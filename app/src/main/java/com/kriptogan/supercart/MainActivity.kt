@@ -119,33 +119,33 @@ fun CustomStatusBar() {
                 .padding(horizontal = 16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Clock
-            Text(
-                text = currentTime,
-                color = Color.White,
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Medium
-            )
-            
-            Spacer(modifier = Modifier.weight(1f))
-            
-            // Battery
+            // Battery (right side in RTL)
             Row(
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Box(
-                    modifier = Modifier
-                        .size(20.dp, 12.dp)
-                        .background(Color.White, shape = androidx.compose.foundation.shape.RoundedCornerShape(2.dp))
-                )
-                Spacer(modifier = Modifier.width(4.dp))
                 Text(
                     text = "$batteryLevel%",
                     color = Color.White,
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Medium
                 )
+                Spacer(modifier = Modifier.width(4.dp))
+                Box(
+                    modifier = Modifier
+                        .size(20.dp, 12.dp)
+                        .background(Color.White, shape = androidx.compose.foundation.shape.RoundedCornerShape(2.dp))
+                )
             }
+            
+            Spacer(modifier = Modifier.weight(1f))
+            
+            // Clock (left side in RTL)
+            Text(
+                text = currentTime,
+                color = Color.White,
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Medium
+            )
         }
     }
 }
@@ -153,6 +153,14 @@ fun CustomStatusBar() {
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        
+        // Force Hebrew locale and RTL layout
+        val locale = java.util.Locale("iw", "IL") // Hebrew, Israel
+        java.util.Locale.setDefault(locale)
+        val config = resources.configuration
+        config.setLocale(locale)
+        createConfigurationContext(config)
+        resources.updateConfiguration(config, resources.displayMetrics)
         
         // Hide status bar and make app full screen
         window.setFlags(
@@ -174,8 +182,8 @@ fun SuperCartApp() {
     var selectedTab by remember { mutableStateOf(0) }
     
     val tabs = listOf(
-        TabItem("Home", Icons.Default.Home),
-        TabItem("Shopping List", Icons.Default.ShoppingCart)
+        TabItem("בית", Icons.Default.Home),
+        TabItem("רשימת קניות", Icons.Default.ShoppingCart)
     )
     
     Box(modifier = Modifier.fillMaxSize()) {
@@ -217,12 +225,12 @@ fun SuperCartApp() {
 
 @Composable
 fun HomeScreen() {
-    Text(text = "This is Home screen")
+    Text(text = "זהו מסך הבית")
 }
 
 @Composable
 fun ShoppingListScreen() {
-    Text(text = "This is Shopping List screen")
+    Text(text = "זהו מסך רשימת הקניות")
 }
 
 @Preview(showBackground = true)
