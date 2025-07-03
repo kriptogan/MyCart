@@ -258,6 +258,7 @@ fun HomeScreen() {
     var isEditMode by remember { mutableStateOf(false) }
     var editIndex by remember { mutableStateOf(-1) }
     var showDeleteConfirm by remember { mutableStateOf(false) }
+    var searchQuery by remember { mutableStateOf("") }
 
     // Fields for new/edit grocery
     var name by remember { mutableStateOf("") }
@@ -283,8 +284,17 @@ fun HomeScreen() {
 
     Box(modifier = Modifier.fillMaxSize()) {
         LazyColumn(modifier = Modifier.fillMaxSize().padding(16.dp)) {
+            item {
+                OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = { searchQuery = it },
+                    label = { Text("חפש מצרך...") },
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp)
+                )
+            }
             GroceryCategory.values().forEach { category ->
-                val itemsInCategory = groceries.withIndex().filter { it.value.category == category }
+                val itemsInCategory = groceries.withIndex()
+                    .filter { it.value.category == category && it.value.name.contains(searchQuery, ignoreCase = true) }
                 if (itemsInCategory.isNotEmpty()) {
                     item(key = category) {
                         Card(
