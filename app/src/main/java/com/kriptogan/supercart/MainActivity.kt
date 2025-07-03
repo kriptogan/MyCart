@@ -12,6 +12,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -23,9 +24,16 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.ShoppingCart
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -48,6 +56,15 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.rememberDatePickerState
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDialog
+import com.kriptogan.supercart.Grocery
+import com.kriptogan.supercart.GroceryCategory
+import java.time.LocalDate
+import java.time.ZoneId
 
 data class TabItem(
     val title: String,
@@ -223,9 +240,130 @@ fun SuperCartApp() {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen() {
-    Text(text = "זהו מסך הבית")
+    var groceries by remember { mutableStateOf(listOf<Grocery>()) }
+    var showDialog by remember { mutableStateOf(false) }
+
+    // Fields for new grocery
+    var name by remember { mutableStateOf("") }
+    var selectedCategory by remember { mutableStateOf(GroceryCategory.פירות) }
+    var expirationDate by remember { mutableStateOf<LocalDate?>(null) }
+    var lastTimeBought by remember { mutableStateOf("") }
+    var averageBuying by remember { mutableStateOf("") }
+    var showDatePicker by remember { mutableStateOf(false) }
+
+    Box(modifier = Modifier.fillMaxSize()) {
+        LazyColumn(modifier = Modifier.fillMaxSize().padding(16.dp)) {
+            items(groceries) { grocery ->
+                Text(text = "${grocery.name} - ${grocery.category.displayName}")
+            }
+        }
+        FloatingActionButton(
+            onClick = { showDialog = true },
+            modifier = Modifier.align(Alignment.BottomEnd).padding(24.dp)
+        ) {
+            Text("+")
+        }
+        if (showDialog) {
+            AlertDialog(
+                onDismissRequest = { showDialog = false },
+                confirmButton = {
+                    Button(onClick = {
+                        if (name.isNotBlank() && lastTimeBought.toIntOrNull() != null && averageBuying.toIntOrNull() != null) {
+                            groceries = groceries + Grocery(
+                                name = name,
+                                category = selectedCategory,
+                                expirationDate = expirationDate,
+                                lastTimeBoughtDays = lastTimeBought.toInt(),
+                                averageBuyingDays = averageBuying.toInt()
+                            )
+                            name = ""
+                            selectedCategory = GroceryCategory.פירות
+                            expirationDate = null
+                            lastTimeBought = ""
+                            averageBuying = ""
+                            showDialog = false
+                        }
+                    }) {
+                        Text("הוסף")
+                    }
+                },
+                dismissButton = {
+                    Button(onClick = { showDialog = false }) {
+                        Text("ביטול")
+                    }
+                },
+                title = { Text("הוסף מצרך") },
+                text = {
+                    Column {
+                        OutlinedTextField(
+                            value = name,
+                            onValueChange = { name = it },
+                            label = { Text("שם המצרך") }
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        // Category dropdown
+                        var expanded by remember { mutableStateOf(false) }
+                        Box {
+                            Button(onClick = { expanded = true }) {
+                                Text(selectedCategory.displayName)
+                            }
+                            DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+                                GroceryCategory.values().forEach { cat ->
+                                    DropdownMenuItem(
+                                        text = { Text(cat.displayName) },
+                                        onClick = {
+                                            selectedCategory = cat
+                                            expanded = false
+                                        }
+                                    )
+                                }
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
+                        // Expiration date picker
+                        Button(onClick = { showDatePicker = true }) {
+                            Text(if (expirationDate != null) expirationDate.toString() else "בחר תאריך תפוגה (אופציונלי)")
+                        }
+                        if (showDatePicker) {
+                            val datePickerState = rememberDatePickerState()
+                            DatePickerDialog(
+                                onDismissRequest = { showDatePicker = false },
+                                confirmButton = {
+                                    Button(onClick = {
+                                        val millis = datePickerState.selectedDateMillis
+                                        expirationDate = millis?.let {
+                                            LocalDate.ofEpochDay(it / (24 * 60 * 60 * 1000))
+                                        }
+                                        showDatePicker = false
+                                    }) { Text("אישור") }
+                                },
+                                dismissButton = {
+                                    Button(onClick = { showDatePicker = false }) { Text("ביטול") }
+                                }
+                            ) {
+                                DatePicker(state = datePickerState)
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
+                        OutlinedTextField(
+                            value = lastTimeBought,
+                            onValueChange = { lastTimeBought = it.filter { c -> c.isDigit() } },
+                            label = { Text("ימים מאז קנייה אחרונה") }
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        OutlinedTextField(
+                            value = averageBuying,
+                            onValueChange = { averageBuying = it.filter { c -> c.isDigit() } },
+                            label = { Text("ממוצע ימים בין קניות") }
+                        )
+                    }
+                }
+            )
+        }
+    }
 }
 
 @Composable
