@@ -42,6 +42,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
@@ -75,6 +76,19 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.clickable
+import androidx.datastore.core.DataStore
+import androidx.datastore.core.Serializer
+import androidx.datastore.dataStore
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.runBlocking
+import kotlinx.serialization.builtins.ListSerializer
+import kotlinx.serialization.json.Json
+import com.kriptogan.supercart.GroceryWithDate
+import com.kriptogan.supercart.toSerializable
+import com.kriptogan.supercart.withLocalDate
+import java.io.InputStream
+import java.io.OutputStream
+import kotlinx.serialization.Serializable
 
 data class TabItem(
     val title: String,
@@ -253,12 +267,24 @@ fun SuperCartApp() {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen() {
-    var groceries by remember { mutableStateOf(listOf<Grocery>()) }
+    val context = LocalContext.current
+    var groceries by remember { mutableStateOf(listOf<GroceryWithDate>()) }
     var showDialog by remember { mutableStateOf(false) }
     var isEditMode by remember { mutableStateOf(false) }
     var editIndex by remember { mutableStateOf(-1) }
     var showDeleteConfirm by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
+
+    // Load groceries from DataStore on first composition
+    LaunchedEffect(Unit) {
+        val loaded = context.groceryDataStore.data.first().map { it.withLocalDate() }
+        groceries = loaded
+    }
+
+    // Save groceries to DataStore whenever they change
+    LaunchedEffect(groceries) {
+        context.groceryDataStore.updateData { groceries.map { it.toSerializable() } }
+    }
 
     // Fields for new/edit grocery
     var name by remember { mutableStateOf("") }
@@ -273,7 +299,7 @@ fun HomeScreen() {
         if (categoryExpansion[cat] == null) categoryExpansion[cat] = true
     }
 
-    fun openEditDialog(index: Int, grocery: Grocery) {
+    fun openEditDialog(index: Int, grocery: GroceryWithDate) {
         name = grocery.name
         selectedCategory = grocery.category
         expirationDate = grocery.expirationDate
@@ -379,7 +405,7 @@ fun HomeScreen() {
                                     )
                                 }
                             } else {
-                                groceries = groceries + Grocery(
+                                groceries = groceries + GroceryWithDate(
                                     name = name,
                                     category = selectedCategory,
                                     expirationDate = expirationDate
@@ -496,5 +522,21 @@ fun ShoppingListScreen() {
 fun SuperCartAppPreview() {
     SuperCartTheme {
         SuperCartApp()
+    }
+}
+
+val Context.groceryDataStore: DataStore<List<Grocery>> by dataStore(
+    fileName = "groceries.json",
+    serializer = GroceryListSerializer
+)
+
+object GroceryListSerializer : Serializer<List<Grocery>> {
+    override val defaultValue: List<Grocery> = emptyList()
+    override suspend fun readFrom(input: InputStream): List<Grocery> =
+        runCatching {
+            Json.decodeFromString(ListSerializer(Grocery.serializer()), input.readBytes().decodeToString())
+        }.getOrDefault(emptyList())
+    override suspend fun writeTo(t: List<Grocery>, output: OutputStream) {
+        output.write(Json.encodeToString(ListSerializer(Grocery.serializer()), t).encodeToByteArray())
     }
 }
