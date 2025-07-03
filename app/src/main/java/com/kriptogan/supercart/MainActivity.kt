@@ -248,6 +248,7 @@ fun HomeScreen() {
     var showDialog by remember { mutableStateOf(false) }
     var isEditMode by remember { mutableStateOf(false) }
     var editIndex by remember { mutableStateOf(-1) }
+    var showDeleteConfirm by remember { mutableStateOf(false) }
 
     // Fields for new/edit grocery
     var name by remember { mutableStateOf("") }
@@ -319,8 +320,16 @@ fun HomeScreen() {
                     }
                 },
                 dismissButton = {
-                    Button(onClick = { showDialog = false }) {
-                        Text("ביטול")
+                    Row {
+                        Button(onClick = { showDialog = false }) {
+                            Text("ביטול")
+                        }
+                        if (isEditMode) {
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Button(onClick = { showDeleteConfirm = true }) {
+                                Text("מחק", color = Color.Red)
+                            }
+                        }
                     }
                 },
                 title = { Text(if (isEditMode) "ערוך מצרך" else "הוסף מצרך") },
@@ -376,6 +385,27 @@ fun HomeScreen() {
                         }
                     }
                 }
+            )
+        }
+        if (showDeleteConfirm && isEditMode && editIndex >= 0) {
+            AlertDialog(
+                onDismissRequest = { showDeleteConfirm = false },
+                confirmButton = {
+                    Button(onClick = {
+                        groceries = groceries.toMutableList().also { it.removeAt(editIndex) }
+                        showDeleteConfirm = false
+                        showDialog = false
+                    }) {
+                        Text("מחק", color = Color.Red)
+                    }
+                },
+                dismissButton = {
+                    Button(onClick = { showDeleteConfirm = false }) {
+                        Text("ביטול")
+                    }
+                },
+                title = { Text("אישור מחיקה") },
+                text = { Text("האם אתה בטוח שברצונך למחוק?") }
             )
         }
     }
