@@ -65,6 +65,7 @@ import com.kriptogan.supercart.Grocery
 import com.kriptogan.supercart.GroceryCategory
 import java.time.LocalDate
 import java.time.ZoneId
+import androidx.compose.foundation.lazy.itemsIndexed
 
 data class TabItem(
     val title: String,
@@ -245,21 +246,44 @@ fun SuperCartApp() {
 fun HomeScreen() {
     var groceries by remember { mutableStateOf(listOf<Grocery>()) }
     var showDialog by remember { mutableStateOf(false) }
+    var isEditMode by remember { mutableStateOf(false) }
+    var editIndex by remember { mutableStateOf(-1) }
 
-    // Fields for new grocery
+    // Fields for new/edit grocery
     var name by remember { mutableStateOf("") }
     var selectedCategory by remember { mutableStateOf(GroceryCategory.פירות) }
     var expirationDate by remember { mutableStateOf<LocalDate?>(null) }
     var showDatePicker by remember { mutableStateOf(false) }
+    var expanded by remember { mutableStateOf(false) }
+
+    fun openEditDialog(index: Int, grocery: Grocery) {
+        name = grocery.name
+        selectedCategory = grocery.category
+        expirationDate = grocery.expirationDate
+        editIndex = index
+        isEditMode = true
+        showDialog = true
+    }
 
     Box(modifier = Modifier.fillMaxSize()) {
         LazyColumn(modifier = Modifier.fillMaxSize().padding(16.dp)) {
-            items(groceries) { grocery ->
-                Text(text = "${grocery.name} - ${grocery.category.displayName}")
+            itemsIndexed(groceries) { index: Int, grocery: Grocery ->
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(text = "${grocery.name} - ${grocery.category.displayName}", modifier = Modifier.weight(1f))
+                    Button(onClick = { openEditDialog(index, grocery) }, modifier = Modifier.padding(start = 8.dp)) {
+                        Text("ערוך")
+                    }
+                }
             }
         }
         FloatingActionButton(
-            onClick = { showDialog = true },
+            onClick = {
+                name = ""
+                selectedCategory = GroceryCategory.פירות
+                expirationDate = null
+                isEditMode = false
+                showDialog = true
+            },
             modifier = Modifier.align(Alignment.BottomEnd).padding(24.dp)
         ) {
             Text("+")
@@ -270,18 +294,28 @@ fun HomeScreen() {
                 confirmButton = {
                     Button(onClick = {
                         if (name.isNotBlank()) {
-                            groceries = groceries + Grocery(
-                                name = name,
-                                category = selectedCategory,
-                                expirationDate = expirationDate
-                            )
+                            if (isEditMode && editIndex >= 0) {
+                                groceries = groceries.toMutableList().also {
+                                    it[editIndex] = it[editIndex].copy(
+                                        name = name,
+                                        category = selectedCategory,
+                                        expirationDate = expirationDate
+                                    )
+                                }
+                            } else {
+                                groceries = groceries + Grocery(
+                                    name = name,
+                                    category = selectedCategory,
+                                    expirationDate = expirationDate
+                                )
+                            }
                             name = ""
                             selectedCategory = GroceryCategory.פירות
                             expirationDate = null
                             showDialog = false
                         }
                     }) {
-                        Text("הוסף")
+                        Text(if (isEditMode) "שמור" else "הוסף")
                     }
                 },
                 dismissButton = {
@@ -289,7 +323,7 @@ fun HomeScreen() {
                         Text("ביטול")
                     }
                 },
-                title = { Text("הוסף מצרך") },
+                title = { Text(if (isEditMode) "ערוך מצרך" else "הוסף מצרך") },
                 text = {
                     Column {
                         OutlinedTextField(
@@ -299,7 +333,6 @@ fun HomeScreen() {
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         // Category dropdown
-                        var expanded by remember { mutableStateOf(false) }
                         Box {
                             Button(onClick = { expanded = true }) {
                                 Text(selectedCategory.displayName)
