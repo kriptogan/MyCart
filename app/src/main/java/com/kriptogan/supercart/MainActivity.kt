@@ -26,6 +26,9 @@ import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Divider
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -40,6 +43,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -66,6 +70,11 @@ import com.kriptogan.supercart.GroceryCategory
 import java.time.LocalDate
 import java.time.ZoneId
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.clickable
 
 data class TabItem(
     val title: String,
@@ -257,6 +266,12 @@ fun HomeScreen() {
     var showDatePicker by remember { mutableStateOf(false) }
     var expanded by remember { mutableStateOf(false) }
 
+    // State for expanded/collapsed categories
+    val categoryExpansion = remember { mutableStateMapOf<GroceryCategory, Boolean>() }
+    GroceryCategory.values().forEach { cat ->
+        if (categoryExpansion[cat] == null) categoryExpansion[cat] = true
+    }
+
     fun openEditDialog(index: Int, grocery: Grocery) {
         name = grocery.name
         selectedCategory = grocery.category
@@ -268,11 +283,61 @@ fun HomeScreen() {
 
     Box(modifier = Modifier.fillMaxSize()) {
         LazyColumn(modifier = Modifier.fillMaxSize().padding(16.dp)) {
-            itemsIndexed(groceries) { index: Int, grocery: Grocery ->
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(text = "${grocery.name} - ${grocery.category.displayName}", modifier = Modifier.weight(1f))
-                    Button(onClick = { openEditDialog(index, grocery) }, modifier = Modifier.padding(start = 8.dp)) {
-                        Text("ערוך")
+            GroceryCategory.values().forEach { category ->
+                val itemsInCategory = groceries.withIndex().filter { it.value.category == category }
+                if (itemsInCategory.isNotEmpty()) {
+                    item(key = category) {
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(bottom = 12.dp),
+                            border = CardDefaults.outlinedCardBorder(),
+                            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                        ) {
+                            Column {
+                                // Header (clickable for expand/collapse)
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable { categoryExpansion[category] = !(categoryExpansion[category] ?: true) }
+                                        .padding(12.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = category.displayName,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 18.sp,
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                    Text(
+                                        text = if (categoryExpansion[category] == true) "▲" else "▼",
+                                        fontSize = 18.sp
+                                    )
+                                }
+                                Divider()
+                                if (categoryExpansion[category] == true) {
+                                    itemsInCategory.forEach { indexedGrocery ->
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(horizontal = 12.dp, vertical = 8.dp)
+                                        ) {
+                                            Text(
+                                                text = indexedGrocery.value.name,
+                                                modifier = Modifier.weight(1f)
+                                            )
+                                            Button(
+                                                onClick = { openEditDialog(indexedGrocery.index, indexedGrocery.value) },
+                                                modifier = Modifier.padding(start = 8.dp)
+                                            ) {
+                                                Text("ערוך")
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }
