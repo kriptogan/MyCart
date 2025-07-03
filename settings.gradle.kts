@@ -19,6 +19,6 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "MyCart"
+rootProject.name = "SuperCart"
 include(":app")
  

@@ -1,4 +1,4 @@
-package com.kriptogan.mycart.ui.theme
+package com.kriptogan.supercart.ui.theme
 
 import androidx.compose.ui.graphics.Color
 

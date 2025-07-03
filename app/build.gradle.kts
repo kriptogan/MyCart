@@ -5,11 +5,11 @@ plugins {
 }
 
 android {
-    namespace = "com.kriptogan.mycart"
+    namespace = "com.kriptogan.supercart"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.kriptogan.mycart"
+        applicationId = "com.kriptogan.supercart"
         minSdk = 24
         targetSdk = 35
         versionCode = 1
