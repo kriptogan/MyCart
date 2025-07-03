@@ -29,6 +29,6 @@ data class Grocery(
     val name: String, // שם המצרך
     val category: GroceryCategory, // קטגוריה
     val expirationDate: LocalDate?, // תאריך תפוגה (אופציונלי)
-    val lastTimeBoughtDays: Int, // מספר ימים מאז הקנייה האחרונה
-    val averageBuyingDays: Int // ממוצע ימים בין קניות
+    val lastTimeBoughtDays: Int? = null, // מספר ימים מאז הקנייה האחרונה (אופציונלי)
+    val averageBuyingDays: Int? = null // ממוצע ימים בין קניות (אופציונלי)
 ) 

@@ -250,8 +250,6 @@ fun HomeScreen() {
     var name by remember { mutableStateOf("") }
     var selectedCategory by remember { mutableStateOf(GroceryCategory.פירות) }
     var expirationDate by remember { mutableStateOf<LocalDate?>(null) }
-    var lastTimeBought by remember { mutableStateOf("") }
-    var averageBuying by remember { mutableStateOf("") }
     var showDatePicker by remember { mutableStateOf(false) }
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -271,19 +269,15 @@ fun HomeScreen() {
                 onDismissRequest = { showDialog = false },
                 confirmButton = {
                     Button(onClick = {
-                        if (name.isNotBlank() && lastTimeBought.toIntOrNull() != null && averageBuying.toIntOrNull() != null) {
+                        if (name.isNotBlank()) {
                             groceries = groceries + Grocery(
                                 name = name,
                                 category = selectedCategory,
-                                expirationDate = expirationDate,
-                                lastTimeBoughtDays = lastTimeBought.toInt(),
-                                averageBuyingDays = averageBuying.toInt()
+                                expirationDate = expirationDate
                             )
                             name = ""
                             selectedCategory = GroceryCategory.פירות
                             expirationDate = null
-                            lastTimeBought = ""
-                            averageBuying = ""
                             showDialog = false
                         }
                     }) {
@@ -347,18 +341,6 @@ fun HomeScreen() {
                                 DatePicker(state = datePickerState)
                             }
                         }
-                        Spacer(modifier = Modifier.height(8.dp))
-                        OutlinedTextField(
-                            value = lastTimeBought,
-                            onValueChange = { lastTimeBought = it.filter { c -> c.isDigit() } },
-                            label = { Text("ימים מאז קנייה אחרונה") }
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        OutlinedTextField(
-                            value = averageBuying,
-                            onValueChange = { averageBuying = it.filter { c -> c.isDigit() } },
-                            label = { Text("ממוצע ימים בין קניות") }
-                        )
                     }
                 }
             )
