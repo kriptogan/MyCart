@@ -51,6 +51,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -399,11 +400,18 @@ fun HomeScreen(
                                 Divider()
                                 if (categoryExpansion[category] == true) {
                                     itemsInCategory.forEach { indexedGrocery ->
+                                        val isExpiringTomorrow = indexedGrocery.value.expirationDate != null &&
+                                            try {
+                                                val expDate = indexedGrocery.value.expirationDate
+                                                val daysUntil = java.time.temporal.ChronoUnit.DAYS.between(LocalDate.now(), expDate)
+                                                daysUntil == 1L
+                                            } catch (e: Exception) { false }
                                         Row(
                                             verticalAlignment = Alignment.CenterVertically,
                                             modifier = Modifier
                                                 .fillMaxWidth()
                                                 .padding(horizontal = 12.dp, vertical = 8.dp)
+                                                .background(if (isExpiringTomorrow) Color(0xFFFFCDD2) else Color.Transparent)
                                         ) {
                                             Text(
                                                 text = indexedGrocery.value.name,
