@@ -94,6 +94,7 @@ import kotlinx.serialization.Serializable
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
 import androidx.compose.material.icons.filled.Warning
+import java.time.temporal.ChronoUnit
 
 data class TabItem(
     val title: String,
@@ -303,7 +304,18 @@ fun SuperCartApp() {
                         onBuy = { grocery ->
                             shoppingList = shoppingList.filterNot { it.name == grocery.name && it.category == grocery.category }
                             groceries = groceries.map {
-                                if (it.name == grocery.name && it.category == grocery.category) it.copy(lastTimeBoughtDays = 0) else it
+                                if (it.name == grocery.name && it.category == grocery.category) {
+                                    val today = LocalDate.now()
+                                    val newBuyEvents = (it.buyEvents + today).sorted()
+                                    val avg = newBuyEvents.averageDaysBetween()
+                                    it.copy(
+                                        lastTimeBoughtDays = 0,
+                                        averageBuyingDays = avg,
+                                        buyEvents = newBuyEvents
+                                    )
+                                } else {
+                                    it
+                                }
                             }
                         }
                     )
@@ -444,15 +456,23 @@ fun HomeScreen(
                                         val isExpiringOrExpired = indexedGrocery.value.expirationDate != null &&
                                             try {
                                                 val expDate = indexedGrocery.value.expirationDate
-                                                val daysUntil = java.time.temporal.ChronoUnit.DAYS.between(LocalDate.now(), expDate)
+                                                val daysUntil = ChronoUnit.DAYS.between(LocalDate.now(), expDate)
                                                 daysUntil <= 1L
                                             } catch (e: Exception) { false }
+                                        val daysSinceLastBuy = indexedGrocery.value.buyEvents.maxOrNull()?.let { ChronoUnit.DAYS.between(it, LocalDate.now()).toInt() } ?: -1
+                                        val shouldHighlightYellow = !isExpiringOrExpired && indexedGrocery.value.averageBuyingDays != null && daysSinceLastBuy >= (indexedGrocery.value.averageBuyingDays!! - 1)
                                         Row(
                                             verticalAlignment = Alignment.CenterVertically,
                                             modifier = Modifier
                                                 .fillMaxWidth()
                                                 .padding(horizontal = 12.dp, vertical = 8.dp)
-                                                .background(if (isExpiringOrExpired) Color(0xFFFFCDD2) else Color.Transparent)
+                                                .background(
+                                                    when {
+                                                        isExpiringOrExpired -> Color(0xFFFFCDD2)
+                                                        shouldHighlightYellow -> Color(0xFFFFF9C4)
+                                                        else -> Color.Transparent
+                                                    }
+                                                )
                                         ) {
                                             Text(
                                                 text = indexedGrocery.value.name,
