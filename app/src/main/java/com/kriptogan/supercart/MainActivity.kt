@@ -95,6 +95,9 @@ import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
 import androidx.compose.material.icons.filled.Warning
 import java.time.temporal.ChronoUnit
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Check
 
 data class TabItem(
     val title: String,
@@ -506,11 +509,14 @@ fun HomeScreen(
                                                     contentDescription = "הוסף לרשימת קניות"
                                                 )
                                             }
-                                            Button(
+                                            IconButton(
                                                 onClick = { openEditDialog(indexedGrocery.index, indexedGrocery.value) },
                                                 modifier = Modifier.padding(start = 8.dp)
                                             ) {
-                                                Text("ערוך")
+                                                Icon(
+                                                    imageVector = Icons.Default.Edit,
+                                                    contentDescription = "ערוך"
+                                                )
                                             }
                                         }
                                     }
@@ -700,17 +706,23 @@ fun ShoppingListScreen(
                                             text = grocery.name,
                                             modifier = Modifier.weight(1f)
                                         )
-                                        Button(
+                                        IconButton(
                                             onClick = { onBuy(grocery) },
                                             modifier = Modifier.padding(start = 4.dp)
                                         ) {
-                                            Text("נרכש")
+                                            Icon(
+                                                imageVector = Icons.Default.Check,
+                                                contentDescription = "נרכש"
+                                            )
                                         }
-                                        Button(
+                                        IconButton(
                                             onClick = { onRemove(grocery) },
                                             modifier = Modifier.padding(start = 4.dp)
                                         ) {
-                                            Text("הסר")
+                                            Icon(
+                                                imageVector = Icons.Default.Delete,
+                                                contentDescription = "הסר"
+                                            )
                                         }
                                     }
                                 }
