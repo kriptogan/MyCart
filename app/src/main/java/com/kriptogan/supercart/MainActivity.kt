@@ -243,7 +243,6 @@ fun SuperCartApp() {
     LaunchedEffect(groceries) {
         context.groceryDataStore.updateData { groceries.map { it.toSerializable() } }
     }
-
     // Load shopping list from DataStore on first composition
     LaunchedEffect(Unit) {
         val loaded = context.shoppingListDataStore.data.first().map { it.withLocalDate() }
@@ -254,56 +253,61 @@ fun SuperCartApp() {
         context.shoppingListDataStore.updateData { shoppingList.map { it.toSerializable() } }
     }
 
-    Scaffold(
-        modifier = Modifier.fillMaxSize(),
-        bottomBar = {
-            NavigationBar {
-                tabs.forEachIndexed { index, tabItem ->
-                    NavigationBarItem(
-                        selected = selectedTab == index,
-                        onClick = { selectedTab = index },
-                        icon = {
-                            if (tabItem.title == "רשימת קניות" && shoppingList.isNotEmpty()) {
-                                BadgedBox(badge = { Badge { Text(shoppingList.size.toString()) } }) {
-                                    Icon(imageVector = tabItem.icon, contentDescription = tabItem.title)
-                                }
-                            } else {
-                                Icon(imageVector = tabItem.icon, contentDescription = tabItem.title)
-                            }
-                        },
-                        label = { Text(text = tabItem.title) }
-                    )
-                }
-            }
-        }
-    ) { innerPadding ->
-        Box(
+    Box(modifier = Modifier.fillMaxSize()) {
+        CustomStatusBar()
+        Scaffold(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(innerPadding),
-            contentAlignment = Alignment.Center
-        ) {
-            when (selectedTab) {
-                0 -> HomeScreen(
-                    shoppingList = shoppingList,
-                    onAddToShoppingList = { grocery ->
-                        if (shoppingList.none { it.name == grocery.name && it.category == grocery.category }) {
-                            shoppingList = shoppingList + grocery
-                        }
+                .padding(top = 48.dp), // Space for custom status bar
+            bottomBar = {
+                NavigationBar {
+                    tabs.forEachIndexed { index, tabItem ->
+                        NavigationBarItem(
+                            selected = selectedTab == index,
+                            onClick = { selectedTab = index },
+                            icon = {
+                                if (tabItem.title == "רשימת קניות" && shoppingList.isNotEmpty()) {
+                                    BadgedBox(badge = { Badge { Text(shoppingList.size.toString()) } }) {
+                                        Icon(imageVector = tabItem.icon, contentDescription = tabItem.title)
+                                    }
+                                } else {
+                                    Icon(imageVector = tabItem.icon, contentDescription = tabItem.title)
+                                }
+                            },
+                            label = { Text(text = tabItem.title) }
+                        )
                     }
-                )
-                1 -> ShoppingListScreen(
-                    shoppingList = shoppingList,
-                    onRemove = { grocery ->
-                        shoppingList = shoppingList.filterNot { it.name == grocery.name && it.category == grocery.category }
-                    },
-                    onBuy = { grocery ->
-                        shoppingList = shoppingList.filterNot { it.name == grocery.name && it.category == grocery.category }
-                        groceries = groceries.map {
-                            if (it.name == grocery.name && it.category == grocery.category) it.copy(lastTimeBoughtDays = 0) else it
+                }
+            }
+        ) { innerPadding ->
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding),
+                contentAlignment = Alignment.Center
+            ) {
+                when (selectedTab) {
+                    0 -> HomeScreen(
+                        shoppingList = shoppingList,
+                        onAddToShoppingList = { grocery ->
+                            if (shoppingList.none { it.name == grocery.name && it.category == grocery.category }) {
+                                shoppingList = shoppingList + grocery
+                            }
                         }
-                    }
-                )
+                    )
+                    1 -> ShoppingListScreen(
+                        shoppingList = shoppingList,
+                        onRemove = { grocery ->
+                            shoppingList = shoppingList.filterNot { it.name == grocery.name && it.category == grocery.category }
+                        },
+                        onBuy = { grocery ->
+                            shoppingList = shoppingList.filterNot { it.name == grocery.name && it.category == grocery.category }
+                            groceries = groceries.map {
+                                if (it.name == grocery.name && it.category == grocery.category) it.copy(lastTimeBoughtDays = 0) else it
+                            }
+                        }
+                    )
+                }
             }
         }
     }
