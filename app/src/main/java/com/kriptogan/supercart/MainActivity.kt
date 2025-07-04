@@ -229,6 +229,18 @@ fun SuperCartApp() {
         TabItem("רשימת קניות", Icons.Default.ShoppingCart)
     )
     var shoppingList by remember { mutableStateOf(listOf<GroceryWithDate>()) }
+    var groceries by remember { mutableStateOf(listOf<GroceryWithDate>()) }
+    val context = LocalContext.current
+
+    // Load groceries from DataStore on first composition
+    LaunchedEffect(Unit) {
+        val loaded = context.groceryDataStore.data.first().map { it.withLocalDate() }
+        groceries = loaded
+    }
+    // Save groceries to DataStore whenever they change
+    LaunchedEffect(groceries) {
+        context.groceryDataStore.updateData { groceries.map { it.toSerializable() } }
+    }
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
@@ -268,7 +280,18 @@ fun SuperCartApp() {
                         }
                     }
                 )
-                1 -> ShoppingListScreen(shoppingList)
+                1 -> ShoppingListScreen(
+                    shoppingList = shoppingList,
+                    onRemove = { grocery ->
+                        shoppingList = shoppingList.filterNot { it.name == grocery.name && it.category == grocery.category }
+                    },
+                    onBuy = { grocery ->
+                        shoppingList = shoppingList.filterNot { it.name == grocery.name && it.category == grocery.category }
+                        groceries = groceries.map {
+                            if (it.name == grocery.name && it.category == grocery.category) it.copy(lastTimeBoughtDays = 0) else it
+                        }
+                    }
+                )
             }
         }
     }
@@ -535,8 +558,11 @@ fun HomeScreen(
 }
 
 @Composable
-fun ShoppingListScreen(shoppingList: List<GroceryWithDate>) {
-    // State for expanded/collapsed categories (local to this screen)
+fun ShoppingListScreen(
+    shoppingList: List<GroceryWithDate>,
+    onRemove: (GroceryWithDate) -> Unit,
+    onBuy: (GroceryWithDate) -> Unit
+) {
     val categoryExpansion = remember { mutableStateMapOf<GroceryCategory, Boolean>() }
     GroceryCategory.values().forEach { cat ->
         if (categoryExpansion[cat] == null) categoryExpansion[cat] = true
@@ -555,7 +581,6 @@ fun ShoppingListScreen(shoppingList: List<GroceryWithDate>) {
                         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
                     ) {
                         Column {
-                            // Header (clickable for expand/collapse)
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -589,6 +614,18 @@ fun ShoppingListScreen(shoppingList: List<GroceryWithDate>) {
                                             text = grocery.name,
                                             modifier = Modifier.weight(1f)
                                         )
+                                        Button(
+                                            onClick = { onBuy(grocery) },
+                                            modifier = Modifier.padding(start = 4.dp)
+                                        ) {
+                                            Text("נרכש")
+                                        }
+                                        Button(
+                                            onClick = { onRemove(grocery) },
+                                            modifier = Modifier.padding(start = 4.dp)
+                                        ) {
+                                            Text("הסר")
+                                        }
                                     }
                                 }
                             }
