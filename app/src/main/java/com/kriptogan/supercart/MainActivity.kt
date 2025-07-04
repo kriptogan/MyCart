@@ -93,6 +93,7 @@ import java.io.OutputStream
 import kotlinx.serialization.Serializable
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
+import androidx.compose.material.icons.filled.Warning
 
 data class TabItem(
     val title: String,
@@ -321,6 +322,17 @@ fun HomeScreen(
     var editIndex by remember { mutableStateOf(-1) }
     var showDeleteConfirm by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
+    var showExpiringOnly by remember { mutableStateOf(false) }
+
+    // Helper to check if a grocery is expired or expiring soon
+    fun isExpiringOrExpired(grocery: GroceryWithDate): Boolean {
+        val exp = grocery.expirationDate ?: return false
+        return try {
+            val daysUntil = java.time.temporal.ChronoUnit.DAYS.between(LocalDate.now(), exp)
+            daysUntil <= 1L
+        } catch (e: Exception) { false }
+    }
+    val hasExpiring = groceries.any { it.expirationDate != null && isExpiringOrExpired(it) }
 
     // Load groceries from DataStore on first composition
     LaunchedEffect(Unit) {
@@ -357,6 +369,30 @@ fun HomeScreen(
 
     Box(modifier = Modifier.fillMaxSize()) {
         LazyColumn(modifier = Modifier.fillMaxSize().padding(16.dp)) {
+            // Warning icon row
+            item {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    IconButton(
+                        onClick = { if (hasExpiring) showExpiringOnly = !showExpiringOnly },
+                        enabled = hasExpiring
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Warning,
+                            contentDescription = "הצג רק מוצרים שפג תוקפם או עומדים לפוג",
+                            tint = if (hasExpiring) Color(0xFFFFC107) else Color.Gray
+                        )
+                    }
+                    Text(
+                        text = "הצג רק מוצרים שפג תוקפם או עומדים לפוג",
+                        color = if (hasExpiring) Color(0xFFFFC107) else Color.Gray,
+                        modifier = Modifier.padding(start = 8.dp)
+                    )
+                }
+            }
+            // Search bar
             item {
                 OutlinedTextField(
                     value = searchQuery,
@@ -368,6 +404,7 @@ fun HomeScreen(
             GroceryCategory.values().forEach { category ->
                 val itemsInCategory = groceries.withIndex()
                     .filter { it.value.category == category && it.value.name.contains(searchQuery, ignoreCase = true) }
+                    .filter { !showExpiringOnly || isExpiringOrExpired(it.value) }
                 if (itemsInCategory.isNotEmpty()) {
                     item(key = category) {
                         Card(
@@ -400,18 +437,18 @@ fun HomeScreen(
                                 Divider()
                                 if (categoryExpansion[category] == true) {
                                     itemsInCategory.forEach { indexedGrocery ->
-                                        val isExpiringTomorrow = indexedGrocery.value.expirationDate != null &&
+                                        val isExpiringOrExpired = indexedGrocery.value.expirationDate != null &&
                                             try {
                                                 val expDate = indexedGrocery.value.expirationDate
                                                 val daysUntil = java.time.temporal.ChronoUnit.DAYS.between(LocalDate.now(), expDate)
-                                                daysUntil == 1L
+                                                daysUntil <= 1L
                                             } catch (e: Exception) { false }
                                         Row(
                                             verticalAlignment = Alignment.CenterVertically,
                                             modifier = Modifier
                                                 .fillMaxWidth()
                                                 .padding(horizontal = 12.dp, vertical = 8.dp)
-                                                .background(if (isExpiringTomorrow) Color(0xFFFFCDD2) else Color.Transparent)
+                                                .background(if (isExpiringOrExpired) Color(0xFFFFCDD2) else Color.Transparent)
                                         ) {
                                             Text(
                                                 text = indexedGrocery.value.name,
