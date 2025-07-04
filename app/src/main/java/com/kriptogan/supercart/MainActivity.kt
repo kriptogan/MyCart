@@ -536,9 +536,66 @@ fun HomeScreen(
 
 @Composable
 fun ShoppingListScreen(shoppingList: List<GroceryWithDate>) {
+    // State for expanded/collapsed categories (local to this screen)
+    val categoryExpansion = remember { mutableStateMapOf<GroceryCategory, Boolean>() }
+    GroceryCategory.values().forEach { cat ->
+        if (categoryExpansion[cat] == null) categoryExpansion[cat] = true
+    }
+
     LazyColumn(modifier = Modifier.fillMaxSize().padding(16.dp)) {
-        items(shoppingList) { grocery ->
-            Text(text = "${grocery.name} - ${grocery.category.displayName}")
+        GroceryCategory.values().forEach { category ->
+            val itemsInCategory = shoppingList.filter { it.category == category }
+            if (itemsInCategory.isNotEmpty()) {
+                item(key = category) {
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 12.dp),
+                        border = CardDefaults.outlinedCardBorder(),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                    ) {
+                        Column {
+                            // Header (clickable for expand/collapse)
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { categoryExpansion[category] = !(categoryExpansion[category] ?: true) }
+                                    .padding(12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = category.displayName,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 18.sp,
+                                    modifier = Modifier.weight(1f)
+                                )
+                                Badge { Text(itemsInCategory.size.toString()) }
+                                Text(
+                                    text = if (categoryExpansion[category] == true) "▲" else "▼",
+                                    fontSize = 18.sp,
+                                    modifier = Modifier.padding(start = 8.dp)
+                                )
+                            }
+                            Divider()
+                            if (categoryExpansion[category] == true) {
+                                itemsInCategory.forEach { grocery ->
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(horizontal = 12.dp, vertical = 8.dp)
+                                    ) {
+                                        Text(
+                                            text = grocery.name,
+                                            modifier = Modifier.weight(1f)
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 }
