@@ -402,6 +402,19 @@ fun HomeScreen(
                     modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
+                    Button(
+                        onClick = {
+                            name = ""
+                            selectedCategory = GroceryCategory.פירות
+                            expirationDate = null
+                            isEditMode = false
+                            showDialog = true
+                        },
+                        modifier = Modifier
+                    ) {
+                        Text("+")
+                    }
+                    Spacer(modifier = Modifier.weight(1f))
                     IconButton(
                         onClick = { if (hasExpiring) showExpiringOnly = !showExpiringOnly },
                         enabled = hasExpiring
@@ -507,18 +520,6 @@ fun HomeScreen(
                     }
                 }
             }
-        }
-        FloatingActionButton(
-            onClick = {
-                name = ""
-                selectedCategory = GroceryCategory.פירות
-                expirationDate = null
-                isEditMode = false
-                showDialog = true
-            },
-            modifier = Modifier.align(Alignment.BottomEnd).padding(24.dp)
-        ) {
-            Text("+")
         }
         if (showDialog) {
             AlertDialog(
