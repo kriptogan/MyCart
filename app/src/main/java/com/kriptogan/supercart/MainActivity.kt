@@ -34,6 +34,7 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.OutlinedTextField
@@ -89,6 +90,8 @@ import com.kriptogan.supercart.withLocalDate
 import java.io.InputStream
 import java.io.OutputStream
 import kotlinx.serialization.Serializable
+import androidx.compose.material3.Badge
+import androidx.compose.material3.BadgedBox
 
 data class TabItem(
     val title: String,
@@ -221,44 +224,51 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun SuperCartApp() {
     var selectedTab by remember { mutableStateOf(0) }
-    
     val tabs = listOf(
         TabItem("בית", Icons.Default.Home),
         TabItem("רשימת קניות", Icons.Default.ShoppingCart)
     )
-    
-    Box(modifier = Modifier.fillMaxSize()) {
-        // Custom Status Bar at the top
-        CustomStatusBar()
-        
-        // Main content
-        Scaffold(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(top = 48.dp), // Space for custom status bar
-            bottomBar = {
-                NavigationBar {
-                    tabs.forEachIndexed { index, tabItem ->
-                        NavigationBarItem(
-                            selected = selectedTab == index,
-                            onClick = { selectedTab = index },
-                            icon = { Icon(imageVector = tabItem.icon, contentDescription = tabItem.title) },
-                            label = { Text(text = tabItem.title) }
-                        )
-                    }
+    var shoppingList by remember { mutableStateOf(listOf<GroceryWithDate>()) }
+
+    Scaffold(
+        modifier = Modifier.fillMaxSize(),
+        bottomBar = {
+            NavigationBar {
+                tabs.forEachIndexed { index, tabItem ->
+                    NavigationBarItem(
+                        selected = selectedTab == index,
+                        onClick = { selectedTab = index },
+                        icon = {
+                            if (tabItem.title == "רשימת קניות" && shoppingList.isNotEmpty()) {
+                                BadgedBox(badge = { Badge { Text(shoppingList.size.toString()) } }) {
+                                    Icon(imageVector = tabItem.icon, contentDescription = tabItem.title)
+                                }
+                            } else {
+                                Icon(imageVector = tabItem.icon, contentDescription = tabItem.title)
+                            }
+                        },
+                        label = { Text(text = tabItem.title) }
+                    )
                 }
             }
-        ) { innerPadding ->
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding),
-                contentAlignment = Alignment.Center
-            ) {
-                when (selectedTab) {
-                    0 -> HomeScreen()
-                    1 -> ShoppingListScreen()
-                }
+        }
+    ) { innerPadding ->
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding),
+            contentAlignment = Alignment.Center
+        ) {
+            when (selectedTab) {
+                0 -> HomeScreen(
+                    shoppingList = shoppingList,
+                    onAddToShoppingList = { grocery ->
+                        if (shoppingList.none { it.name == grocery.name && it.category == grocery.category }) {
+                            shoppingList = shoppingList + grocery
+                        }
+                    }
+                )
+                1 -> ShoppingListScreen(shoppingList)
             }
         }
     }
@@ -266,7 +276,10 @@ fun SuperCartApp() {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HomeScreen() {
+fun HomeScreen(
+    shoppingList: List<GroceryWithDate>,
+    onAddToShoppingList: (GroceryWithDate) -> Unit
+) {
     val context = LocalContext.current
     var groceries by remember { mutableStateOf(listOf<GroceryWithDate>()) }
     var showDialog by remember { mutableStateOf(false) }
@@ -363,6 +376,15 @@ fun HomeScreen() {
                                                 text = indexedGrocery.value.name,
                                                 modifier = Modifier.weight(1f)
                                             )
+                                            IconButton(
+                                                onClick = { onAddToShoppingList(indexedGrocery.value) },
+                                                modifier = Modifier.padding(start = 4.dp)
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Default.ShoppingCart,
+                                                    contentDescription = "הוסף לרשימת קניות"
+                                                )
+                                            }
                                             Button(
                                                 onClick = { openEditDialog(indexedGrocery.index, indexedGrocery.value) },
                                                 modifier = Modifier.padding(start = 8.dp)
@@ -513,8 +535,12 @@ fun HomeScreen() {
 }
 
 @Composable
-fun ShoppingListScreen() {
-    Text(text = "זהו מסך רשימת הקניות")
+fun ShoppingListScreen(shoppingList: List<GroceryWithDate>) {
+    LazyColumn(modifier = Modifier.fillMaxSize().padding(16.dp)) {
+        items(shoppingList) { grocery ->
+            Text(text = "${grocery.name} - ${grocery.category.displayName}")
+        }
+    }
 }
 
 @Preview(showBackground = true)
