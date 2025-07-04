@@ -383,6 +383,17 @@ fun HomeScreen(
         showDialog = true
     }
 
+    fun shouldShowInAlertFilter(grocery: GroceryWithDate): Boolean {
+        val expDate = grocery.expirationDate
+        val isExpiringOrExpired = expDate != null && try {
+            val daysUntil = ChronoUnit.DAYS.between(LocalDate.now(), expDate)
+            daysUntil <= 1L
+        } catch (e: Exception) { false }
+        val daysSinceLastBuy = grocery.buyEvents.maxOrNull()?.let { date -> ChronoUnit.DAYS.between(date, LocalDate.now()).toInt() } ?: -1
+        val shouldHighlightYellow = !isExpiringOrExpired && grocery.averageBuyingDays != null && daysSinceLastBuy >= (grocery.averageBuyingDays!! - 1)
+        return isExpiringOrExpired || shouldHighlightYellow
+    }
+
     Box(modifier = Modifier.fillMaxSize()) {
         LazyColumn(modifier = Modifier.fillMaxSize().padding(16.dp)) {
             // Warning icon row
@@ -397,15 +408,10 @@ fun HomeScreen(
                     ) {
                         Icon(
                             imageVector = Icons.Default.Warning,
-                            contentDescription = "הצג רק מוצרים שפג תוקפם או עומדים לפוג",
+                            contentDescription = "הצג רק מוצרים שפג תוקפם, עומדים לפוג, או עבר ממוצע קנייה",
                             tint = if (hasExpiring) Color(0xFFFFC107) else Color.Gray
                         )
                     }
-                    Text(
-                        text = "הצג רק מוצרים שפג תוקפם או עומדים לפוג",
-                        color = if (hasExpiring) Color(0xFFFFC107) else Color.Gray,
-                        modifier = Modifier.padding(start = 8.dp)
-                    )
                 }
             }
             // Search bar
@@ -420,7 +426,7 @@ fun HomeScreen(
             GroceryCategory.values().forEach { category ->
                 val itemsInCategory = groceries.withIndex()
                     .filter { it.value.category == category && it.value.name.contains(searchQuery, ignoreCase = true) }
-                    .filter { !showExpiringOnly || isExpiringOrExpired(it.value) }
+                    .filter { !showExpiringOnly || shouldShowInAlertFilter(it.value) }
                 if (itemsInCategory.isNotEmpty()) {
                     item(key = category) {
                         Card(
