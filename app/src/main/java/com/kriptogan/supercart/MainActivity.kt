@@ -242,6 +242,16 @@ fun SuperCartApp() {
         context.groceryDataStore.updateData { groceries.map { it.toSerializable() } }
     }
 
+    // Load shopping list from DataStore on first composition
+    LaunchedEffect(Unit) {
+        val loaded = context.shoppingListDataStore.data.first().map { it.withLocalDate() }
+        shoppingList = loaded
+    }
+    // Save shopping list to DataStore whenever it changes
+    LaunchedEffect(shoppingList) {
+        context.shoppingListDataStore.updateData { shoppingList.map { it.toSerializable() } }
+    }
+
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         bottomBar = {
@@ -651,6 +661,22 @@ val Context.groceryDataStore: DataStore<List<Grocery>> by dataStore(
 )
 
 object GroceryListSerializer : Serializer<List<Grocery>> {
+    override val defaultValue: List<Grocery> = emptyList()
+    override suspend fun readFrom(input: InputStream): List<Grocery> =
+        runCatching {
+            Json.decodeFromString(ListSerializer(Grocery.serializer()), input.readBytes().decodeToString())
+        }.getOrDefault(emptyList())
+    override suspend fun writeTo(t: List<Grocery>, output: OutputStream) {
+        output.write(Json.encodeToString(ListSerializer(Grocery.serializer()), t).encodeToByteArray())
+    }
+}
+
+val Context.shoppingListDataStore: DataStore<List<Grocery>> by dataStore(
+    fileName = "shopping_list.json",
+    serializer = ShoppingListSerializer
+)
+
+object ShoppingListSerializer : Serializer<List<Grocery>> {
     override val defaultValue: List<Grocery> = emptyList()
     override suspend fun readFrom(input: InputStream): List<Grocery> =
         runCatching {
