@@ -302,6 +302,8 @@ fun SuperCartApp() {
                     )
                     1 -> ShoppingListScreen(
                         shoppingList = shoppingListItems,
+                        groceries = groceries,
+                        onUpdateGroceries = { groceries = it },
                         onRemove = { grocery ->
                             groceries = groceries.map {
                                 if (it.name == grocery.name && it.category == grocery.category) {
@@ -649,15 +651,38 @@ fun HomeScreen(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ShoppingListScreen(
     shoppingList: List<GroceryWithDate>,
+    groceries: List<GroceryWithDate>,
+    onUpdateGroceries: (List<GroceryWithDate>) -> Unit,
     onRemove: (GroceryWithDate) -> Unit,
     onBuy: (GroceryWithDate) -> Unit
 ) {
     val categoryExpansion = remember { mutableStateMapOf<GroceryCategory, Boolean>() }
     GroceryCategory.values().forEach { cat ->
         if (categoryExpansion[cat] == null) categoryExpansion[cat] = true
+    }
+
+    // Edit state variables
+    var showEditDialog by remember { mutableStateOf(false) }
+    var editGrocery by remember { mutableStateOf<GroceryWithDate?>(null) }
+    var showDeleteConfirm by remember { mutableStateOf(false) }
+
+    // Edit dialog fields
+    var name by remember { mutableStateOf("") }
+    var selectedCategory by remember { mutableStateOf(GroceryCategory.פירות) }
+    var expirationDate by remember { mutableStateOf<LocalDate?>(null) }
+    var showDatePicker by remember { mutableStateOf(false) }
+    var expanded by remember { mutableStateOf(false) }
+
+    fun openEditDialog(grocery: GroceryWithDate) {
+        name = grocery.name
+        selectedCategory = grocery.category
+        expirationDate = grocery.expirationDate
+        editGrocery = grocery
+        showEditDialog = true
     }
 
     LazyColumn(modifier = Modifier.fillMaxSize().padding(16.dp)) {
@@ -724,6 +749,15 @@ fun ShoppingListScreen(
                                                 contentDescription = "הסר"
                                             )
                                         }
+                                        IconButton(
+                                            onClick = { openEditDialog(grocery) },
+                                            modifier = Modifier.padding(start = 4.dp)
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.Edit,
+                                                contentDescription = "ערוך"
+                                            )
+                                        }
                                     }
                                 }
                             }
@@ -732,6 +766,87 @@ fun ShoppingListScreen(
                 }
             }
         }
+    }
+
+    // Edit dialog
+    if (showEditDialog && editGrocery != null) {
+        AlertDialog(
+            onDismissRequest = { showEditDialog = false },
+            confirmButton = {
+                Button(onClick = {
+                    val updated = editGrocery!!.copy(
+                        name = name,
+                        category = selectedCategory,
+                        expirationDate = expirationDate
+                    )
+                    val updatedGroceries = groceries.map {
+                        if (it.name == editGrocery!!.name && it.category == editGrocery!!.category) updated else it
+                    }
+                    onUpdateGroceries(updatedGroceries)
+                    showEditDialog = false
+                }) {
+                    Text("שמור")
+                }
+            },
+            dismissButton = {
+                Button(onClick = { showEditDialog = false }) {
+                    Text("ביטול")
+                }
+            },
+            title = { Text("ערוך מצרך") },
+            text = {
+                Column {
+                    OutlinedTextField(
+                        value = name,
+                        onValueChange = { name = it },
+                        label = { Text("שם המצרך") }
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    // Category dropdown
+                    Box {
+                        Button(onClick = { expanded = true }) {
+                            Text(selectedCategory.displayName)
+                        }
+                        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+                            GroceryCategory.values().forEach { cat ->
+                                DropdownMenuItem(
+                                    text = { Text(cat.displayName) },
+                                    onClick = {
+                                        selectedCategory = cat
+                                        expanded = false
+                                    }
+                                )
+                            }
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))
+                    // Expiration date picker
+                    Button(onClick = { showDatePicker = true }) {
+                        Text(if (expirationDate != null) expirationDate.toString() else "בחר תאריך תפוגה (אופציונלי)")
+                    }
+                    if (showDatePicker) {
+                        val datePickerState = rememberDatePickerState()
+                        DatePickerDialog(
+                            onDismissRequest = { showDatePicker = false },
+                            confirmButton = {
+                                Button(onClick = {
+                                    val millis = datePickerState.selectedDateMillis
+                                    expirationDate = millis?.let {
+                                        LocalDate.ofEpochDay(it / (24 * 60 * 60 * 1000))
+                                    }
+                                    showDatePicker = false
+                                }) { Text("אישור") }
+                            },
+                            dismissButton = {
+                                Button(onClick = { showDatePicker = false }) { Text("ביטול") }
+                            }
+                        ) {
+                            DatePicker(state = datePickerState)
+                        }
+                    }
+                }
+            }
+        )
     }
 }
 
