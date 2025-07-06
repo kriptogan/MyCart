@@ -352,6 +352,8 @@ fun HomeScreen(
     var showDeleteConfirm by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
     var showExpiringOnly by remember { mutableStateOf(false) }
+    var showNotesDialog by remember { mutableStateOf(false) }
+    var notesText by remember { mutableStateOf("") }
 
     // Helper to check if a grocery is expired or expiring soon
     fun isExpiringOrExpired(grocery: GroceryWithDate): Boolean {
@@ -398,7 +400,7 @@ fun HomeScreen(
 
     Box(modifier = Modifier.fillMaxSize()) {
         LazyColumn(modifier = Modifier.fillMaxSize().padding(16.dp)) {
-            // Warning icon row
+            // Top buttons row
             item {
                 Row(
                     modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
@@ -417,6 +419,12 @@ fun HomeScreen(
                         Text("+")
                     }
                     Spacer(modifier = Modifier.weight(1f))
+                    Button(
+                        onClick = { showNotesDialog = true },
+                        modifier = Modifier.padding(end = 8.dp)
+                    ) {
+                        Text("הערות")
+                    }
                     IconButton(
                         onClick = { if (hasExpiring) showExpiringOnly = !showExpiringOnly },
                         enabled = hasExpiring
@@ -647,6 +655,72 @@ fun HomeScreen(
                 },
                 title = { Text("אישור מחיקה") },
                 text = { Text("האם אתה בטוח שברצונך למחוק?") }
+            )
+        }
+        
+        // Notes dialog
+        if (showNotesDialog) {
+            AlertDialog(
+                onDismissRequest = { showNotesDialog = false },
+                confirmButton = {
+                    Button(onClick = {
+                        // Parse each line and add as new items or update existing ones
+                        val lines = notesText.split("\n").filter { it.trim().isNotEmpty() }
+                        if (lines.isNotEmpty()) {
+                            val updatedGroceries = groceries.toMutableList()
+                            
+                            lines.forEach { line ->
+                                val itemName = line.trim()
+                                val existingItemIndex = updatedGroceries.indexOfFirst { it.name == itemName }
+                                
+                                if (existingItemIndex != -1) {
+                                    // Item exists, just set inShoppingList to true
+                                    updatedGroceries[existingItemIndex] = updatedGroceries[existingItemIndex].copy(
+                                        inShoppingList = true
+                                    )
+                                } else {
+                                    // Item doesn't exist, create new item
+                                    val newItem = GroceryWithDate(
+                                        name = itemName,
+                                        category = GroceryCategory.אחר,
+                                        expirationDate = null,
+                                        lastTimeBoughtDays = null,
+                                        averageBuyingDays = null,
+                                        buyEvents = emptyList(),
+                                        inShoppingList = true
+                                    )
+                                    updatedGroceries.add(newItem)
+                                }
+                            }
+                            
+                            onUpdateGroceries(updatedGroceries)
+                        }
+                        notesText = ""
+                        showNotesDialog = false
+                    }) {
+                        Text("הוסף")
+                    }
+                },
+                dismissButton = {
+                    Button(onClick = { 
+                        notesText = ""
+                        showNotesDialog = false 
+                    }) {
+                        Text("סגור")
+                    }
+                },
+                title = { Text("הערות") },
+                text = {
+                    OutlinedTextField(
+                        value = notesText,
+                        onValueChange = { notesText = it },
+                        label = { Text("כתוב הערות...") },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(200.dp),
+                        maxLines = 10
+                    )
+                }
             )
         }
     }
