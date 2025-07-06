@@ -401,7 +401,16 @@ fun HomeScreen(
             daysUntil <= 1L
         } catch (e: Exception) { false }
     }
-    val hasExpiring = groceries.any { it.expirationDate != null && isExpiringOrExpired(it) }
+    val hasExpiring = groceries.any { grocery ->
+        val expDate = grocery.expirationDate
+        val isExpiringOrExpired = expDate != null && try {
+            val daysUntil = ChronoUnit.DAYS.between(LocalDate.now(), expDate)
+            daysUntil <= 1L
+        } catch (e: Exception) { false }
+        val daysSinceLastBuy = grocery.buyEvents.maxOrNull()?.let { date -> ChronoUnit.DAYS.between(date, LocalDate.now()).toInt() } ?: -1
+        val shouldHighlightYellow = !isExpiringOrExpired && grocery.averageBuyingDays != null && daysSinceLastBuy >= (grocery.averageBuyingDays!! - 1)
+        isExpiringOrExpired || shouldHighlightYellow
+    }
 
     // Fields for new/edit grocery
     var name by remember { mutableStateOf("") }
