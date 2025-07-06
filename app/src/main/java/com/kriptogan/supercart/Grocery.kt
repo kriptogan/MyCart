@@ -70,6 +70,8 @@ fun GroceryWithDate.toSerializable(): Grocery = Grocery(
 fun List<java.time.LocalDate>.averageDaysBetween(): Int? {
     if (size < 2) return null
     val sorted = sorted()
-    val intervals = sorted.zipWithNext { a, b -> java.time.temporal.ChronoUnit.DAYS.between(a, b).toInt() }
+    // Take only the last 4 buy events for more recent pattern analysis
+    val recentEvents = if (sorted.size > 4) sorted.takeLast(4) else sorted
+    val intervals = recentEvents.zipWithNext { a, b -> java.time.temporal.ChronoUnit.DAYS.between(a, b).toInt() }
     return if (intervals.isNotEmpty()) intervals.sum() / intervals.size else null
 } 
