@@ -474,7 +474,6 @@ fun HomeScreen(
                             tint = Color.White
                         )
                     }
-                    Spacer(modifier = Modifier.weight(1f))
                     IconButton(
                         onClick = { showNotesDialog = true },
                         modifier = Modifier
@@ -483,14 +482,17 @@ fun HomeScreen(
                                 shape = androidx.compose.foundation.shape.CircleShape
                             )
                             .size(48.dp)
-                            .padding(end = 8.dp)
+                            .padding(start = 0.dp)
                     ) {
                         Icon(
                             imageVector = Icons.Default.Edit,
                             contentDescription = "הערות",
-                            tint = Color.White
+                            tint = Color.White,
+                            modifier = Modifier.size(24.dp)
                         )
                     }
+                    Spacer(modifier = Modifier.width(30.dp))
+                    Spacer(modifier = Modifier.weight(1f))
                     IconButton(
                         onClick = { if (hasExpiring) showExpiringOnly = !showExpiringOnly },
                         enabled = hasExpiring,
