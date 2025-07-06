@@ -281,28 +281,28 @@ fun SuperCartApp() {
                             onClick = { selectedTab = index },
                             icon = {
                                 if (tabItem.title == "רשימת קניות" && shoppingListItems.isNotEmpty()) {
-                                    BadgedBox(badge = { 
+                                    BadgedBox(badge = {
                                         Badge(
-                                            containerColor = Color(0xFFFF5722) // Orange badge
-                                        ) { 
+                                            containerColor = Color(0xFFFF5722)
+                                        ) {
                                             Text(
                                                 shoppingListItems.size.toString(),
                                                 color = Color.White,
                                                 fontSize = 12.sp
-                                            ) 
-                                        } 
+                                            )
+                                        }
                                     }) {
                                         Icon(
-                                            imageVector = tabItem.icon, 
+                                            imageVector = tabItem.icon,
                                             contentDescription = tabItem.title,
-                                            tint = if (selectedTab == index) Color.White else Color.White.copy(alpha = 0.7f)
+                                            tint = if (selectedTab == index) Color(0xFF4CAF50) else Color.White.copy(alpha = 0.7f)
                                         )
                                     }
                                 } else {
                                     Icon(
-                                        imageVector = tabItem.icon, 
+                                        imageVector = tabItem.icon,
                                         contentDescription = tabItem.title,
-                                        tint = if (selectedTab == index) Color.White else Color.White.copy(alpha = 0.7f)
+                                        tint = if (selectedTab == index) Color(0xFF4CAF50) else Color.White.copy(alpha = 0.7f)
                                     )
                                 }
                             },
