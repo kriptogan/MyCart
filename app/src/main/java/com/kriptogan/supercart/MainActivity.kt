@@ -505,7 +505,8 @@ fun HomeScreen(
                                             ) {
                                                 Icon(
                                                     imageVector = Icons.Default.ShoppingCart,
-                                                    contentDescription = "הוסף לרשימת קניות"
+                                                    contentDescription = "הוסף לרשימת קניות",
+                                                    tint = if (indexedGrocery.value.inShoppingList) Color.Green else Color.Unspecified
                                                 )
                                             }
                                             IconButton(
