@@ -78,6 +78,7 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.clickable
+import androidx.compose.material.icons.filled.Add
 import androidx.datastore.core.DataStore
 import androidx.datastore.core.Serializer
 import androidx.datastore.dataStore
@@ -406,7 +407,7 @@ fun HomeScreen(
                     modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Button(
+                    IconButton(
                         onClick = {
                             name = ""
                             selectedCategory = GroceryCategory.פירות
@@ -416,14 +417,20 @@ fun HomeScreen(
                         },
                         modifier = Modifier
                     ) {
-                        Text("+")
+                        Icon(
+                            imageVector = Icons.Default.Add,
+                            contentDescription = "הוסף מצרך"
+                        )
                     }
                     Spacer(modifier = Modifier.weight(1f))
-                    Button(
+                    IconButton(
                         onClick = { showNotesDialog = true },
                         modifier = Modifier.padding(end = 8.dp)
                     ) {
-                        Text("הערות")
+                        Icon(
+                            imageVector = Icons.Default.Edit,
+                            contentDescription = "הערות"
+                        )
                     }
                     IconButton(
                         onClick = { if (hasExpiring) showExpiringOnly = !showExpiringOnly },
