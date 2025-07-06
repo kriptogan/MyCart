@@ -234,7 +234,6 @@ fun SuperCartApp() {
         TabItem("בית", Icons.Default.Home),
         TabItem("רשימת קניות", Icons.Default.ShoppingCart)
     )
-    var shoppingList by remember { mutableStateOf(listOf<GroceryWithDate>()) }
     var groceries by remember { mutableStateOf(listOf<GroceryWithDate>()) }
     val context = LocalContext.current
 
@@ -247,14 +246,10 @@ fun SuperCartApp() {
     LaunchedEffect(groceries) {
         context.groceryDataStore.updateData { groceries.map { it.toSerializable() } }
     }
-    // Load shopping list from DataStore on first composition
-    LaunchedEffect(Unit) {
-        val loaded = context.shoppingListDataStore.data.first().map { it.withLocalDate() }
-        shoppingList = loaded
-    }
-    // Save shopping list to DataStore whenever it changes
-    LaunchedEffect(shoppingList) {
-        context.shoppingListDataStore.updateData { shoppingList.map { it.toSerializable() } }
+
+    // Helper function to get shopping list items by filtering inShoppingList = true
+    val shoppingListItems = remember(groceries) {
+        groceries.filter { it.inShoppingList }
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -270,8 +265,8 @@ fun SuperCartApp() {
                             selected = selectedTab == index,
                             onClick = { selectedTab = index },
                             icon = {
-                                if (tabItem.title == "רשימת קניות" && shoppingList.isNotEmpty()) {
-                                    BadgedBox(badge = { Badge { Text(shoppingList.size.toString()) } }) {
+                                if (tabItem.title == "רשימת קניות" && shoppingListItems.isNotEmpty()) {
+                                    BadgedBox(badge = { Badge { Text(shoppingListItems.size.toString()) } }) {
                                         Icon(imageVector = tabItem.icon, contentDescription = tabItem.title)
                                     }
                                 } else {
@@ -292,20 +287,31 @@ fun SuperCartApp() {
             ) {
                 when (selectedTab) {
                     0 -> HomeScreen(
-                        shoppingList = shoppingList,
+                        shoppingList = shoppingListItems,
+                        groceries = groceries,
+                        onUpdateGroceries = { groceries = it },
                         onAddToShoppingList = { grocery ->
-                            if (shoppingList.none { it.name == grocery.name && it.category == grocery.category }) {
-                                shoppingList = shoppingList + grocery
+                            groceries = groceries.map {
+                                if (it.name == grocery.name && it.category == grocery.category) {
+                                    it.copy(inShoppingList = true)
+                                } else {
+                                    it
+                                }
                             }
                         }
                     )
                     1 -> ShoppingListScreen(
-                        shoppingList = shoppingList,
+                        shoppingList = shoppingListItems,
                         onRemove = { grocery ->
-                            shoppingList = shoppingList.filterNot { it.name == grocery.name && it.category == grocery.category }
+                            groceries = groceries.map {
+                                if (it.name == grocery.name && it.category == grocery.category) {
+                                    it.copy(inShoppingList = false)
+                                } else {
+                                    it
+                                }
+                            }
                         },
                         onBuy = { grocery ->
-                            shoppingList = shoppingList.filterNot { it.name == grocery.name && it.category == grocery.category }
                             groceries = groceries.map {
                                 if (it.name == grocery.name && it.category == grocery.category) {
                                     val today = LocalDate.now()
@@ -314,7 +320,8 @@ fun SuperCartApp() {
                                     it.copy(
                                         lastTimeBoughtDays = 0,
                                         averageBuyingDays = avg,
-                                        buyEvents = newBuyEvents
+                                        buyEvents = newBuyEvents,
+                                        inShoppingList = false
                                     )
                                 } else {
                                     it
@@ -332,10 +339,11 @@ fun SuperCartApp() {
 @Composable
 fun HomeScreen(
     shoppingList: List<GroceryWithDate>,
+    groceries: List<GroceryWithDate>,
+    onUpdateGroceries: (List<GroceryWithDate>) -> Unit,
     onAddToShoppingList: (GroceryWithDate) -> Unit
 ) {
     val context = LocalContext.current
-    var groceries by remember { mutableStateOf(listOf<GroceryWithDate>()) }
     var showDialog by remember { mutableStateOf(false) }
     var isEditMode by remember { mutableStateOf(false) }
     var editIndex by remember { mutableStateOf(-1) }
@@ -352,17 +360,6 @@ fun HomeScreen(
         } catch (e: Exception) { false }
     }
     val hasExpiring = groceries.any { it.expirationDate != null && isExpiringOrExpired(it) }
-
-    // Load groceries from DataStore on first composition
-    LaunchedEffect(Unit) {
-        val loaded = context.groceryDataStore.data.first().map { it.withLocalDate() }
-        groceries = loaded
-    }
-
-    // Save groceries to DataStore whenever they change
-    LaunchedEffect(groceries) {
-        context.groceryDataStore.updateData { groceries.map { it.toSerializable() } }
-    }
 
     // Fields for new/edit grocery
     var name by remember { mutableStateOf("") }
@@ -534,19 +531,21 @@ fun HomeScreen(
                     Button(onClick = {
                         if (name.isNotBlank()) {
                             if (isEditMode && editIndex >= 0) {
-                                groceries = groceries.toMutableList().also {
+                                val updatedGroceries = groceries.toMutableList().also {
                                     it[editIndex] = it[editIndex].copy(
                                         name = name,
                                         category = selectedCategory,
                                         expirationDate = expirationDate
                                     )
                                 }
+                                onUpdateGroceries(updatedGroceries)
                             } else {
-                                groceries = groceries + GroceryWithDate(
+                                val updatedGroceries = groceries + GroceryWithDate(
                                     name = name,
                                     category = selectedCategory,
                                     expirationDate = expirationDate
                                 )
+                                onUpdateGroceries(updatedGroceries)
                             }
                             name = ""
                             selectedCategory = GroceryCategory.פירות
@@ -630,7 +629,8 @@ fun HomeScreen(
                 onDismissRequest = { showDeleteConfirm = false },
                 confirmButton = {
                     Button(onClick = {
-                        groceries = groceries.toMutableList().also { it.removeAt(editIndex) }
+                        val updatedGroceries = groceries.toMutableList().also { it.removeAt(editIndex) }
+                        onUpdateGroceries(updatedGroceries)
                         showDeleteConfirm = false
                         showDialog = false
                     }) {
@@ -759,18 +759,3 @@ object GroceryListSerializer : Serializer<List<Grocery>> {
     }
 }
 
-val Context.shoppingListDataStore: DataStore<List<Grocery>> by dataStore(
-    fileName = "shopping_list.json",
-    serializer = ShoppingListSerializer
-)
-
-object ShoppingListSerializer : Serializer<List<Grocery>> {
-    override val defaultValue: List<Grocery> = emptyList()
-    override suspend fun readFrom(input: InputStream): List<Grocery> =
-        runCatching {
-            Json.decodeFromString(ListSerializer(Grocery.serializer()), input.readBytes().decodeToString())
-        }.getOrDefault(emptyList())
-    override suspend fun writeTo(t: List<Grocery>, output: OutputStream) {
-        output.write(Json.encodeToString(ListSerializer(Grocery.serializer()), t).encodeToByteArray())
-    }
-}
