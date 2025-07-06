@@ -474,6 +474,7 @@ fun HomeScreen(
                             tint = Color.White
                         )
                     }
+                    Spacer(modifier = Modifier.width(30.dp))
                     IconButton(
                         onClick = { showNotesDialog = true },
                         modifier = Modifier
@@ -491,7 +492,6 @@ fun HomeScreen(
                             modifier = Modifier.size(24.dp)
                         )
                     }
-                    Spacer(modifier = Modifier.width(30.dp))
                     Spacer(modifier = Modifier.weight(1f))
                     IconButton(
                         onClick = { if (hasExpiring) showExpiringOnly = !showExpiringOnly },
