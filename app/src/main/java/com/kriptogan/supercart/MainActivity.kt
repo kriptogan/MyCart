@@ -596,6 +596,15 @@ fun HomeScreen(
                                                 modifier = Modifier.weight(1f)
                                             )
                                             IconButton(
+                                                onClick = { openEditDialog(indexedGrocery.index, indexedGrocery.value) },
+                                                modifier = Modifier.padding(start = 4.dp)
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Default.Edit,
+                                                    contentDescription = "ערוך"
+                                                )
+                                            }
+                                            IconButton(
                                                 onClick = { onAddToShoppingList(indexedGrocery.value) },
                                                 modifier = Modifier.padding(start = 4.dp)
                                             ) {
@@ -603,15 +612,6 @@ fun HomeScreen(
                                                     imageVector = Icons.Default.ShoppingCart,
                                                     contentDescription = "הוסף לרשימת קניות",
                                                     tint = if (indexedGrocery.value.inShoppingList) Color.Green else Color.Unspecified
-                                                )
-                                            }
-                                            IconButton(
-                                                onClick = { openEditDialog(indexedGrocery.index, indexedGrocery.value) },
-                                                modifier = Modifier.padding(start = 8.dp)
-                                            ) {
-                                                Icon(
-                                                    imageVector = Icons.Default.Edit,
-                                                    contentDescription = "ערוך"
                                                 )
                                             }
                                         }
@@ -904,15 +904,6 @@ fun ShoppingListScreen(
                                             modifier = Modifier.weight(1f)
                                         )
                                         IconButton(
-                                            onClick = { onBuy(grocery) },
-                                            modifier = Modifier.padding(start = 4.dp)
-                                        ) {
-                                            Icon(
-                                                imageVector = Icons.Default.Check,
-                                                contentDescription = "נרכש"
-                                            )
-                                        }
-                                        IconButton(
                                             onClick = { onRemove(grocery) },
                                             modifier = Modifier.padding(start = 4.dp)
                                         ) {
@@ -928,6 +919,15 @@ fun ShoppingListScreen(
                                             Icon(
                                                 imageVector = Icons.Default.Edit,
                                                 contentDescription = "ערוך"
+                                            )
+                                        }
+                                        IconButton(
+                                            onClick = { onBuy(grocery) },
+                                            modifier = Modifier.padding(start = 4.dp)
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.Check,
+                                                contentDescription = "נרכש"
                                             )
                                         }
                                     }
