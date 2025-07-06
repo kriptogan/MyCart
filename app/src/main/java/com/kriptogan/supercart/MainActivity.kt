@@ -161,7 +161,14 @@ fun CustomStatusBar() {
         modifier = Modifier
             .fillMaxWidth()
             .height(48.dp)
-            .background(Color.Black.copy(alpha = 0.8f)),
+            .background(
+                Brush.verticalGradient(
+                    colors = listOf(
+                        Color(0xFF4CAF50), // Green gradient
+                        Color(0xFF66BB6A)
+                    )
+                )
+            ),
         color = Color.Transparent
     ) {
         Row(
@@ -184,7 +191,10 @@ fun CustomStatusBar() {
                 Box(
                     modifier = Modifier
                         .size(20.dp, 12.dp)
-                        .background(Color.White, shape = androidx.compose.foundation.shape.RoundedCornerShape(2.dp))
+                        .background(
+                            color = Color.White,
+                            shape = androidx.compose.foundation.shape.RoundedCornerShape(2.dp)
+                        )
                 )
             }
             
@@ -259,22 +269,49 @@ fun SuperCartApp() {
             modifier = Modifier
                 .fillMaxSize()
                 .padding(top = 48.dp), // Space for custom status bar
+            containerColor = Color(0xFFF5F5F5), // Light gray background
             bottomBar = {
-                NavigationBar {
+                NavigationBar(
+                    containerColor = Color(0xFF4CAF50), // Green navigation bar
+                    contentColor = Color.White
+                ) {
                     tabs.forEachIndexed { index, tabItem ->
                         NavigationBarItem(
                             selected = selectedTab == index,
                             onClick = { selectedTab = index },
                             icon = {
                                 if (tabItem.title == "רשימת קניות" && shoppingListItems.isNotEmpty()) {
-                                    BadgedBox(badge = { Badge { Text(shoppingListItems.size.toString()) } }) {
-                                        Icon(imageVector = tabItem.icon, contentDescription = tabItem.title)
+                                    BadgedBox(badge = { 
+                                        Badge(
+                                            containerColor = Color(0xFFFF5722) // Orange badge
+                                        ) { 
+                                            Text(
+                                                shoppingListItems.size.toString(),
+                                                color = Color.White,
+                                                fontSize = 12.sp
+                                            ) 
+                                        } 
+                                    }) {
+                                        Icon(
+                                            imageVector = tabItem.icon, 
+                                            contentDescription = tabItem.title,
+                                            tint = if (selectedTab == index) Color.White else Color.White.copy(alpha = 0.7f)
+                                        )
                                     }
                                 } else {
-                                    Icon(imageVector = tabItem.icon, contentDescription = tabItem.title)
+                                    Icon(
+                                        imageVector = tabItem.icon, 
+                                        contentDescription = tabItem.title,
+                                        tint = if (selectedTab == index) Color.White else Color.White.copy(alpha = 0.7f)
+                                    )
                                 }
                             },
-                            label = { Text(text = tabItem.title) }
+                            label = { 
+                                Text(
+                                    text = tabItem.title,
+                                    color = if (selectedTab == index) Color.White else Color.White.copy(alpha = 0.7f)
+                                ) 
+                            }
                         )
                     }
                 }
@@ -404,7 +441,7 @@ fun HomeScreen(
             // Top buttons row
             item {
                 Row(
-                    modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     IconButton(
@@ -416,30 +453,49 @@ fun HomeScreen(
                             showDialog = true
                         },
                         modifier = Modifier
+                            .background(
+                                color = Color(0xFF4CAF50),
+                                shape = androidx.compose.foundation.shape.CircleShape
+                            )
+                            .size(48.dp)
                     ) {
                         Icon(
                             imageVector = Icons.Default.Add,
-                            contentDescription = "הוסף מצרך"
+                            contentDescription = "הוסף מצרך",
+                            tint = Color.White
                         )
                     }
                     Spacer(modifier = Modifier.weight(1f))
                     IconButton(
                         onClick = { showNotesDialog = true },
-                        modifier = Modifier.padding(end = 8.dp)
+                        modifier = Modifier
+                            .background(
+                                color = Color(0xFF2196F3),
+                                shape = androidx.compose.foundation.shape.CircleShape
+                            )
+                            .size(48.dp)
+                            .padding(end = 8.dp)
                     ) {
                         Icon(
                             imageVector = Icons.Default.Edit,
-                            contentDescription = "הערות"
+                            contentDescription = "הערות",
+                            tint = Color.White
                         )
                     }
                     IconButton(
                         onClick = { if (hasExpiring) showExpiringOnly = !showExpiringOnly },
-                        enabled = hasExpiring
+                        enabled = hasExpiring,
+                        modifier = Modifier
+                            .background(
+                                color = if (hasExpiring) Color(0xFFFF9800) else Color(0xFFBDBDBD),
+                                shape = androidx.compose.foundation.shape.CircleShape
+                            )
+                            .size(48.dp)
                     ) {
                         Icon(
                             imageVector = Icons.Default.Warning,
                             contentDescription = "הצג רק מוצרים שפג תוקפם, עומדים לפוג, או עבר ממוצע קנייה",
-                            tint = if (hasExpiring) Color(0xFFFFC107) else Color.Gray
+                            tint = Color.White
                         )
                     }
                 }
@@ -450,7 +506,15 @@ fun HomeScreen(
                     value = searchQuery,
                     onValueChange = { searchQuery = it },
                     label = { Text("חפש מצרך...") },
-                    modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp)
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 16.dp),
+                    colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = Color(0xFF4CAF50),
+                        unfocusedBorderColor = Color(0xFFBDBDBD),
+                        focusedLabelColor = Color(0xFF4CAF50)
+                    ),
+                    shape = androidx.compose.foundation.shape.RoundedCornerShape(8.dp)
                 )
             }
             GroceryCategory.values().forEach { category ->
@@ -464,7 +528,11 @@ fun HomeScreen(
                                 .fillMaxWidth()
                                 .padding(bottom = 12.dp),
                             border = CardDefaults.outlinedCardBorder(),
-                            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+                            colors = CardDefaults.cardColors(
+                                containerColor = Color.White
+                            ),
+                            shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp)
                         ) {
                             Column {
                                 // Header (clickable for expand/collapse)
@@ -501,14 +569,16 @@ fun HomeScreen(
                                             verticalAlignment = Alignment.CenterVertically,
                                             modifier = Modifier
                                                 .fillMaxWidth()
-                                                .padding(horizontal = 12.dp, vertical = 8.dp)
+                                                .padding(horizontal = 16.dp, vertical = 12.dp)
                                                 .background(
                                                     when {
-                                                        isExpiringOrExpired -> Color(0xFFFFCDD2)
-                                                        shouldHighlightYellow -> Color(0xFFFFF9C4)
-                                                        else -> Color.Transparent
-                                                    }
+                                                        isExpiringOrExpired -> Color(0xFFFFEBEE) // Lighter red
+                                                        shouldHighlightYellow -> Color(0xFFFFF8E1) // Lighter yellow
+                                                        else -> Color(0xFFF8F9FA) // Very light gray
+                                                    },
+                                                    shape = androidx.compose.foundation.shape.RoundedCornerShape(8.dp)
                                                 )
+                                                .padding(horizontal = 12.dp, vertical = 8.dp)
                                         ) {
                                             Text(
                                                 text = indexedGrocery.value.name,
