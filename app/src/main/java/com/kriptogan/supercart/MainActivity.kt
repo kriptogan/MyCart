@@ -856,7 +856,11 @@ fun ShoppingListScreen(
                             .fillMaxWidth()
                             .padding(bottom = 12.dp),
                         border = CardDefaults.outlinedCardBorder(),
-                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = Color.White
+                        ),
+                        shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp)
                     ) {
                         Column {
                             Row(
@@ -886,6 +890,11 @@ fun ShoppingListScreen(
                                         verticalAlignment = Alignment.CenterVertically,
                                         modifier = Modifier
                                             .fillMaxWidth()
+                                            .padding(horizontal = 16.dp, vertical = 12.dp)
+                                            .background(
+                                                Color(0xFFF8F9FA), // Very light gray background
+                                                shape = androidx.compose.foundation.shape.RoundedCornerShape(8.dp)
+                                            )
                                             .padding(horizontal = 12.dp, vertical = 8.dp)
                                     ) {
                                         Text(
