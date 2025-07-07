@@ -455,7 +455,7 @@ fun HomeScreen(
                 ) {
                     IconButton(
                         onClick = {
-                            name = ""
+                            name = if (searchQuery.isNotBlank()) searchQuery else ""
                             selectedCategory = GroceryCategory.פירות
                             expirationDate = null
                             isEditMode = false
