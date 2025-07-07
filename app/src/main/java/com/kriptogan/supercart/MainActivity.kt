@@ -99,6 +99,16 @@ import java.time.temporal.ChronoUnit
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.List
+import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.foundation.layout.heightIn
+import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.stringPreferencesKey
+import androidx.datastore.preferences.preferencesDataStore
+import kotlinx.coroutines.launch
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.CoroutineScope
 
 data class TabItem(
     val title: String,
@@ -247,6 +257,24 @@ fun SuperCartApp() {
     )
     var groceries by remember { mutableStateOf(listOf<GroceryWithDate>()) }
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+
+    // Category order state
+    var categoryOrder by remember { mutableStateOf<List<String>?>(null) }
+    var reorderList by remember { mutableStateOf(GroceryCategory.values().map { it }) }
+
+    // Load saved order on first composition
+    LaunchedEffect(Unit) {
+        val saved = context.categoryOrderDataStore.data.first()[CATEGORY_ORDER_KEY]
+        categoryOrder = saved?.split(",")
+        if (categoryOrder != null) {
+            reorderList = categoryOrder!!.mapNotNull { name -> GroceryCategory.values().find { it.name == name } }
+        }
+    }
+
+    // Compute ordered categories
+    val orderedCategories = categoryOrder?.mapNotNull { name -> GroceryCategory.values().find { it.name == name } }
+        ?: GroceryCategory.values().toList()
 
     // Load groceries from DataStore on first composition
     LaunchedEffect(Unit) {
@@ -336,7 +364,13 @@ fun SuperCartApp() {
                                     it
                                 }
                             }
-                        }
+                        },
+                        orderedCategories = orderedCategories,
+                        reorderList = reorderList,
+                        setReorderList = { reorderList = it },
+                        categoryOrder = categoryOrder,
+                        setCategoryOrder = { categoryOrder = it },
+                        scope = scope
                     )
                     1 -> ShoppingListScreen(
                         shoppingList = shoppingListItems,
@@ -367,7 +401,8 @@ fun SuperCartApp() {
                                     it
                                 }
                             }
-                        }
+                        },
+                        orderedCategories = orderedCategories
                     )
                 }
             }
@@ -381,7 +416,13 @@ fun HomeScreen(
     shoppingList: List<GroceryWithDate>,
     groceries: List<GroceryWithDate>,
     onUpdateGroceries: (List<GroceryWithDate>) -> Unit,
-    onAddToShoppingList: (GroceryWithDate) -> Unit
+    onAddToShoppingList: (GroceryWithDate) -> Unit,
+    orderedCategories: List<GroceryCategory>,
+    reorderList: List<GroceryCategory>,
+    setReorderList: (List<GroceryCategory>) -> Unit,
+    categoryOrder: List<String>?,
+    setCategoryOrder: (List<String>?) -> Unit,
+    scope: CoroutineScope
 ) {
     val context = LocalContext.current
     var showDialog by remember { mutableStateOf(false) }
@@ -392,6 +433,7 @@ fun HomeScreen(
     var showExpiringOnly by remember { mutableStateOf(false) }
     var showNotesDialog by remember { mutableStateOf(false) }
     var notesText by remember { mutableStateOf("") }
+    var showReorderDialog by remember { mutableStateOf(false) }
 
     // Helper to check if a grocery is expired or expiring soon
     fun isExpiringOrExpired(grocery: GroceryWithDate): Boolean {
@@ -421,7 +463,7 @@ fun HomeScreen(
 
     // State for expanded/collapsed categories
     val categoryExpansion = remember { mutableStateMapOf<GroceryCategory, Boolean>() }
-    GroceryCategory.values().forEach { cat ->
+    orderedCategories.forEach { cat ->
         if (categoryExpansion[cat] == null) categoryExpansion[cat] = true
     }
 
@@ -492,6 +534,24 @@ fun HomeScreen(
                             modifier = Modifier.size(24.dp)
                         )
                     }
+                    Spacer(modifier = Modifier.width(10.dp))
+                    IconButton(
+                        onClick = { showReorderDialog = true },
+                        modifier = Modifier
+                            .background(
+                                color = Color(0xFF757575), // Gray
+                                shape = androidx.compose.foundation.shape.CircleShape
+                            )
+                            .size(48.dp)
+                            .padding(start = 0.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.List,
+                            contentDescription = "סדר קטגוריות",
+                            tint = Color.White,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
                     Spacer(modifier = Modifier.weight(1f))
                     IconButton(
                         onClick = { if (hasExpiring) showExpiringOnly = !showExpiringOnly },
@@ -528,7 +588,7 @@ fun HomeScreen(
                     shape = androidx.compose.foundation.shape.RoundedCornerShape(8.dp)
                 )
             }
-            GroceryCategory.values().forEach { category ->
+            orderedCategories.forEach { category ->
                 val itemsInCategory = groceries.withIndex()
                     .filter { it.value.category == category && it.value.name.contains(searchQuery, ignoreCase = true) }
                     .filter { !showExpiringOnly || shouldShowInAlertFilter(it.value) }
@@ -683,7 +743,7 @@ fun HomeScreen(
                                 Text(selectedCategory.displayName)
                             }
                             DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-                                GroceryCategory.values().forEach { cat ->
+                                orderedCategories.forEach { cat ->
                                     DropdownMenuItem(
                                         text = { Text(cat.displayName) },
                                         onClick = {
@@ -811,6 +871,61 @@ fun HomeScreen(
                 }
             )
         }
+        if (showReorderDialog) {
+            AlertDialog(
+                onDismissRequest = { showReorderDialog = false },
+                confirmButton = {
+                    Row {
+                        Button(onClick = {
+                            // Save order to DataStore
+                            scope.launch {
+                                context.categoryOrderDataStore.edit { prefs ->
+                                    prefs[CATEGORY_ORDER_KEY] = reorderList.joinToString(",") { it.name }
+                                }
+                                setCategoryOrder(reorderList.map { it.name })
+                            }
+                            showReorderDialog = false
+                        }) { Text("שמור") }
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Button(onClick = { showReorderDialog = false }) { Text("סגור") }
+                    }
+                },
+                title = { Text("סדר קטגוריות") },
+                text = {
+                    LazyColumn(modifier = Modifier.heightIn(max = 350.dp)) {
+                        itemsIndexed(reorderList) { idx, cat ->
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(cat.displayName, modifier = Modifier.weight(1f))
+                                IconButton(
+                                    onClick = {
+                                        if (idx > 0) {
+                                            val newList = reorderList.toMutableList()
+                                            newList[idx] = newList[idx - 1].also { newList[idx - 1] = newList[idx] }
+                                            setReorderList(newList)
+                                        }
+                                    },
+                                    enabled = idx > 0
+                                ) {
+                                    Icon(Icons.Default.KeyboardArrowUp, contentDescription = "העלה")
+                                }
+                                IconButton(
+                                    onClick = {
+                                        if (idx < reorderList.size - 1) {
+                                            val newList = reorderList.toMutableList()
+                                            newList[idx] = newList[idx + 1].also { newList[idx + 1] = newList[idx] }
+                                            setReorderList(newList)
+                                        }
+                                    },
+                                    enabled = idx < reorderList.size - 1
+                                ) {
+                                    Icon(Icons.Default.KeyboardArrowDown, contentDescription = "הורד")
+                                }
+                            }
+                        }
+                    }
+                }
+            )
+        }
     }
 }
 
@@ -821,10 +936,11 @@ fun ShoppingListScreen(
     groceries: List<GroceryWithDate>,
     onUpdateGroceries: (List<GroceryWithDate>) -> Unit,
     onRemove: (GroceryWithDate) -> Unit,
-    onBuy: (GroceryWithDate) -> Unit
+    onBuy: (GroceryWithDate) -> Unit,
+    orderedCategories: List<GroceryCategory>
 ) {
     val categoryExpansion = remember { mutableStateMapOf<GroceryCategory, Boolean>() }
-    GroceryCategory.values().forEach { cat ->
+    orderedCategories.forEach { cat ->
         if (categoryExpansion[cat] == null) categoryExpansion[cat] = true
     }
 
@@ -849,7 +965,7 @@ fun ShoppingListScreen(
     }
 
     LazyColumn(modifier = Modifier.fillMaxSize().padding(16.dp)) {
-        GroceryCategory.values().forEach { category ->
+        orderedCategories.forEach { category ->
             val itemsInCategory = shoppingList.filter { it.category == category }
             if (itemsInCategory.isNotEmpty()) {
                 item(key = category) {
@@ -980,7 +1096,7 @@ fun ShoppingListScreen(
                             Text(selectedCategory.displayName)
                         }
                         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-                            GroceryCategory.values().forEach { cat ->
+                            orderedCategories.forEach { cat ->
                                 DropdownMenuItem(
                                     text = { Text(cat.displayName) },
                                     onClick = {
@@ -1045,4 +1161,7 @@ object GroceryListSerializer : Serializer<List<Grocery>> {
         output.write(Json.encodeToString(ListSerializer(Grocery.serializer()), t).encodeToByteArray())
     }
 }
+
+val Context.categoryOrderDataStore by preferencesDataStore(name = "category_order_prefs")
+val CATEGORY_ORDER_KEY = stringPreferencesKey("category_order")
 
