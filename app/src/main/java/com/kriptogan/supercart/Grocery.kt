@@ -3,6 +3,15 @@ package com.kriptogan.supercart
 import java.time.LocalDate
 import kotlinx.serialization.Serializable
 
+// Custom category data class
+@Serializable
+data class CustomCategory(
+    val id: Int,           // Unique identifier
+    val name: String,       // Display name
+    val default: Boolean,   // Whether this is a default category
+    val viewOrder: Int      // Order for display
+)
+
 // קטגוריות מצרכים
 @Serializable
 enum class GroceryCategory(val displayName: String) {

@@ -1165,3 +1165,20 @@ object GroceryListSerializer : Serializer<List<Grocery>> {
 val Context.categoryOrderDataStore by preferencesDataStore(name = "category_order_prefs")
 val CATEGORY_ORDER_KEY = stringPreferencesKey("category_order")
 
+// Custom categories DataStore
+val Context.customCategoriesDataStore: DataStore<List<CustomCategory>> by dataStore(
+    fileName = "custom_categories.json",
+    serializer = CustomCategoryListSerializer
+)
+
+object CustomCategoryListSerializer : Serializer<List<CustomCategory>> {
+    override val defaultValue: List<CustomCategory> = emptyList()
+    override suspend fun readFrom(input: InputStream): List<CustomCategory> =
+        runCatching {
+            Json.decodeFromString(ListSerializer(CustomCategory.serializer()), input.readBytes().decodeToString())
+        }.getOrDefault(emptyList())
+    override suspend fun writeTo(t: List<CustomCategory>, output: OutputStream) {
+        output.write(Json.encodeToString(ListSerializer(CustomCategory.serializer()), t).encodeToByteArray())
+    }
+}
+
