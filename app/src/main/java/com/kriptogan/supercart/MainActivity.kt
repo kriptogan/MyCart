@@ -439,6 +439,14 @@ fun HomeScreen(
     var showNotesDialog by remember { mutableStateOf(false) }
     var notesText by remember { mutableStateOf("") }
     var showReorderDialog by remember { mutableStateOf(false) }
+    var customCategories by remember { mutableStateOf<List<CustomCategory>>(emptyList()) }
+    var selectedCustomCategoryId by remember { mutableStateOf<Int?>(null) }
+    var customCategoryExpanded by remember { mutableStateOf(false) }
+
+    // Load custom categories
+    LaunchedEffect(Unit) {
+        customCategories = context.customCategoriesDataStore.data.first()
+    }
 
     // Helper to check if a grocery is expired or expiring soon
     fun isExpiringOrExpired(grocery: GroceryWithDate): Boolean {
@@ -475,6 +483,7 @@ fun HomeScreen(
     fun openEditDialog(index: Int, grocery: GroceryWithDate) {
         name = grocery.name
         selectedCategory = grocery.category
+        selectedCustomCategoryId = grocery.customCategoryId
         expirationDate = grocery.expirationDate
         editIndex = index
         isEditMode = true
@@ -504,6 +513,7 @@ fun HomeScreen(
                         onClick = {
                             name = if (searchQuery.isNotBlank()) searchQuery else ""
                             selectedCategory = GroceryCategory.פירות
+                            selectedCustomCategoryId = null
                             expirationDate = null
                             isEditMode = false
                             showDialog = true
@@ -694,25 +704,28 @@ fun HomeScreen(
                 confirmButton = {
                     Button(onClick = {
                         if (name.isNotBlank()) {
-                            if (isEditMode && editIndex >= 0) {
-                                val updatedGroceries = groceries.toMutableList().also {
-                                    it[editIndex] = it[editIndex].copy(
-                                        name = name,
-                                        category = selectedCategory,
-                                        expirationDate = expirationDate
-                                    )
-                                }
-                                onUpdateGroceries(updatedGroceries)
-                            } else {
-                                val updatedGroceries = groceries + GroceryWithDate(
+                                                    if (isEditMode && editIndex >= 0) {
+                            val updatedGroceries = groceries.toMutableList().also {
+                                it[editIndex] = it[editIndex].copy(
                                     name = name,
                                     category = selectedCategory,
+                                    customCategoryId = selectedCustomCategoryId,
                                     expirationDate = expirationDate
                                 )
-                                onUpdateGroceries(updatedGroceries)
                             }
+                            onUpdateGroceries(updatedGroceries)
+                        } else {
+                            val updatedGroceries = groceries + GroceryWithDate(
+                                name = name,
+                                category = selectedCategory,
+                                customCategoryId = selectedCustomCategoryId,
+                                expirationDate = expirationDate
+                            )
+                            onUpdateGroceries(updatedGroceries)
+                        }
                             name = ""
                             selectedCategory = GroceryCategory.פירות
+                            selectedCustomCategoryId = null
                             expirationDate = null
                             showDialog = false
                         }
@@ -754,6 +767,32 @@ fun HomeScreen(
                                         onClick = {
                                             selectedCategory = cat
                                             expanded = false
+                                        }
+                                    )
+                                }
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
+                        // Custom category dropdown
+                        Box {
+                            val selectedCustomCategory = customCategories.find { it.id == selectedCustomCategoryId }
+                            Button(onClick = { customCategoryExpanded = true }) {
+                                Text(selectedCustomCategory?.name ?: "בחר קטגוריה מותאמת (אופציונלי)")
+                            }
+                            DropdownMenu(expanded = customCategoryExpanded, onDismissRequest = { customCategoryExpanded = false }) {
+                                DropdownMenuItem(
+                                    text = { Text("ללא קטגוריה מותאמת") },
+                                    onClick = {
+                                        selectedCustomCategoryId = null
+                                        customCategoryExpanded = false
+                                    }
+                                )
+                                customCategories.sortedBy { it.viewOrder }.forEach { customCat ->
+                                    DropdownMenuItem(
+                                        text = { Text(customCat.name) },
+                                        onClick = {
+                                            selectedCustomCategoryId = customCat.id
+                                            customCategoryExpanded = false
                                         }
                                     )
                                 }

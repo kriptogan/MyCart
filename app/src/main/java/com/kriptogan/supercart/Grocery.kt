@@ -39,6 +39,7 @@ enum class GroceryCategory(val displayName: String) {
 data class Grocery(
     val name: String, // שם המצרך
     val category: GroceryCategory, // קטגוריה
+    val customCategoryId: Int? = null, // קישור לקטגוריה מותאמת
     val expirationDate: String? = null, // תאריך תפוגה (אופציונלי, as ISO string)
     val lastTimeBoughtDays: Int? = null, // מספר ימים מאז הקנייה האחרונה (אופציונלי)
     val averageBuyingDays: Int? = null, // ממוצע ימים בין קניות (אופציונלי)
@@ -49,6 +50,7 @@ data class Grocery(
 fun Grocery.withLocalDate(): GroceryWithDate = GroceryWithDate(
     name = name,
     category = category,
+    customCategoryId = customCategoryId,
     expirationDate = expirationDate?.let { java.time.LocalDate.parse(it) },
     lastTimeBoughtDays = lastTimeBoughtDays,
     averageBuyingDays = averageBuyingDays,
@@ -59,6 +61,7 @@ fun Grocery.withLocalDate(): GroceryWithDate = GroceryWithDate(
 data class GroceryWithDate(
     val name: String,
     val category: GroceryCategory,
+    val customCategoryId: Int? = null,
     val expirationDate: java.time.LocalDate?,
     val lastTimeBoughtDays: Int? = null,
     val averageBuyingDays: Int? = null,
@@ -69,6 +72,7 @@ data class GroceryWithDate(
 fun GroceryWithDate.toSerializable(): Grocery = Grocery(
     name = name,
     category = category,
+    customCategoryId = customCategoryId,
     expirationDate = expirationDate?.toString(),
     lastTimeBoughtDays = lastTimeBoughtDays,
     averageBuyingDays = averageBuyingDays,
