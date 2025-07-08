@@ -239,6 +239,11 @@ class MainActivity : ComponentActivity() {
             WindowManager.LayoutParams.FLAG_FULLSCREEN
         )
         
+        // Initialize default custom categories
+        kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
+            initializeDefaultCustomCategories()
+        }
+        
         enableEdgeToEdge()
         setContent {
             SuperCartTheme {
@@ -1179,6 +1184,39 @@ object CustomCategoryListSerializer : Serializer<List<CustomCategory>> {
         }.getOrDefault(emptyList())
     override suspend fun writeTo(t: List<CustomCategory>, output: OutputStream) {
         output.write(Json.encodeToString(ListSerializer(CustomCategory.serializer()), t).encodeToByteArray())
+    }
+}
+
+// Function to initialize default custom categories
+suspend fun Context.initializeDefaultCustomCategories() {
+    val defaultCategories = listOf(
+        CustomCategory(id = 1, name = "אחר", default = true, viewOrder = 1),
+        CustomCategory(id = 2, name = "פירות", default = true, viewOrder = 2),
+        CustomCategory(id = 3, name = "ירקות", default = true, viewOrder = 3),
+        CustomCategory(id = 4, name = "מאפים ולחמים", default = true, viewOrder = 4),
+        CustomCategory(id = 5, name = "חטיפים ומתוקים", default = true, viewOrder = 5),
+        CustomCategory(id = 6, name = "דגנים וקטניות", default = true, viewOrder = 6),
+        CustomCategory(id = 7, name = "שימורים", default = true, viewOrder = 7),
+        CustomCategory(id = 8, name = "חד פעמי", default = true, viewOrder = 8),
+        CustomCategory(id = 9, name = "מוצרי נקיון", default = true, viewOrder = 9),
+        CustomCategory(id = 10, name = "מוצרים לתינוקות", default = true, viewOrder = 10),
+        CustomCategory(id = 11, name = "מזון יבש", default = true, viewOrder = 11),
+        CustomCategory(id = 12, name = "תבלינים ורטבים", default = true, viewOrder = 12),
+        CustomCategory(id = 13, name = "מוצרי טואלטיקה", default = true, viewOrder = 13),
+        CustomCategory(id = 14, name = "משקאות", default = true, viewOrder = 14),
+        CustomCategory(id = 15, name = "קפואים", default = true, viewOrder = 15),
+        CustomCategory(id = 16, name = "מוצרי חלב", default = true, viewOrder = 16),
+        CustomCategory(id = 17, name = "בשר ודגים", default = true, viewOrder = 17),
+        CustomCategory(id = 18, name = "מוצרים לבית", default = true, viewOrder = 18)
+    )
+    
+    // Check if "אחר" category with id = 1 already exists
+    val existingCategories = customCategoriesDataStore.data.first()
+    val hasAcherCategory = existingCategories.any { it.id == 1 && it.name == "אחר" }
+    
+    if (!hasAcherCategory) {
+        // Initialize with default categories
+        customCategoriesDataStore.updateData { defaultCategories }
     }
 }
 
