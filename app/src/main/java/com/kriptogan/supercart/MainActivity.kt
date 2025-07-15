@@ -454,6 +454,8 @@ fun HomeScreen(
     var showEditCategoryDialog by remember { mutableStateOf(false) } // For editing category name
     var editingCategory by remember { mutableStateOf<CustomCategory?>(null) } // Category being edited
     var editingCategoryName by remember { mutableStateOf("") } // New name for the category
+    var showDeleteCategoryDialog by remember { mutableStateOf(false) } // For delete category confirmation
+    var categoryToDelete by remember { mutableStateOf<CustomCategory?>(null) } // Category to be deleted
 
     // Helper to check if a grocery is expired or expiring soon
     fun isExpiringOrExpired(grocery: GroceryWithDate): Boolean {
@@ -1043,14 +1045,29 @@ fun HomeScreen(
                     }
                 },
                 dismissButton = {
-                    Button(
-                        onClick = { 
-                            showEditCategoryDialog = false
-                            editingCategory = null
-                            editingCategoryName = ""
+                    Row {
+                        Button(
+                            onClick = { 
+                                categoryToDelete = editingCategory
+                                showEditCategoryDialog = false
+                                showDeleteCategoryDialog = true
+                            },
+                            colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                                containerColor = Color.Red
+                            )
+                        ) {
+                            Text("מחק", color = Color.White)
                         }
-                    ) {
-                        Text("ביטול")
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Button(
+                            onClick = { 
+                                showEditCategoryDialog = false
+                                editingCategory = null
+                                editingCategoryName = ""
+                            }
+                        ) {
+                            Text("ביטול")
+                        }
                     }
                 },
                 title = { Text("ערוך שם קטגוריה") },
@@ -1061,6 +1078,76 @@ fun HomeScreen(
                         label = { Text("שם הקטגוריה") },
                         modifier = Modifier.fillMaxWidth()
                     )
+                }
+            )
+        }
+        
+        // Delete category confirmation dialog
+        if (showDeleteCategoryDialog && categoryToDelete != null) {
+            AlertDialog(
+                onDismissRequest = { 
+                    showDeleteCategoryDialog = false
+                    categoryToDelete = null
+                },
+                confirmButton = {
+                    Column {
+                        Button(
+                            onClick = {
+                                // Delete all items in this category
+                                val updatedGroceries = groceries.filter { it.customCategoryId != categoryToDelete!!.id }
+                                onUpdateGroceries(updatedGroceries)
+                                
+                                // Remove the category
+                                val updatedCategories = customCategories.filter { it.id != categoryToDelete!!.id }
+                                onUpdateCategories(updatedCategories)
+                                
+                                showDeleteCategoryDialog = false
+                                categoryToDelete = null
+                            },
+                            colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                                containerColor = Color.Red
+                            )
+                        ) {
+                            Text("מחק את כל הפריטים", color = Color.White)
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Button(
+                            onClick = {
+                                // Move all items to "אחר" category (ID 1)
+                                val updatedGroceries = groceries.map { grocery ->
+                                    if (grocery.customCategoryId == categoryToDelete!!.id) {
+                                        grocery.copy(customCategoryId = 1) // Move to "אחר"
+                                    } else {
+                                        grocery
+                                    }
+                                }
+                                onUpdateGroceries(updatedGroceries)
+                                
+                                // Remove the category
+                                val updatedCategories = customCategories.filter { it.id != categoryToDelete!!.id }
+                                onUpdateCategories(updatedCategories)
+                                
+                                showDeleteCategoryDialog = false
+                                categoryToDelete = null
+                            }
+                        ) {
+                            Text("העבר ל'אחר'")
+                        }
+                    }
+                },
+                dismissButton = {
+                    Button(
+                        onClick = { 
+                            showDeleteCategoryDialog = false
+                            categoryToDelete = null
+                        }
+                    ) {
+                        Text("ביטול")
+                    }
+                },
+                title = { Text("מחק קטגוריה") },
+                text = { 
+                    Text("הקטגוריה '${categoryToDelete?.name}' מכילה פריטים. מה ברצונך לעשות?")
                 }
             )
         }
