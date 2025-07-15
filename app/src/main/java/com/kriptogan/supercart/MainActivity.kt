@@ -102,6 +102,9 @@ import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.Done
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -804,18 +807,35 @@ fun HomeScreen(
                             showDialog = false
                         }
                     }) {
-                        Text(if (isEditMode) "שמור" else "הוסף")
+                        Icon(
+                            imageVector = Icons.Default.Done,
+                            contentDescription = if (isEditMode) "שמור" else "הוסף",
+                            tint = Color.White
+                        )
                     }
                 },
                 dismissButton = {
                     Row {
                         Button(onClick = { showDialog = false }) {
-                            Text("ביטול")
+                            Icon(
+                                imageVector = Icons.Default.Close,
+                                contentDescription = "ביטול",
+                                tint = Color.White
+                            )
                         }
                         if (isEditMode) {
                             Spacer(modifier = Modifier.width(8.dp))
-                            Button(onClick = { showDeleteConfirm = true }) {
-                                Text("מחק", color = Color.Red)
+                            Button(
+                                onClick = { showDeleteConfirm = true },
+                                colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                                    containerColor = Color.Red
+                                )
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Delete,
+                                    contentDescription = "מחק",
+                                    tint = Color.White
+                                )
                             }
                         }
                     }
@@ -900,13 +920,25 @@ fun HomeScreen(
                         onUpdateGroceries(updatedGroceries)
                         showDeleteConfirm = false
                         showDialog = false
-                    }) {
-                        Text("מחק", color = Color.Red)
-                    }
+                    },
+                    colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                        containerColor = Color.Red
+                    )
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Delete,
+                        contentDescription = "מחק",
+                        tint = Color.White
+                    )
+                }
                 },
                 dismissButton = {
                     Button(onClick = { showDeleteConfirm = false }) {
-                        Text("ביטול")
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = "ביטול",
+                            tint = Color.White
+                        )
                     }
                 },
                 title = { Text("אישור מחיקה") },
