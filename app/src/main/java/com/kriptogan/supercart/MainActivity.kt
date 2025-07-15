@@ -451,6 +451,9 @@ fun HomeScreen(
     var notesText by remember { mutableStateOf("") }
     var showCategoriesList by remember { mutableStateOf(false) } // For categories list dialog
     var expanded by remember { mutableStateOf(false) } // For category dropdown
+    var showEditCategoryDialog by remember { mutableStateOf(false) } // For editing category name
+    var editingCategory by remember { mutableStateOf<CustomCategory?>(null) } // Category being edited
+    var editingCategoryName by remember { mutableStateOf("") } // New name for the category
 
     // Helper to check if a grocery is expired or expiring soon
     fun isExpiringOrExpired(grocery: GroceryWithDate): Boolean {
@@ -986,12 +989,78 @@ fun HomeScreen(
                                         tint = if (customCategories.indexOf(category) < customCategories.size - 1) Color.Black else Color.Gray
                                     )
                                 }
+                                IconButton(
+                                    onClick = {
+                                        editingCategory = category
+                                        editingCategoryName = category.name
+                                        showEditCategoryDialog = true
+                                    }
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Edit,
+                                        contentDescription = "ערוך שם קטגוריה",
+                                        tint = Color.Black
+                                    )
+                                }
                             }
                             if (category != customCategories.sortedBy { it.viewOrder }.last()) {
                                 Divider(modifier = Modifier.padding(vertical = 4.dp))
                             }
                         }
                     }
+                }
+            )
+        }
+        
+        // Edit category dialog
+        if (showEditCategoryDialog && editingCategory != null) {
+            AlertDialog(
+                onDismissRequest = { 
+                    showEditCategoryDialog = false
+                    editingCategory = null
+                    editingCategoryName = ""
+                },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            if (editingCategoryName.isNotBlank()) {
+                                val updatedCategories = customCategories.map { cat ->
+                                    if (cat.id == editingCategory!!.id) {
+                                        cat.copy(name = editingCategoryName)
+                                    } else {
+                                        cat
+                                    }
+                                }
+                                onUpdateCategories(updatedCategories)
+                                showEditCategoryDialog = false
+                                editingCategory = null
+                                editingCategoryName = ""
+                            }
+                        },
+                        enabled = editingCategoryName.isNotBlank()
+                    ) {
+                        Text("שמור")
+                    }
+                },
+                dismissButton = {
+                    Button(
+                        onClick = { 
+                            showEditCategoryDialog = false
+                            editingCategory = null
+                            editingCategoryName = ""
+                        }
+                    ) {
+                        Text("ביטול")
+                    }
+                },
+                title = { Text("ערוך שם קטגוריה") },
+                text = {
+                    OutlinedTextField(
+                        value = editingCategoryName,
+                        onValueChange = { editingCategoryName = it },
+                        label = { Text("שם הקטגוריה") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
                 }
             )
         }
