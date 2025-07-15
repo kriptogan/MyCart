@@ -983,6 +983,7 @@ fun ShoppingListScreen(
     onBuy: (GroceryWithDate) -> Unit,
     orderedCategories: List<GroceryCategory>
 ) {
+    val context = LocalContext.current // <-- FIX: get context at top level
     val categoryExpansion = remember { mutableStateMapOf<GroceryCategory, Boolean>() }
     orderedCategories.forEach { cat ->
         if (categoryExpansion[cat] == null) categoryExpansion[cat] = true
@@ -996,16 +997,25 @@ fun ShoppingListScreen(
     // Edit dialog fields
     var name by remember { mutableStateOf("") }
     var selectedCategory by remember { mutableStateOf(GroceryCategory.פירות) }
+    var selectedCustomCategoryId by remember { mutableStateOf<Int?>(null) }
     var expirationDate by remember { mutableStateOf<LocalDate?>(null) }
     var showDatePicker by remember { mutableStateOf(false) }
     var expanded by remember { mutableStateOf(false) }
+    var customCategoryExpanded by remember { mutableStateOf(false) }
+    var customCategories by remember { mutableStateOf<List<CustomCategory>>(emptyList()) }
 
     fun openEditDialog(grocery: GroceryWithDate) {
         name = grocery.name
         selectedCategory = grocery.category
+        selectedCustomCategoryId = grocery.customCategoryId
         expirationDate = grocery.expirationDate
         editGrocery = grocery
         showEditDialog = true
+    }
+
+    // Load custom categories
+    LaunchedEffect(Unit) {
+        customCategories = context.customCategoriesDataStore.data.first()
     }
 
     LazyColumn(modifier = Modifier.fillMaxSize().padding(16.dp)) {
@@ -1109,6 +1119,7 @@ fun ShoppingListScreen(
                     val updated = editGrocery!!.copy(
                         name = name,
                         category = selectedCategory,
+                        customCategoryId = selectedCustomCategoryId,
                         expirationDate = expirationDate
                     )
                     val updatedGroceries = groceries.map {
@@ -1146,6 +1157,32 @@ fun ShoppingListScreen(
                                     onClick = {
                                         selectedCategory = cat
                                         expanded = false
+                                    }
+                                )
+                            }
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))
+                    // Custom category dropdown
+                    Box {
+                        val selectedCustomCategory = customCategories.find { it.id == selectedCustomCategoryId }
+                        Button(onClick = { customCategoryExpanded = true }) {
+                            Text(selectedCustomCategory?.name ?: "בחר קטגוריה מותאמת (אופציונלי)")
+                        }
+                        DropdownMenu(expanded = customCategoryExpanded, onDismissRequest = { customCategoryExpanded = false }) {
+                            DropdownMenuItem(
+                                text = { Text("ללא קטגוריה מותאמת") },
+                                onClick = {
+                                    selectedCustomCategoryId = null
+                                    customCategoryExpanded = false
+                                }
+                            )
+                            customCategories.sortedBy { it.viewOrder }.forEach { customCat ->
+                                DropdownMenuItem(
+                                    text = { Text(customCat.name) },
+                                    onClick = {
+                                        selectedCustomCategoryId = customCat.id
+                                        customCategoryExpanded = false
                                     }
                                 )
                             }
