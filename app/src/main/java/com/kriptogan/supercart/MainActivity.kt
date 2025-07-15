@@ -476,6 +476,8 @@ fun HomeScreen(
     var showCreateCategoryDialog by remember { mutableStateOf(false) } // For creating new category
     var newCategoryName by remember { mutableStateOf("") } // Name for new category
     var showMenu by remember { mutableStateOf(false) } // For hamburger menu
+    var showBuyHistoryDialog by remember { mutableStateOf(false) } // For showing buy history
+    var selectedGroceryForHistory by remember { mutableStateOf<GroceryWithDate?>(null) } // Grocery to show history for
 
     // Helper to check if a grocery is expired or expiring soon
     fun isExpiringOrExpired(grocery: GroceryWithDate): Boolean {
@@ -868,6 +870,21 @@ fun HomeScreen(
                                 }
                             ) {
                                 DatePicker(state = datePickerState)
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
+                        // Buy history button (only show in edit mode)
+                        if (isEditMode && editIndex >= 0) {
+                            val currentGrocery = groceries[editIndex]
+                            if (currentGrocery.buyEvents.isNotEmpty()) {
+                                Button(
+                                    onClick = {
+                                        selectedGroceryForHistory = currentGrocery
+                                        showBuyHistoryDialog = true
+                                    }
+                                ) {
+                                    Text("היסטוריית קניות (${currentGrocery.buyEvents.size} קניות)")
+                                }
                             }
                         }
                     }
@@ -1263,6 +1280,56 @@ fun HomeScreen(
                         label = { Text("שם הקטגוריה") },
                         modifier = Modifier.fillMaxWidth()
                     )
+                }
+            )
+        }
+        
+        // Buy history dialog
+        if (showBuyHistoryDialog && selectedGroceryForHistory != null) {
+            AlertDialog(
+                onDismissRequest = { 
+                    showBuyHistoryDialog = false
+                    selectedGroceryForHistory = null
+                },
+                confirmButton = {
+                    Button(
+                        onClick = { 
+                            showBuyHistoryDialog = false
+                            selectedGroceryForHistory = null
+                        }
+                    ) {
+                        Text("סגור")
+                    }
+                },
+                title = { Text("היסטוריית קניות - ${selectedGroceryForHistory?.name}") },
+                text = {
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(max = 300.dp)
+                    ) {
+                        items(selectedGroceryForHistory?.buyEvents?.sorted()?.reversed() ?: emptyList()) { buyDate ->
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = buyDate.toString(),
+                                    modifier = Modifier.weight(1f)
+                                )
+                                Text(
+                                    text = "${ChronoUnit.DAYS.between(buyDate, LocalDate.now())} ימים",
+                                    color = Color.Gray,
+                                    fontSize = 12.sp
+                                )
+                            }
+                            if (buyDate != selectedGroceryForHistory?.buyEvents?.sorted()?.reversed()?.last()) {
+                                Divider(modifier = Modifier.padding(vertical = 4.dp))
+                            }
+                        }
+                    }
                 }
             )
         }
