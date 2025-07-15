@@ -439,7 +439,7 @@ fun HomeScreen(
     var showExpiringOnly by remember { mutableStateOf(false) }
     var showNotesDialog by remember { mutableStateOf(false) }
     var notesText by remember { mutableStateOf("") }
-    // Remove showReorderDialog since we no longer need the reorder functionality
+    var showCategoriesList by remember { mutableStateOf(false) } // For categories list dialog
     var expanded by remember { mutableStateOf(false) } // For category dropdown
 
     // Helper to check if a grocery is expired or expiring soon
@@ -557,7 +557,22 @@ fun HomeScreen(
                         )
                     }
                     Spacer(modifier = Modifier.width(10.dp))
-                    // Remove the reorder dialog button since we no longer use enum categories
+                    IconButton(
+                        onClick = { showCategoriesList = true },
+                        modifier = Modifier
+                            .background(
+                                color = Color(0xFF9C27B0),
+                                shape = androidx.compose.foundation.shape.CircleShape
+                            )
+                            .size(48.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.List,
+                            contentDescription = "רשימת קטגוריות",
+                            tint = Color.White
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(10.dp))
                     Spacer(modifier = Modifier.weight(1f))
                     IconButton(
                         onClick = { if (hasExpiring) showExpiringOnly = !showExpiringOnly },
@@ -881,6 +896,57 @@ fun HomeScreen(
                             .height(200.dp),
                         maxLines = 10
                     )
+                }
+            )
+        }
+        
+        // Categories list dialog
+        if (showCategoriesList) {
+            AlertDialog(
+                onDismissRequest = { showCategoriesList = false },
+                confirmButton = {
+                    Button(onClick = { showCategoriesList = false }) {
+                        Text("סגור")
+                    }
+                },
+                title = { Text("רשימת קטגוריות") },
+                text = {
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(max = 400.dp)
+                    ) {
+                        items(customCategories.sortedBy { it.viewOrder }) { category ->
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = category.name,
+                                    modifier = Modifier.weight(1f),
+                                    fontWeight = if (category.default) FontWeight.Bold else FontWeight.Normal
+                                )
+                                if (category.default) {
+                                    Text(
+                                        text = "(ברירת מחדל)",
+                                        fontSize = 12.sp,
+                                        color = Color.Gray
+                                    )
+                                }
+                                Text(
+                                    text = "סדר: ${category.viewOrder}",
+                                    fontSize = 12.sp,
+                                    color = Color.Gray,
+                                    modifier = Modifier.padding(start = 8.dp)
+                                )
+                            }
+                            if (category != customCategories.sortedBy { it.viewOrder }.last()) {
+                                Divider(modifier = Modifier.padding(vertical = 4.dp))
+                            }
+                        }
+                    }
                 }
             )
         }
