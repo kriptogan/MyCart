@@ -301,6 +301,19 @@ fun SuperCartApp() {
     LaunchedEffect(groceries) {
         context.groceryDataStore.updateData { groceries.map { it.toSerializable() } }
     }
+    
+    // Save custom categories to DataStore whenever they change
+    LaunchedEffect(customCategories) {
+        context.customCategoriesDataStore.updateData { customCategories }
+    }
+    
+    // Save category order to DataStore whenever it changes
+    LaunchedEffect(customCategories) {
+        val categoryOrderString = customCategories.sortedBy { it.viewOrder }.map { it.id }.joinToString(",")
+        context.categoryOrderDataStore.edit { preferences ->
+            preferences[CATEGORY_ORDER_KEY] = categoryOrderString
+        }
+    }
 
     // Helper function to get shopping list items by filtering inShoppingList = true
     val shoppingListItems = remember(groceries) {
