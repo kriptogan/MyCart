@@ -915,12 +915,12 @@ fun HomeScreen(
                         Text("סגור")
                     }
                 },
-                title = { Text("הערות") },
+                title = { Text("הוסף רשימה") },
                 text = {
                     OutlinedTextField(
                         value = notesText,
                         onValueChange = { notesText = it },
-                        label = { Text("כתוב הערות...") },
+                        label = { Text("הוסף פריטים. כל פריט בשורה נפרדת.") },
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(200.dp),
