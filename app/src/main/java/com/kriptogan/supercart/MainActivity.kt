@@ -277,14 +277,19 @@ fun SuperCartApp() {
 
     // Compute ordered categories - ensure all categories are included
     val currentCategoryOrder = categoryOrder
-    val orderedCategories = if (currentCategoryOrder != null && currentCategoryOrder.isNotEmpty()) {
-        // Use saved order, but ensure all categories are included
-        val orderedFromPrefs = currentCategoryOrder.mapNotNull { id -> customCategories.find { it.id == id } }
-        val missingCategories = customCategories.filter { cat -> !orderedFromPrefs.any { it.id == cat.id } }
-        orderedFromPrefs + missingCategories.sortedBy { it.viewOrder }
-    } else {
-        // Use default order
-        customCategories.sortedBy { it.viewOrder }
+    var orderedCategories by remember { mutableStateOf<List<CustomCategory>>(emptyList()) }
+    
+    // Update ordered categories when customCategories or categoryOrder changes
+    LaunchedEffect(customCategories, categoryOrder) {
+        orderedCategories = if (currentCategoryOrder != null && currentCategoryOrder.isNotEmpty()) {
+            // Use saved order, but ensure all categories are included
+            val orderedFromPrefs = currentCategoryOrder.mapNotNull { id -> customCategories.find { it.id == id } }
+            val missingCategories = customCategories.filter { cat -> !orderedFromPrefs.any { it.id == cat.id } }
+            orderedFromPrefs + missingCategories.sortedBy { it.viewOrder }
+        } else {
+            // Use default order
+            customCategories.sortedBy { it.viewOrder }
+        }
     }
 
     // Load groceries from DataStore on first composition
@@ -378,6 +383,10 @@ fun SuperCartApp() {
                         },
                         orderedCategories = orderedCategories,
                         customCategories = customCategories,
+                        onUpdateCategories = { categories -> 
+                            customCategories = categories
+                            // The orderedCategories will be updated automatically by the LaunchedEffect
+                        },
                         scope = scope
                     )
                     1 -> ShoppingListScreen(
@@ -428,6 +437,7 @@ fun HomeScreen(
     onAddToShoppingList: (GroceryWithDate) -> Unit,
     orderedCategories: List<CustomCategory>,
     customCategories: List<CustomCategory>,
+    onUpdateCategories: (List<CustomCategory>) -> Unit,
     scope: CoroutineScope
 ) {
     val context = LocalContext.current
@@ -928,19 +938,54 @@ fun HomeScreen(
                                     modifier = Modifier.weight(1f),
                                     fontWeight = if (category.default) FontWeight.Bold else FontWeight.Normal
                                 )
-                                if (category.default) {
-                                    Text(
-                                        text = "(ברירת מחדל)",
-                                        fontSize = 12.sp,
-                                        color = Color.Gray
+                                IconButton(
+                                    onClick = {
+                                        // Move category up
+                                        val currentIndex = customCategories.indexOf(category)
+                                        if (currentIndex > 0) {
+                                            val updatedCategories = customCategories.toMutableList()
+                                            val temp = updatedCategories[currentIndex]
+                                            updatedCategories[currentIndex] = updatedCategories[currentIndex - 1]
+                                            updatedCategories[currentIndex - 1] = temp
+                                            // Update viewOrder values
+                                            updatedCategories.forEachIndexed { index, cat ->
+                                                updatedCategories[index] = cat.copy(viewOrder = index + 1)
+                                            }
+                                            onUpdateCategories(updatedCategories)
+                                        }
+                                    },
+                                    enabled = customCategories.indexOf(category) > 0
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.KeyboardArrowUp,
+                                        contentDescription = "העלה",
+                                        tint = if (customCategories.indexOf(category) > 0) Color.Black else Color.Gray
                                     )
                                 }
-                                Text(
-                                    text = "סדר: ${category.viewOrder}",
-                                    fontSize = 12.sp,
-                                    color = Color.Gray,
-                                    modifier = Modifier.padding(start = 8.dp)
-                                )
+                                IconButton(
+                                    onClick = {
+                                        // Move category down
+                                        val currentIndex = customCategories.indexOf(category)
+                                        if (currentIndex < customCategories.size - 1) {
+                                            val updatedCategories = customCategories.toMutableList()
+                                            val temp = updatedCategories[currentIndex]
+                                            updatedCategories[currentIndex] = updatedCategories[currentIndex + 1]
+                                            updatedCategories[currentIndex + 1] = temp
+                                            // Update viewOrder values
+                                            updatedCategories.forEachIndexed { index, cat ->
+                                                updatedCategories[index] = cat.copy(viewOrder = index + 1)
+                                            }
+                                            onUpdateCategories(updatedCategories)
+                                        }
+                                    },
+                                    enabled = customCategories.indexOf(category) < customCategories.size - 1
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.KeyboardArrowDown,
+                                        contentDescription = "הורד",
+                                        tint = if (customCategories.indexOf(category) < customCategories.size - 1) Color.Black else Color.Gray
+                                    )
+                                }
                             }
                             if (category != customCategories.sortedBy { it.viewOrder }.last()) {
                                 Divider(modifier = Modifier.padding(vertical = 4.dp))
