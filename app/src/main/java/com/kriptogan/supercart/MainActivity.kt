@@ -469,6 +469,8 @@ fun HomeScreen(
     var editingCategoryName by remember { mutableStateOf("") } // New name for the category
     var showDeleteCategoryDialog by remember { mutableStateOf(false) } // For delete category confirmation
     var categoryToDelete by remember { mutableStateOf<CustomCategory?>(null) } // Category to be deleted
+    var showCreateCategoryDialog by remember { mutableStateOf(false) } // For creating new category
+    var newCategoryName by remember { mutableStateOf("") } // Name for new category
 
     // Helper to check if a grocery is expired or expiring soon
     fun isExpiringOrExpired(grocery: GroceryWithDate): Boolean {
@@ -933,8 +935,19 @@ fun HomeScreen(
             AlertDialog(
                 onDismissRequest = { showCategoriesList = false },
                 confirmButton = {
-                    Button(onClick = { showCategoriesList = false }) {
-                        Text("סגור")
+                    Row {
+                        Button(
+                            onClick = { 
+                                newCategoryName = ""
+                                showCreateCategoryDialog = true
+                            }
+                        ) {
+                            Text("צור קטגוריה חדשה")
+                        }
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Button(onClick = { showCategoriesList = false }) {
+                            Text("סגור")
+                        }
                     }
                 },
                 title = { Text("רשימת קטגוריות") },
@@ -954,7 +967,7 @@ fun HomeScreen(
                                 Text(
                                     text = category.name,
                                     modifier = Modifier.weight(1f),
-                                    fontWeight = if (category.default) FontWeight.Bold else FontWeight.Normal
+                                    fontWeight = FontWeight.Bold
                                 )
                                 IconButton(
                                     onClick = {
@@ -1161,6 +1174,62 @@ fun HomeScreen(
                 title = { Text("מחק קטגוריה") },
                 text = { 
                     Text("הקטגוריה '${categoryToDelete?.name}' מכילה פריטים. מה ברצונך לעשות?")
+                }
+            )
+        }
+        
+        // Create category dialog
+        if (showCreateCategoryDialog) {
+            AlertDialog(
+                onDismissRequest = { 
+                    showCreateCategoryDialog = false
+                    newCategoryName = ""
+                },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            if (newCategoryName.isNotBlank()) {
+                                // Generate a new unique ID
+                                val newId = (customCategories.maxOfOrNull { it.id } ?: 0) + 1
+                                val newViewOrder = (customCategories.maxOfOrNull { it.viewOrder } ?: 0) + 1
+                                
+                                val newCategory = CustomCategory(
+                                    id = newId,
+                                    name = newCategoryName,
+                                    default = false,
+                                    viewOrder = newViewOrder
+                                )
+                                
+                                val updatedCategories = customCategories + newCategory
+                                onUpdateCategories(updatedCategories)
+                                
+                                showCreateCategoryDialog = false
+                                newCategoryName = ""
+                            }
+                        },
+                        enabled = newCategoryName.isNotBlank()
+                    ) {
+                        Text("צור")
+                    }
+                },
+                dismissButton = {
+                    Button(
+                        onClick = { 
+                            showCreateCategoryDialog = false
+                            newCategoryName = ""
+                        }
+                    ) {
+                        Text("ביטול")
+                    }
+                },
+                title = { Text("צור קטגוריה חדשה") },
+                text = {
+                    OutlinedTextField(
+                        value = newCategoryName,
+                        onValueChange = { newCategoryName = it },
+                        label = { Text("שם הקטגוריה") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
                 }
             )
         }
