@@ -101,6 +101,7 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.foundation.layout.heightIn
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
@@ -471,6 +472,7 @@ fun HomeScreen(
     var categoryToDelete by remember { mutableStateOf<CustomCategory?>(null) } // Category to be deleted
     var showCreateCategoryDialog by remember { mutableStateOf(false) } // For creating new category
     var newCategoryName by remember { mutableStateOf("") } // Name for new category
+    var showMenu by remember { mutableStateOf(false) } // For hamburger menu
 
     // Helper to check if a grocery is expired or expiring soon
     fun isExpiringOrExpired(grocery: GroceryWithDate): Boolean {
@@ -570,39 +572,20 @@ fun HomeScreen(
                     }
                     Spacer(modifier = Modifier.width(30.dp))
                     IconButton(
-                        onClick = { showNotesDialog = true },
+                        onClick = { showMenu = true },
                         modifier = Modifier
                             .background(
-                                color = Color(0xFF2196F3),
-                                shape = androidx.compose.foundation.shape.CircleShape
-                            )
-                            .size(48.dp)
-                            .padding(start = 0.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Edit,
-                            contentDescription = "הערות",
-                            tint = Color.White,
-                            modifier = Modifier.size(24.dp)
-                        )
-                    }
-                    Spacer(modifier = Modifier.width(10.dp))
-                    IconButton(
-                        onClick = { showCategoriesList = true },
-                        modifier = Modifier
-                            .background(
-                                color = Color(0xFF9C27B0),
+                                color = Color(0xFF607D8B),
                                 shape = androidx.compose.foundation.shape.CircleShape
                             )
                             .size(48.dp)
                     ) {
                         Icon(
-                            imageVector = Icons.Default.List,
-                            contentDescription = "רשימת קטגוריות",
+                            imageVector = Icons.Default.Menu,
+                            contentDescription = "תפריט",
                             tint = Color.White
                         )
                     }
-                    Spacer(modifier = Modifier.width(10.dp))
                     Spacer(modifier = Modifier.weight(1f))
                     IconButton(
                         onClick = { if (hasExpiring) showExpiringOnly = !showExpiringOnly },
@@ -622,6 +605,32 @@ fun HomeScreen(
                     }
                 }
             }
+            
+            // Hamburger menu dropdown
+            item {
+                Box {
+                    DropdownMenu(
+                        expanded = showMenu,
+                        onDismissRequest = { showMenu = false }
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text("ניהול קטגוריות") },
+                            onClick = {
+                                showCategoriesList = true
+                                showMenu = false
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("ייבוא רשימת קניות") },
+                            onClick = {
+                                showNotesDialog = true
+                                showMenu = false
+                            }
+                        )
+                    }
+                }
+            }
+            
             // Search bar
             item {
                 OutlinedTextField(
