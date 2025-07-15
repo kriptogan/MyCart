@@ -1072,12 +1072,13 @@ fun HomeScreen(
                                         editingCategory = category
                                         editingCategoryName = category.name
                                         showEditCategoryDialog = true
-                                    }
+                                    },
+                                    enabled = category.name != "אחר"
                                 ) {
                                     Icon(
                                         imageVector = Icons.Default.Edit,
                                         contentDescription = "ערוך שם קטגוריה",
-                                        tint = Color.Black
+                                        tint = if (category.name == "אחר") Color.Gray else Color.Black
                                     )
                                 }
                             }
@@ -1115,26 +1116,28 @@ fun HomeScreen(
                                 editingCategoryName = ""
                             }
                         },
-                        enabled = editingCategoryName.isNotBlank()
+                        enabled = editingCategoryName.isNotBlank() && editingCategory?.name != "אחר"
                     ) {
                         Text("שמור")
                     }
                 },
                 dismissButton = {
                     Row {
-                        Button(
-                            onClick = { 
-                                categoryToDelete = editingCategory
-                                showEditCategoryDialog = false
-                                showDeleteCategoryDialog = true
-                            },
-                            colors = androidx.compose.material3.ButtonDefaults.buttonColors(
-                                containerColor = Color.Red
-                            )
-                        ) {
-                            Text("מחק", color = Color.White)
+                        if (editingCategory?.name != "אחר") {
+                            Button(
+                                onClick = { 
+                                    categoryToDelete = editingCategory
+                                    showEditCategoryDialog = false
+                                    showDeleteCategoryDialog = true
+                                },
+                                colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                                    containerColor = Color.Red
+                                )
+                            ) {
+                                Text("מחק", color = Color.White)
+                            }
+                            Spacer(modifier = Modifier.width(8.dp))
                         }
-                        Spacer(modifier = Modifier.width(8.dp))
                         Button(
                             onClick = { 
                                 showEditCategoryDialog = false
@@ -1152,7 +1155,8 @@ fun HomeScreen(
                         value = editingCategoryName,
                         onValueChange = { editingCategoryName = it },
                         label = { Text("שם הקטגוריה") },
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = editingCategory?.name != "אחר"
                     )
                 }
             )
