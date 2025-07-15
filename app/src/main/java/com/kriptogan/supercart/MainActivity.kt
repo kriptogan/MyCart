@@ -69,7 +69,6 @@ import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import com.kriptogan.supercart.Grocery
-import com.kriptogan.supercart.GroceryCategory
 import java.time.LocalDate
 import java.time.ZoneId
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -239,9 +238,10 @@ class MainActivity : ComponentActivity() {
             WindowManager.LayoutParams.FLAG_FULLSCREEN
         )
         
-        // Initialize default custom categories
+        // Initialize default custom categories and migrate existing data
         kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
             initializeDefaultCustomCategories()
+            migrateGroceriesToCustomCategories()
         }
         
         enableEdgeToEdge()
@@ -264,22 +264,28 @@ fun SuperCartApp() {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
-    // Category order state
-    var categoryOrder by remember { mutableStateOf<List<String>?>(null) }
-    var reorderList by remember { mutableStateOf(GroceryCategory.values().map { it }) }
+    // Custom categories state
+    var customCategories by remember { mutableStateOf<List<CustomCategory>>(emptyList()) }
+    var categoryOrder by remember { mutableStateOf<List<Int>?>(null) }
 
-    // Load saved order on first composition
+    // Load custom categories and order on first composition
     LaunchedEffect(Unit) {
+        customCategories = context.customCategoriesDataStore.data.first()
         val saved = context.categoryOrderDataStore.data.first()[CATEGORY_ORDER_KEY]
-        categoryOrder = saved?.split(",")
-        if (categoryOrder != null) {
-            reorderList = categoryOrder!!.mapNotNull { name -> GroceryCategory.values().find { it.name == name } }
-        }
+        categoryOrder = saved?.split(",")?.mapNotNull { it.toIntOrNull() }
     }
 
-    // Compute ordered categories
-    val orderedCategories = categoryOrder?.mapNotNull { name -> GroceryCategory.values().find { it.name == name } }
-        ?: GroceryCategory.values().toList()
+    // Compute ordered categories - ensure all categories are included
+    val currentCategoryOrder = categoryOrder
+    val orderedCategories = if (currentCategoryOrder != null && currentCategoryOrder.isNotEmpty()) {
+        // Use saved order, but ensure all categories are included
+        val orderedFromPrefs = currentCategoryOrder.mapNotNull { id -> customCategories.find { it.id == id } }
+        val missingCategories = customCategories.filter { cat -> !orderedFromPrefs.any { it.id == cat.id } }
+        orderedFromPrefs + missingCategories.sortedBy { it.viewOrder }
+    } else {
+        // Use default order
+        customCategories.sortedBy { it.viewOrder }
+    }
 
     // Load groceries from DataStore on first composition
     LaunchedEffect(Unit) {
@@ -363,7 +369,7 @@ fun SuperCartApp() {
                         onUpdateGroceries = { groceries = it },
                         onAddToShoppingList = { grocery ->
                             groceries = groceries.map {
-                                if (it.name == grocery.name && it.category == grocery.category) {
+                                if (it.name == grocery.name && it.customCategoryId == grocery.customCategoryId) {
                                     it.copy(inShoppingList = true)
                                 } else {
                                     it
@@ -371,10 +377,7 @@ fun SuperCartApp() {
                             }
                         },
                         orderedCategories = orderedCategories,
-                        reorderList = reorderList,
-                        setReorderList = { reorderList = it },
-                        categoryOrder = categoryOrder,
-                        setCategoryOrder = { categoryOrder = it },
+                        customCategories = customCategories,
                         scope = scope
                     )
                     1 -> ShoppingListScreen(
@@ -383,7 +386,7 @@ fun SuperCartApp() {
                         onUpdateGroceries = { groceries = it },
                         onRemove = { grocery ->
                             groceries = groceries.map {
-                                if (it.name == grocery.name && it.category == grocery.category) {
+                                if (it.name == grocery.name && it.customCategoryId == grocery.customCategoryId) {
                                     it.copy(inShoppingList = false)
                                 } else {
                                     it
@@ -392,7 +395,7 @@ fun SuperCartApp() {
                         },
                         onBuy = { grocery ->
                             groceries = groceries.map {
-                                if (it.name == grocery.name && it.category == grocery.category) {
+                                if (it.name == grocery.name && it.customCategoryId == grocery.customCategoryId) {
                                     val today = LocalDate.now()
                                     val newBuyEvents = (it.buyEvents + today).sorted()
                                     val avg = newBuyEvents.averageDaysBetween()
@@ -407,7 +410,8 @@ fun SuperCartApp() {
                                 }
                             }
                         },
-                        orderedCategories = orderedCategories
+                        orderedCategories = orderedCategories,
+                        customCategories = customCategories
                     )
                 }
             }
@@ -422,11 +426,8 @@ fun HomeScreen(
     groceries: List<GroceryWithDate>,
     onUpdateGroceries: (List<GroceryWithDate>) -> Unit,
     onAddToShoppingList: (GroceryWithDate) -> Unit,
-    orderedCategories: List<GroceryCategory>,
-    reorderList: List<GroceryCategory>,
-    setReorderList: (List<GroceryCategory>) -> Unit,
-    categoryOrder: List<String>?,
-    setCategoryOrder: (List<String>?) -> Unit,
+    orderedCategories: List<CustomCategory>,
+    customCategories: List<CustomCategory>,
     scope: CoroutineScope
 ) {
     val context = LocalContext.current
@@ -439,14 +440,7 @@ fun HomeScreen(
     var showNotesDialog by remember { mutableStateOf(false) }
     var notesText by remember { mutableStateOf("") }
     var showReorderDialog by remember { mutableStateOf(false) }
-    var customCategories by remember { mutableStateOf<List<CustomCategory>>(emptyList()) }
-    var selectedCustomCategoryId by remember { mutableStateOf<Int?>(null) }
-    var customCategoryExpanded by remember { mutableStateOf(false) }
-
-    // Load custom categories
-    LaunchedEffect(Unit) {
-        customCategories = context.customCategoriesDataStore.data.first()
-    }
+    var expanded by remember { mutableStateOf(false) } // For category dropdown
 
     // Helper to check if a grocery is expired or expiring soon
     fun isExpiringOrExpired(grocery: GroceryWithDate): Boolean {
@@ -469,20 +463,34 @@ fun HomeScreen(
 
     // Fields for new/edit grocery
     var name by remember { mutableStateOf("") }
-    var selectedCategory by remember { mutableStateOf(GroceryCategory.פירות) }
+    var selectedCustomCategoryId by remember { mutableStateOf(1) } // Default to "אחר"
     var expirationDate by remember { mutableStateOf<LocalDate?>(null) }
     var showDatePicker by remember { mutableStateOf(false) }
-    var expanded by remember { mutableStateOf(false) }
 
     // State for expanded/collapsed categories
-    val categoryExpansion = remember { mutableStateMapOf<GroceryCategory, Boolean>() }
-    orderedCategories.forEach { cat ->
-        if (categoryExpansion[cat] == null) categoryExpansion[cat] = true
+    val categoryExpansion = remember { mutableStateMapOf<Int, Boolean>() }
+    
+    // Initialize expansion state for all categories
+    LaunchedEffect(orderedCategories) {
+        orderedCategories.forEach { cat ->
+            if (categoryExpansion[cat.id] == null) {
+                categoryExpansion[cat.id] = true
+            }
+        }
+    }
+    
+    // Debug: Print current state
+    LaunchedEffect(groceries, orderedCategories) {
+        println("DEBUG: Total groceries: ${groceries.size}")
+        println("DEBUG: Ordered categories: ${orderedCategories.map { "${it.name} (${it.id})" }}")
+        groceries.forEach { grocery ->
+            val category = customCategories.find { it.id == grocery.customCategoryId }
+            println("DEBUG: Grocery '${grocery.name}' -> Category: ${category?.name ?: "UNKNOWN"} (ID: ${grocery.customCategoryId})")
+        }
     }
 
     fun openEditDialog(index: Int, grocery: GroceryWithDate) {
         name = grocery.name
-        selectedCategory = grocery.category
         selectedCustomCategoryId = grocery.customCategoryId
         expirationDate = grocery.expirationDate
         editIndex = index
@@ -512,8 +520,7 @@ fun HomeScreen(
                     IconButton(
                         onClick = {
                             name = if (searchQuery.isNotBlank()) searchQuery else ""
-                            selectedCategory = GroceryCategory.פירות
-                            selectedCustomCategoryId = null
+                            selectedCustomCategoryId = 1 // Default to "אחר"
                             expirationDate = null
                             isEditMode = false
                             showDialog = true
@@ -605,10 +612,16 @@ fun HomeScreen(
             }
             orderedCategories.forEach { category ->
                 val itemsInCategory = groceries.withIndex()
-                    .filter { it.value.category == category && it.value.name.contains(searchQuery, ignoreCase = true) }
+                    .filter { it.value.customCategoryId == category.id && it.value.name.contains(searchQuery, ignoreCase = true) }
                     .filter { !showExpiringOnly || shouldShowInAlertFilter(it.value) }
+                
+                // Debug: Print category filtering results
                 if (itemsInCategory.isNotEmpty()) {
-                    item(key = category) {
+                    println("DEBUG: Category '${category.name}' (${category.id}) has ${itemsInCategory.size} items")
+                }
+                
+                if (itemsInCategory.isNotEmpty()) {
+                    item(key = category.id) {
                         Card(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -625,23 +638,23 @@ fun HomeScreen(
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .clickable { categoryExpansion[category] = !(categoryExpansion[category] ?: true) }
+                                        .clickable { categoryExpansion[category.id] = !(categoryExpansion[category.id] ?: true) }
                                         .padding(12.dp),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Text(
-                                        text = category.displayName,
+                                        text = category.name,
                                         fontWeight = FontWeight.Bold,
                                         fontSize = 18.sp,
                                         modifier = Modifier.weight(1f)
                                     )
                                     Text(
-                                        text = if (categoryExpansion[category] == true) "▲" else "▼",
+                                        text = if (categoryExpansion[category.id] == true) "▲" else "▼",
                                         fontSize = 18.sp
                                     )
                                 }
                                 Divider()
-                                if (categoryExpansion[category] == true) {
+                                if (categoryExpansion[category.id] == true) {
                                     itemsInCategory.forEach { indexedGrocery ->
                                         val isExpiringOrExpired = indexedGrocery.value.expirationDate != null &&
                                             try {
@@ -704,28 +717,25 @@ fun HomeScreen(
                 confirmButton = {
                     Button(onClick = {
                         if (name.isNotBlank()) {
-                                                    if (isEditMode && editIndex >= 0) {
-                            val updatedGroceries = groceries.toMutableList().also {
-                                it[editIndex] = it[editIndex].copy(
+                            if (isEditMode && editIndex >= 0) {
+                                val updatedGroceries = groceries.toMutableList().also {
+                                    it[editIndex] = it[editIndex].copy(
+                                        name = name,
+                                        customCategoryId = selectedCustomCategoryId,
+                                        expirationDate = expirationDate
+                                    )
+                                }
+                                onUpdateGroceries(updatedGroceries)
+                            } else {
+                                val updatedGroceries = groceries + GroceryWithDate(
                                     name = name,
-                                    category = selectedCategory,
                                     customCategoryId = selectedCustomCategoryId,
                                     expirationDate = expirationDate
                                 )
+                                onUpdateGroceries(updatedGroceries)
                             }
-                            onUpdateGroceries(updatedGroceries)
-                        } else {
-                            val updatedGroceries = groceries + GroceryWithDate(
-                                name = name,
-                                category = selectedCategory,
-                                customCategoryId = selectedCustomCategoryId,
-                                expirationDate = expirationDate
-                            )
-                            onUpdateGroceries(updatedGroceries)
-                        }
                             name = ""
-                            selectedCategory = GroceryCategory.פירות
-                            selectedCustomCategoryId = null
+                            selectedCustomCategoryId = 1 // Default to "אחר"
                             expirationDate = null
                             showDialog = false
                         }
@@ -757,42 +767,17 @@ fun HomeScreen(
                         Spacer(modifier = Modifier.height(8.dp))
                         // Category dropdown
                         Box {
+                            val selectedCategory = customCategories.find { it.id == selectedCustomCategoryId }
                             Button(onClick = { expanded = true }) {
-                                Text(selectedCategory.displayName)
+                                Text(selectedCategory?.name ?: "בחר קטגוריה")
                             }
                             DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-                                orderedCategories.forEach { cat ->
+                                customCategories.sortedBy { it.viewOrder }.forEach { cat ->
                                     DropdownMenuItem(
-                                        text = { Text(cat.displayName) },
+                                        text = { Text(cat.name) },
                                         onClick = {
-                                            selectedCategory = cat
+                                            selectedCustomCategoryId = cat.id
                                             expanded = false
-                                        }
-                                    )
-                                }
-                            }
-                        }
-                        Spacer(modifier = Modifier.height(8.dp))
-                        // Custom category dropdown
-                        Box {
-                            val selectedCustomCategory = customCategories.find { it.id == selectedCustomCategoryId }
-                            Button(onClick = { customCategoryExpanded = true }) {
-                                Text(selectedCustomCategory?.name ?: "בחר קטגוריה מותאמת (אופציונלי)")
-                            }
-                            DropdownMenu(expanded = customCategoryExpanded, onDismissRequest = { customCategoryExpanded = false }) {
-                                DropdownMenuItem(
-                                    text = { Text("ללא קטגוריה מותאמת") },
-                                    onClick = {
-                                        selectedCustomCategoryId = null
-                                        customCategoryExpanded = false
-                                    }
-                                )
-                                customCategories.sortedBy { it.viewOrder }.forEach { customCat ->
-                                    DropdownMenuItem(
-                                        text = { Text(customCat.name) },
-                                        onClick = {
-                                            selectedCustomCategoryId = customCat.id
-                                            customCategoryExpanded = false
                                         }
                                     )
                                 }
@@ -874,7 +859,7 @@ fun HomeScreen(
                                     // Item doesn't exist, create new item
                                     val newItem = GroceryWithDate(
                                         name = itemName,
-                                        category = GroceryCategory.אחר,
+                                        customCategoryId = 1, // Default to "אחר"
                                         expirationDate = null,
                                         lastTimeBoughtDays = null,
                                         averageBuyingDays = null,
@@ -924,9 +909,8 @@ fun HomeScreen(
                             // Save order to DataStore
                             scope.launch {
                                 context.categoryOrderDataStore.edit { prefs ->
-                                    prefs[CATEGORY_ORDER_KEY] = reorderList.joinToString(",") { it.name }
+                                    prefs[CATEGORY_ORDER_KEY] = orderedCategories.joinToString(",") { it.name }
                                 }
-                                setCategoryOrder(reorderList.map { it.name })
                             }
                             showReorderDialog = false
                         }) { Text("שמור") }
@@ -937,15 +921,15 @@ fun HomeScreen(
                 title = { Text("סדר קטגוריות") },
                 text = {
                     LazyColumn(modifier = Modifier.heightIn(max = 350.dp)) {
-                        itemsIndexed(reorderList) { idx, cat ->
+                        itemsIndexed(orderedCategories) { idx, cat ->
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text(cat.displayName, modifier = Modifier.weight(1f))
+                                Text(cat.name, modifier = Modifier.weight(1f))
                                 IconButton(
                                     onClick = {
                                         if (idx > 0) {
-                                            val newList = reorderList.toMutableList()
+                                            val newList = orderedCategories.toMutableList()
                                             newList[idx] = newList[idx - 1].also { newList[idx - 1] = newList[idx] }
-                                            setReorderList(newList)
+                                            // setReorderList(newList) // This line was removed
                                         }
                                     },
                                     enabled = idx > 0
@@ -954,13 +938,13 @@ fun HomeScreen(
                                 }
                                 IconButton(
                                     onClick = {
-                                        if (idx < reorderList.size - 1) {
-                                            val newList = reorderList.toMutableList()
+                                        if (idx < orderedCategories.size - 1) {
+                                            val newList = orderedCategories.toMutableList()
                                             newList[idx] = newList[idx + 1].also { newList[idx + 1] = newList[idx] }
-                                            setReorderList(newList)
+                                            // setReorderList(newList) // This line was removed
                                         }
                                     },
-                                    enabled = idx < reorderList.size - 1
+                                    enabled = idx < orderedCategories.size - 1
                                 ) {
                                     Icon(Icons.Default.KeyboardArrowDown, contentDescription = "הורד")
                                 }
@@ -981,12 +965,13 @@ fun ShoppingListScreen(
     onUpdateGroceries: (List<GroceryWithDate>) -> Unit,
     onRemove: (GroceryWithDate) -> Unit,
     onBuy: (GroceryWithDate) -> Unit,
-    orderedCategories: List<GroceryCategory>
+    orderedCategories: List<CustomCategory>,
+    customCategories: List<CustomCategory>
 ) {
-    val context = LocalContext.current // <-- FIX: get context at top level
-    val categoryExpansion = remember { mutableStateMapOf<GroceryCategory, Boolean>() }
+    val context = LocalContext.current
+    val categoryExpansion = remember { mutableStateMapOf<Int, Boolean>() }
     orderedCategories.forEach { cat ->
-        if (categoryExpansion[cat] == null) categoryExpansion[cat] = true
+        if (categoryExpansion[cat.id] == null) categoryExpansion[cat.id] = true
     }
 
     // Edit state variables
@@ -996,33 +981,24 @@ fun ShoppingListScreen(
 
     // Edit dialog fields
     var name by remember { mutableStateOf("") }
-    var selectedCategory by remember { mutableStateOf(GroceryCategory.פירות) }
-    var selectedCustomCategoryId by remember { mutableStateOf<Int?>(null) }
+    var selectedCustomCategoryId by remember { mutableStateOf(1) }
     var expirationDate by remember { mutableStateOf<LocalDate?>(null) }
     var showDatePicker by remember { mutableStateOf(false) }
-    var expanded by remember { mutableStateOf(false) }
-    var customCategoryExpanded by remember { mutableStateOf(false) }
-    var customCategories by remember { mutableStateOf<List<CustomCategory>>(emptyList()) }
+    var expanded by remember { mutableStateOf(false) } // For category dropdown
 
     fun openEditDialog(grocery: GroceryWithDate) {
         name = grocery.name
-        selectedCategory = grocery.category
         selectedCustomCategoryId = grocery.customCategoryId
         expirationDate = grocery.expirationDate
         editGrocery = grocery
         showEditDialog = true
     }
 
-    // Load custom categories
-    LaunchedEffect(Unit) {
-        customCategories = context.customCategoriesDataStore.data.first()
-    }
-
     LazyColumn(modifier = Modifier.fillMaxSize().padding(16.dp)) {
         orderedCategories.forEach { category ->
-            val itemsInCategory = shoppingList.filter { it.category == category }
+            val itemsInCategory = shoppingList.filter { it.customCategoryId == category.id }
             if (itemsInCategory.isNotEmpty()) {
-                item(key = category) {
+                item(key = category.id) {
                     Card(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -1038,25 +1014,25 @@ fun ShoppingListScreen(
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .clickable { categoryExpansion[category] = !(categoryExpansion[category] ?: true) }
+                                    .clickable { categoryExpansion[category.id] = !(categoryExpansion[category.id] ?: true) }
                                     .padding(12.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text(
-                                    text = category.displayName,
+                                    text = category.name,
                                     fontWeight = FontWeight.Bold,
                                     fontSize = 18.sp,
                                     modifier = Modifier.weight(1f)
                                 )
                                 Badge { Text(itemsInCategory.size.toString()) }
                                 Text(
-                                    text = if (categoryExpansion[category] == true) "▲" else "▼",
+                                    text = if (categoryExpansion[category.id] == true) "▲" else "▼",
                                     fontSize = 18.sp,
                                     modifier = Modifier.padding(start = 8.dp)
                                 )
                             }
                             Divider()
-                            if (categoryExpansion[category] == true) {
+                            if (categoryExpansion[category.id] == true) {
                                 itemsInCategory.forEach { grocery ->
                                     Row(
                                         verticalAlignment = Alignment.CenterVertically,
@@ -1118,12 +1094,11 @@ fun ShoppingListScreen(
                 Button(onClick = {
                     val updated = editGrocery!!.copy(
                         name = name,
-                        category = selectedCategory,
                         customCategoryId = selectedCustomCategoryId,
                         expirationDate = expirationDate
                     )
                     val updatedGroceries = groceries.map {
-                        if (it.name == editGrocery!!.name && it.category == editGrocery!!.category) updated else it
+                        if (it.name == editGrocery!!.name && it.customCategoryId == editGrocery!!.customCategoryId) updated else it
                     }
                     onUpdateGroceries(updatedGroceries)
                     showEditDialog = false
@@ -1147,42 +1122,17 @@ fun ShoppingListScreen(
                     Spacer(modifier = Modifier.height(8.dp))
                     // Category dropdown
                     Box {
+                        val selectedCategory = customCategories.find { it.id == selectedCustomCategoryId }
                         Button(onClick = { expanded = true }) {
-                            Text(selectedCategory.displayName)
+                            Text(selectedCategory?.name ?: "בחר קטגוריה")
                         }
                         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-                            orderedCategories.forEach { cat ->
+                            customCategories.sortedBy { it.viewOrder }.forEach { cat ->
                                 DropdownMenuItem(
-                                    text = { Text(cat.displayName) },
+                                    text = { Text(cat.name) },
                                     onClick = {
-                                        selectedCategory = cat
+                                        selectedCustomCategoryId = cat.id
                                         expanded = false
-                                    }
-                                )
-                            }
-                        }
-                    }
-                    Spacer(modifier = Modifier.height(8.dp))
-                    // Custom category dropdown
-                    Box {
-                        val selectedCustomCategory = customCategories.find { it.id == selectedCustomCategoryId }
-                        Button(onClick = { customCategoryExpanded = true }) {
-                            Text(selectedCustomCategory?.name ?: "בחר קטגוריה מותאמת (אופציונלי)")
-                        }
-                        DropdownMenu(expanded = customCategoryExpanded, onDismissRequest = { customCategoryExpanded = false }) {
-                            DropdownMenuItem(
-                                text = { Text("ללא קטגוריה מותאמת") },
-                                onClick = {
-                                    selectedCustomCategoryId = null
-                                    customCategoryExpanded = false
-                                }
-                            )
-                            customCategories.sortedBy { it.viewOrder }.forEach { customCat ->
-                                DropdownMenuItem(
-                                    text = { Text(customCat.name) },
-                                    onClick = {
-                                        selectedCustomCategoryId = customCat.id
-                                        customCategoryExpanded = false
                                     }
                                 )
                             }
@@ -1293,6 +1243,35 @@ suspend fun Context.initializeDefaultCustomCategories() {
     if (!hasAcherCategory) {
         // Initialize with default categories
         customCategoriesDataStore.updateData { defaultCategories }
+    }
+}
+
+// Migration function to convert old enum-based groceries to custom categories
+suspend fun Context.migrateGroceriesToCustomCategories() {
+    val groceries = groceryDataStore.data.first()
+    val customCategories = customCategoriesDataStore.data.first()
+    
+    // Simple migration: ensure all groceries have a valid customCategoryId
+    // If any grocery has customCategoryId = null or 0, set it to 1 (אחר)
+    val needsMigration = groceries.any { it.customCategoryId == 0 }
+    
+    if (needsMigration) {
+        val migratedGroceries = groceries.map { grocery ->
+            // Ensure customCategoryId is valid (default to 1 if invalid)
+            val validCategoryId = if (grocery.customCategoryId <= 0) 1 else grocery.customCategoryId
+            Grocery(
+                name = grocery.name,
+                customCategoryId = validCategoryId,
+                expirationDate = grocery.expirationDate,
+                lastTimeBoughtDays = grocery.lastTimeBoughtDays,
+                averageBuyingDays = grocery.averageBuyingDays,
+                buyEvents = grocery.buyEvents,
+                inShoppingList = grocery.inShoppingList
+            )
+        }
+        
+        // Save migrated groceries
+        groceryDataStore.updateData { migratedGroceries }
     }
 }
 

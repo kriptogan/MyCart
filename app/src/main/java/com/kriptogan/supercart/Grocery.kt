@@ -12,34 +12,11 @@ data class CustomCategory(
     val viewOrder: Int      // Order for display
 )
 
-// קטגוריות מצרכים
-@Serializable
-enum class GroceryCategory(val displayName: String) {
-    פירות("פירות"),
-    ירקות("ירקות"),
-    מאפים_ולחמים("מאפים ולחמים"),
-    חטיפים_ומתוקים("חטיפים ומתוקים"),
-    דגנים_וקטניות("דגנים וקטניות"),
-    שימורים("שימורים"),
-    מוצרי_ניקיון("מוצרי נקיון"),
-    מזון_לתינוקות("מזון לתינוקות"),
-    מזון_יבש("מזון יבש"),
-    תבלינים_ורטבים("תבלינים ורטבים"),
-    מוצרי_טואלטיקה("מוצרי טואלטיקה"),
-    משקאות("משקאות"),
-    קפואים("קפואים"),
-    מוצרי_חלב("מוצרי חלב"),
-    בשר_ודגים("בשר ודגים"),
-    מוצרים_לבית("מוצרים לבית"),
-    אחר("אחר")
-}
-
 // מודל נתונים עבור מצרך
 @Serializable
 data class Grocery(
     val name: String, // שם המצרך
-    val category: GroceryCategory, // קטגוריה
-    val customCategoryId: Int? = null, // קישור לקטגוריה מותאמת
+    val customCategoryId: Int, // קישור לקטגוריה מותאמת (חובה)
     val expirationDate: String? = null, // תאריך תפוגה (אופציונלי, as ISO string)
     val lastTimeBoughtDays: Int? = null, // מספר ימים מאז הקנייה האחרונה (אופציונלי)
     val averageBuyingDays: Int? = null, // ממוצע ימים בין קניות (אופציונלי)
@@ -49,7 +26,6 @@ data class Grocery(
 
 fun Grocery.withLocalDate(): GroceryWithDate = GroceryWithDate(
     name = name,
-    category = category,
     customCategoryId = customCategoryId,
     expirationDate = expirationDate?.let { java.time.LocalDate.parse(it) },
     lastTimeBoughtDays = lastTimeBoughtDays,
@@ -60,8 +36,7 @@ fun Grocery.withLocalDate(): GroceryWithDate = GroceryWithDate(
 
 data class GroceryWithDate(
     val name: String,
-    val category: GroceryCategory,
-    val customCategoryId: Int? = null,
+    val customCategoryId: Int,
     val expirationDate: java.time.LocalDate?,
     val lastTimeBoughtDays: Int? = null,
     val averageBuyingDays: Int? = null,
@@ -71,7 +46,6 @@ data class GroceryWithDate(
 
 fun GroceryWithDate.toSerializable(): Grocery = Grocery(
     name = name,
-    category = category,
     customCategoryId = customCategoryId,
     expirationDate = expirationDate?.toString(),
     lastTimeBoughtDays = lastTimeBoughtDays,
