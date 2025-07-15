@@ -439,7 +439,7 @@ fun HomeScreen(
     var showExpiringOnly by remember { mutableStateOf(false) }
     var showNotesDialog by remember { mutableStateOf(false) }
     var notesText by remember { mutableStateOf("") }
-    var showReorderDialog by remember { mutableStateOf(false) }
+    // Remove showReorderDialog since we no longer need the reorder functionality
     var expanded by remember { mutableStateOf(false) } // For category dropdown
 
     // Helper to check if a grocery is expired or expiring soon
@@ -557,23 +557,7 @@ fun HomeScreen(
                         )
                     }
                     Spacer(modifier = Modifier.width(10.dp))
-                    IconButton(
-                        onClick = { showReorderDialog = true },
-                        modifier = Modifier
-                            .background(
-                                color = Color(0xFF757575), // Gray
-                                shape = androidx.compose.foundation.shape.CircleShape
-                            )
-                            .size(48.dp)
-                            .padding(start = 0.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.List,
-                            contentDescription = "סדר קטגוריות",
-                            tint = Color.White,
-                            modifier = Modifier.size(24.dp)
-                        )
-                    }
+                    // Remove the reorder dialog button since we no longer use enum categories
                     Spacer(modifier = Modifier.weight(1f))
                     IconButton(
                         onClick = { if (hasExpiring) showExpiringOnly = !showExpiringOnly },
@@ -897,60 +881,6 @@ fun HomeScreen(
                             .height(200.dp),
                         maxLines = 10
                     )
-                }
-            )
-        }
-        if (showReorderDialog) {
-            AlertDialog(
-                onDismissRequest = { showReorderDialog = false },
-                confirmButton = {
-                    Row {
-                        Button(onClick = {
-                            // Save order to DataStore
-                            scope.launch {
-                                context.categoryOrderDataStore.edit { prefs ->
-                                    prefs[CATEGORY_ORDER_KEY] = orderedCategories.joinToString(",") { it.name }
-                                }
-                            }
-                            showReorderDialog = false
-                        }) { Text("שמור") }
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Button(onClick = { showReorderDialog = false }) { Text("סגור") }
-                    }
-                },
-                title = { Text("סדר קטגוריות") },
-                text = {
-                    LazyColumn(modifier = Modifier.heightIn(max = 350.dp)) {
-                        itemsIndexed(orderedCategories) { idx, cat ->
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text(cat.name, modifier = Modifier.weight(1f))
-                                IconButton(
-                                    onClick = {
-                                        if (idx > 0) {
-                                            val newList = orderedCategories.toMutableList()
-                                            newList[idx] = newList[idx - 1].also { newList[idx - 1] = newList[idx] }
-                                            // setReorderList(newList) // This line was removed
-                                        }
-                                    },
-                                    enabled = idx > 0
-                                ) {
-                                    Icon(Icons.Default.KeyboardArrowUp, contentDescription = "העלה")
-                                }
-                                IconButton(
-                                    onClick = {
-                                        if (idx < orderedCategories.size - 1) {
-                                            val newList = orderedCategories.toMutableList()
-                                            newList[idx] = newList[idx + 1].also { newList[idx + 1] = newList[idx] }
-                                            // setReorderList(newList) // This line was removed
-                                        }
-                                    },
-                                    enabled = idx < orderedCategories.size - 1
-                                ) {
-                                    Icon(Icons.Default.KeyboardArrowDown, contentDescription = "הורד")
-                                }
-                            }
-                        }
-                    }
                 }
             )
         }
