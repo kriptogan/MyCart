@@ -103,6 +103,9 @@ import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.text.style.TextAlign
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
@@ -608,25 +611,46 @@ fun HomeScreen(
             
             // Hamburger menu dropdown
             item {
-                Box {
-                    DropdownMenu(
-                        expanded = showMenu,
-                        onDismissRequest = { showMenu = false }
+                Box(
+                    modifier = Modifier.fillMaxWidth(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    // Invisible anchor for dropdown positioning
+                    Box(
+                        modifier = Modifier.size(0.dp)
                     ) {
-                        DropdownMenuItem(
-                            text = { Text("ניהול קטגוריות") },
-                            onClick = {
-                                showCategoriesList = true
-                                showMenu = false
-                            }
-                        )
-                        DropdownMenuItem(
-                            text = { Text("ייבוא רשימת קניות") },
-                            onClick = {
-                                showNotesDialog = true
-                                showMenu = false
-                            }
-                        )
+                        DropdownMenu(
+                            expanded = showMenu,
+                            onDismissRequest = { showMenu = false },
+                            modifier = Modifier.width(200.dp)
+                        ) {
+                            DropdownMenuItem(
+                                text = { 
+                                    Text(
+                                        "ניהול קטגוריות",
+                                        modifier = Modifier.fillMaxWidth(),
+                                        textAlign = TextAlign.Center
+                                    ) 
+                                },
+                                onClick = {
+                                    showCategoriesList = true
+                                    showMenu = false
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { 
+                                    Text(
+                                        "ייבוא רשימת קניות",
+                                        modifier = Modifier.fillMaxWidth(),
+                                        textAlign = TextAlign.Center
+                                    ) 
+                                },
+                                onClick = {
+                                    showNotesDialog = true
+                                    showMenu = false
+                                }
+                            )
+                        }
                     }
                 }
             }
