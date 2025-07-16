@@ -782,40 +782,10 @@ fun HomeScreen(
             AlertDialog(
                 onDismissRequest = { showDialog = false },
                 confirmButton = {
-                    Button(onClick = {
-                        if (name.isNotBlank()) {
-                            if (isEditMode && editIndex >= 0) {
-                                val updatedGroceries = groceries.toMutableList().also {
-                                    it[editIndex] = it[editIndex].copy(
-                                        name = name,
-                                        customCategoryId = selectedCustomCategoryId,
-                                        expirationDate = expirationDate
-                                    )
-                                }
-                                onUpdateGroceries(updatedGroceries)
-                            } else {
-                                val updatedGroceries = groceries + GroceryWithDate(
-                                    name = name,
-                                    customCategoryId = selectedCustomCategoryId,
-                                    expirationDate = expirationDate
-                                )
-                                onUpdateGroceries(updatedGroceries)
-                            }
-                            name = ""
-                            selectedCustomCategoryId = 1 // Default to "אחר"
-                            expirationDate = null
-                            showDialog = false
-                        }
-                    }) {
-                        Icon(
-                            imageVector = Icons.Default.Done,
-                            contentDescription = if (isEditMode) "שמור" else "הוסף",
-                            tint = Color.White
-                        )
-                    }
-                },
-                dismissButton = {
-                    Row {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = androidx.compose.foundation.layout.Arrangement.SpaceBetween
+                    ) {
                         Button(onClick = { showDialog = false }) {
                             Icon(
                                 imageVector = Icons.Default.Close,
@@ -823,17 +793,50 @@ fun HomeScreen(
                                 tint = Color.White
                             )
                         }
-                        if (isEditMode) {
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Button(
-                                onClick = { showDeleteConfirm = true },
-                                colors = androidx.compose.material3.ButtonDefaults.buttonColors(
-                                    containerColor = Color.Red
-                                )
-                            ) {
+                        Row {
+                            if (isEditMode) {
+                                Button(
+                                    onClick = { showDeleteConfirm = true },
+                                    colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                                        containerColor = Color.Red
+                                    )
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Delete,
+                                        contentDescription = "מחק",
+                                        tint = Color.White
+                                    )
+                                }
+                                Spacer(modifier = Modifier.width(8.dp))
+                            }
+                            Button(onClick = {
+                                if (name.isNotBlank()) {
+                                    if (isEditMode && editIndex >= 0) {
+                                        val updatedGroceries = groceries.toMutableList().also {
+                                            it[editIndex] = it[editIndex].copy(
+                                                name = name,
+                                                customCategoryId = selectedCustomCategoryId,
+                                                expirationDate = expirationDate
+                                            )
+                                        }
+                                        onUpdateGroceries(updatedGroceries)
+                                    } else {
+                                        val updatedGroceries = groceries + GroceryWithDate(
+                                            name = name,
+                                            customCategoryId = selectedCustomCategoryId,
+                                            expirationDate = expirationDate
+                                        )
+                                        onUpdateGroceries(updatedGroceries)
+                                    }
+                                    name = ""
+                                    selectedCustomCategoryId = 1 // Default to "אחר"
+                                    expirationDate = null
+                                    showDialog = false
+                                }
+                            }) {
                                 Icon(
-                                    imageVector = Icons.Default.Delete,
-                                    contentDescription = "מחק",
+                                    imageVector = Icons.Default.Done,
+                                    contentDescription = if (isEditMode) "שמור" else "הוסף",
                                     tint = Color.White
                                 )
                             }
@@ -852,7 +855,10 @@ fun HomeScreen(
                         // Category dropdown
                         Box {
                             val selectedCategory = customCategories.find { it.id == selectedCustomCategoryId }
-                            Button(onClick = { expanded = true }) {
+                            Button(
+                                onClick = { expanded = true },
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
                                 Text(selectedCategory?.name ?: "בחר קטגוריה")
                             }
                             DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
@@ -869,7 +875,10 @@ fun HomeScreen(
                         }
                         Spacer(modifier = Modifier.height(8.dp))
                         // Expiration date picker
-                        Button(onClick = { showDatePicker = true }) {
+                        Button(
+                            onClick = { showDatePicker = true },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
                             Text(if (expirationDate != null) expirationDate.toString() else "בחר תאריך תפוגה (אופציונלי)")
                         }
                         if (showDatePicker) {
@@ -933,12 +942,14 @@ fun HomeScreen(
                 }
                 },
                 dismissButton = {
-                    Button(onClick = { showDeleteConfirm = false }) {
-                        Icon(
-                            imageVector = Icons.Default.Close,
-                            contentDescription = "ביטול",
-                            tint = Color.White
-                        )
+                    Row {
+                        Button(onClick = { showDeleteConfirm = false }) {
+                            Icon(
+                                imageVector = Icons.Default.Close,
+                                contentDescription = "ביטול",
+                                tint = Color.White
+                            )
+                        }
                     }
                 },
                 title = { Text("אישור מחיקה") },
@@ -990,11 +1001,13 @@ fun HomeScreen(
                     }
                 },
                 dismissButton = {
-                    Button(onClick = { 
-                        notesText = ""
-                        showNotesDialog = false 
-                    }) {
-                        Text("סגור")
+                    Row {
+                        Button(onClick = { 
+                            notesText = ""
+                            showNotesDialog = false 
+                        }) {
+                            Text("סגור")
+                        }
                     }
                 },
                 title = { Text("הוסף רשימה") },
@@ -1154,7 +1167,19 @@ fun HomeScreen(
                     }
                 },
                 dismissButton = {
-                    Row {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = androidx.compose.foundation.layout.Arrangement.SpaceBetween
+                    ) {
+                        Button(
+                            onClick = { 
+                                showEditCategoryDialog = false
+                                editingCategory = null
+                                editingCategoryName = ""
+                            }
+                        ) {
+                            Text("ביטול")
+                        }
                         if (editingCategory?.name != "אחר") {
                             Button(
                                 onClick = { 
@@ -1168,16 +1193,8 @@ fun HomeScreen(
                             ) {
                                 Text("מחק", color = Color.White)
                             }
-                            Spacer(modifier = Modifier.width(8.dp))
-                        }
-                        Button(
-                            onClick = { 
-                                showEditCategoryDialog = false
-                                editingCategory = null
-                                editingCategoryName = ""
-                            }
-                        ) {
-                            Text("ביטול")
+                        } else {
+                            Spacer(modifier = Modifier.width(48.dp))
                         }
                     }
                 },
@@ -1248,13 +1265,15 @@ fun HomeScreen(
                     }
                 },
                 dismissButton = {
-                    Button(
-                        onClick = { 
-                            showDeleteCategoryDialog = false
-                            categoryToDelete = null
+                    Row {
+                        Button(
+                            onClick = { 
+                                showDeleteCategoryDialog = false
+                                categoryToDelete = null
+                            }
+                        ) {
+                            Text("ביטול")
                         }
-                    ) {
-                        Text("ביטול")
                     }
                 },
                 title = { Text("מחק קטגוריה") },
@@ -1299,13 +1318,15 @@ fun HomeScreen(
                     }
                 },
                 dismissButton = {
-                    Button(
-                        onClick = { 
-                            showCreateCategoryDialog = false
-                            newCategoryName = ""
+                    Row {
+                        Button(
+                            onClick = { 
+                                showCreateCategoryDialog = false
+                                newCategoryName = ""
+                            }
+                        ) {
+                            Text("ביטול")
                         }
-                    ) {
-                        Text("ביטול")
                     }
                 },
                 title = { Text("צור קטגוריה חדשה") },
@@ -1522,8 +1543,14 @@ fun ShoppingListScreen(
                 }
             },
             dismissButton = {
-                Button(onClick = { showEditDialog = false }) {
-                    Text("ביטול")
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = androidx.compose.foundation.layout.Arrangement.SpaceBetween
+                ) {
+                    Button(onClick = { showEditDialog = false }) {
+                        Text("ביטול")
+                    }
+                    Spacer(modifier = Modifier.width(48.dp))
                 }
             },
             title = { Text("ערוך מצרך") },
