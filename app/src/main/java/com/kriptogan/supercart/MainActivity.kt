@@ -924,29 +924,31 @@ fun HomeScreen(
             AlertDialog(
                 onDismissRequest = { showDeleteConfirm = false },
                 confirmButton = {
-                    Button(onClick = {
-                        val updatedGroceries = groceries.toMutableList().also { it.removeAt(editIndex) }
-                        onUpdateGroceries(updatedGroceries)
-                        showDeleteConfirm = false
-                        showDialog = false
-                    },
-                    colors = androidx.compose.material3.ButtonDefaults.buttonColors(
-                        containerColor = Color.Red
-                    )
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Delete,
-                        contentDescription = "מחק",
-                        tint = Color.White
-                    )
-                }
-                },
-                dismissButton = {
-                    Row {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = androidx.compose.foundation.layout.Arrangement.SpaceBetween
+                    ) {
                         Button(onClick = { showDeleteConfirm = false }) {
                             Icon(
                                 imageVector = Icons.Default.Close,
                                 contentDescription = "ביטול",
+                                tint = Color.White
+                            )
+                        }
+                        Button(
+                            onClick = {
+                                val updatedGroceries = groceries.toMutableList().also { it.removeAt(editIndex) }
+                                onUpdateGroceries(updatedGroceries)
+                                showDeleteConfirm = false
+                                showDialog = false
+                            },
+                            colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                                containerColor = Color.Red
+                            )
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Delete,
+                                contentDescription = "מחק",
                                 tint = Color.White
                             )
                         }
@@ -962,51 +964,60 @@ fun HomeScreen(
             AlertDialog(
                 onDismissRequest = { showNotesDialog = false },
                 confirmButton = {
-                    Button(onClick = {
-                        // Parse each line and add as new items or update existing ones
-                        val lines = notesText.split("\n").filter { it.trim().isNotEmpty() }
-                        if (lines.isNotEmpty()) {
-                            val updatedGroceries = groceries.toMutableList()
-                            
-                            lines.forEach { line ->
-                                val itemName = line.trim()
-                                val existingItemIndex = updatedGroceries.indexOfFirst { it.name == itemName }
-                                
-                                if (existingItemIndex != -1) {
-                                    // Item exists, just set inShoppingList to true
-                                    updatedGroceries[existingItemIndex] = updatedGroceries[existingItemIndex].copy(
-                                        inShoppingList = true
-                                    )
-                                } else {
-                                    // Item doesn't exist, create new item
-                                    val newItem = GroceryWithDate(
-                                        name = itemName,
-                                        customCategoryId = 1, // Default to "אחר"
-                                        expirationDate = null,
-                                        lastTimeBoughtDays = null,
-                                        averageBuyingDays = null,
-                                        buyEvents = emptyList(),
-                                        inShoppingList = true
-                                    )
-                                    updatedGroceries.add(newItem)
-                                }
-                            }
-                            
-                            onUpdateGroceries(updatedGroceries)
-                        }
-                        notesText = ""
-                        showNotesDialog = false
-                    }) {
-                        Text("הוסף")
-                    }
-                },
-                dismissButton = {
-                    Row {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = androidx.compose.foundation.layout.Arrangement.SpaceBetween
+                    ) {
                         Button(onClick = { 
                             notesText = ""
                             showNotesDialog = false 
                         }) {
-                            Text("סגור")
+                            Icon(
+                                imageVector = Icons.Default.Close,
+                                contentDescription = "סגור",
+                                tint = Color.White
+                            )
+                        }
+                        Button(onClick = {
+                            // Parse each line and add as new items or update existing ones
+                            val lines = notesText.split("\n").filter { it.trim().isNotEmpty() }
+                            if (lines.isNotEmpty()) {
+                                val updatedGroceries = groceries.toMutableList()
+                                
+                                lines.forEach { line ->
+                                    val itemName = line.trim()
+                                    val existingItemIndex = updatedGroceries.indexOfFirst { it.name == itemName }
+                                    
+                                    if (existingItemIndex != -1) {
+                                        // Item exists, just set inShoppingList to true
+                                        updatedGroceries[existingItemIndex] = updatedGroceries[existingItemIndex].copy(
+                                            inShoppingList = true
+                                        )
+                                    } else {
+                                        // Item doesn't exist, create new item
+                                        val newItem = GroceryWithDate(
+                                            name = itemName,
+                                            customCategoryId = 1, // Default to "אחר"
+                                            expirationDate = null,
+                                            lastTimeBoughtDays = null,
+                                            averageBuyingDays = null,
+                                            buyEvents = emptyList(),
+                                            inShoppingList = true
+                                        )
+                                        updatedGroceries.add(newItem)
+                                    }
+                                }
+                                
+                                onUpdateGroceries(updatedGroceries)
+                            }
+                            notesText = ""
+                            showNotesDialog = false
+                        }) {
+                            Icon(
+                                imageVector = Icons.Default.Done,
+                                contentDescription = "הוסף",
+                                tint = Color.White
+                            )
                         }
                     }
                 },
@@ -1030,18 +1041,28 @@ fun HomeScreen(
             AlertDialog(
                 onDismissRequest = { showCategoriesList = false },
                 confirmButton = {
-                    Row {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = androidx.compose.foundation.layout.Arrangement.SpaceBetween
+                    ) {
+                        Button(onClick = { showCategoriesList = false }) {
+                            Icon(
+                                imageVector = Icons.Default.Close,
+                                contentDescription = "סגור",
+                                tint = Color.White
+                            )
+                        }
                         Button(
                             onClick = { 
                                 newCategoryName = ""
                                 showCreateCategoryDialog = true
                             }
                         ) {
-                            Text("צור קטגוריה חדשה")
-                        }
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Button(onClick = { showCategoriesList = false }) {
-                            Text("סגור")
+                            Icon(
+                                imageVector = Icons.Default.Add,
+                                contentDescription = "צור קטגוריה חדשה",
+                                tint = Color.White
+                            )
                         }
                     }
                 },
@@ -1291,41 +1312,50 @@ fun HomeScreen(
                     newCategoryName = ""
                 },
                 confirmButton = {
-                    Button(
-                        onClick = {
-                            if (newCategoryName.isNotBlank()) {
-                                // Generate a new unique ID
-                                val newId = (customCategories.maxOfOrNull { it.id } ?: 0) + 1
-                                val newViewOrder = (customCategories.maxOfOrNull { it.viewOrder } ?: 0) + 1
-                                
-                                val newCategory = CustomCategory(
-                                    id = newId,
-                                    name = newCategoryName,
-                                    default = false,
-                                    viewOrder = newViewOrder
-                                )
-                                
-                                val updatedCategories = customCategories + newCategory
-                                onUpdateCategories(updatedCategories)
-                                
-                                showCreateCategoryDialog = false
-                                newCategoryName = ""
-                            }
-                        },
-                        enabled = newCategoryName.isNotBlank()
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = androidx.compose.foundation.layout.Arrangement.SpaceBetween
                     ) {
-                        Text("צור")
-                    }
-                },
-                dismissButton = {
-                    Row {
                         Button(
                             onClick = { 
                                 showCreateCategoryDialog = false
                                 newCategoryName = ""
                             }
                         ) {
-                            Text("ביטול")
+                            Icon(
+                                imageVector = Icons.Default.Close,
+                                contentDescription = "ביטול",
+                                tint = Color.White
+                            )
+                        }
+                        Button(
+                            onClick = {
+                                if (newCategoryName.isNotBlank()) {
+                                    // Generate a new unique ID
+                                    val newId = (customCategories.maxOfOrNull { it.id } ?: 0) + 1
+                                    val newViewOrder = (customCategories.maxOfOrNull { it.viewOrder } ?: 0) + 1
+                                    
+                                    val newCategory = CustomCategory(
+                                        id = newId,
+                                        name = newCategoryName,
+                                        default = false,
+                                        viewOrder = newViewOrder
+                                    )
+                                    
+                                    val updatedCategories = customCategories + newCategory
+                                    onUpdateCategories(updatedCategories)
+                                    
+                                    showCreateCategoryDialog = false
+                                    newCategoryName = ""
+                                }
+                            },
+                            enabled = newCategoryName.isNotBlank()
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Done,
+                                contentDescription = "צור",
+                                tint = Color.White
+                            )
                         }
                     }
                 },
