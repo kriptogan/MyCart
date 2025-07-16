@@ -1557,30 +1557,35 @@ fun ShoppingListScreen(
         AlertDialog(
             onDismissRequest = { showEditDialog = false },
             confirmButton = {
-                Button(onClick = {
-                    val updated = editGrocery!!.copy(
-                        name = name,
-                        customCategoryId = selectedCustomCategoryId,
-                        expirationDate = expirationDate
-                    )
-                    val updatedGroceries = groceries.map {
-                        if (it.name == editGrocery!!.name && it.customCategoryId == editGrocery!!.customCategoryId) updated else it
-                    }
-                    onUpdateGroceries(updatedGroceries)
-                    showEditDialog = false
-                }) {
-                    Text("שמור")
-                }
-            },
-            dismissButton = {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = androidx.compose.foundation.layout.Arrangement.SpaceBetween
                 ) {
                     Button(onClick = { showEditDialog = false }) {
-                        Text("ביטול")
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = "ביטול",
+                            tint = Color.White
+                        )
                     }
-                    Spacer(modifier = Modifier.width(48.dp))
+                    Button(onClick = {
+                        val updated = editGrocery!!.copy(
+                            name = name,
+                            customCategoryId = selectedCustomCategoryId,
+                            expirationDate = expirationDate
+                        )
+                        val updatedGroceries = groceries.map {
+                            if (it.name == editGrocery!!.name && it.customCategoryId == editGrocery!!.customCategoryId) updated else it
+                        }
+                        onUpdateGroceries(updatedGroceries)
+                        showEditDialog = false
+                    }) {
+                        Icon(
+                            imageVector = Icons.Default.Done,
+                            contentDescription = "שמור",
+                            tint = Color.White
+                        )
+                    }
                 }
             },
             title = { Text("ערוך מצרך") },
@@ -1595,7 +1600,10 @@ fun ShoppingListScreen(
                     // Category dropdown
                     Box {
                         val selectedCategory = customCategories.find { it.id == selectedCustomCategoryId }
-                        Button(onClick = { expanded = true }) {
+                        Button(
+                            onClick = { expanded = true },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
                             Text(selectedCategory?.name ?: "בחר קטגוריה")
                         }
                         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
@@ -1612,7 +1620,10 @@ fun ShoppingListScreen(
                     }
                     Spacer(modifier = Modifier.height(8.dp))
                     // Expiration date picker
-                    Button(onClick = { showDatePicker = true }) {
+                    Button(
+                        onClick = { showDatePicker = true },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
                         Text(if (expirationDate != null) expirationDate.toString() else "בחר תאריך תפוגה (אופציונלי)")
                     }
                     if (showDatePicker) {
