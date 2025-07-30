@@ -173,7 +173,12 @@ object StringResources {
                  "add_to_shopping_list_message" to "האם ברצונך להוסיף את '%s' לרשימת הקניות?",
                  "yes" to "כן",
                  "no" to "לא",
-                 "return_to_shopping_list" to "החזר לרשימת קניות"
+                 "return_to_shopping_list" to "החזר לרשימת קניות",
+                 "categories_list" to "רשימת קטגוריות",
+                 "move_up" to "העלה",
+                 "move_down" to "הורד",
+                 "add_list" to "הוסף רשימה",
+                 "add_items_instructions" to "הוסף פריטים. כל פריט בשורה נפרדת."
     )
     
     private val englishStrings = mapOf(
@@ -223,7 +228,12 @@ object StringResources {
                  "add_to_shopping_list_message" to "Do you want to add '%s' to the shopping list?",
                  "yes" to "Yes",
                  "no" to "No",
-                 "return_to_shopping_list" to "Return to Shopping List"
+                 "return_to_shopping_list" to "Return to Shopping List",
+                 "categories_list" to "Categories List",
+                 "move_up" to "Move Up",
+                 "move_down" to "Move Down",
+                 "add_list" to "Add List",
+                 "add_items_instructions" to "Add items. Each item on a separate line."
     )
     
     private val russianStrings = mapOf(
@@ -273,7 +283,12 @@ object StringResources {
                  "add_to_shopping_list_message" to "Хотите добавить '%s' в список покупок?",
                  "yes" to "Да",
                  "no" to "Нет",
-                 "return_to_shopping_list" to "Вернуть в список покупок"
+                 "return_to_shopping_list" to "Вернуть в список покупок",
+                 "categories_list" to "Список категорий",
+                 "move_up" to "Поднять",
+                 "move_down" to "Опустить",
+                 "add_list" to "Добавить список",
+                 "add_items_instructions" to "Добавьте товары. Каждый товар с новой строки."
     )
     
                  fun getString(key: String, language: String, vararg args: Any): String {
@@ -1225,7 +1240,7 @@ fun HomeScreen(
                         }) {
                             Icon(
                                 imageVector = Icons.Default.Close,
-                                contentDescription = stringResource(R.string.close),
+                                contentDescription = localizedString("close", selectedLanguage),
                                 tint = Color.White
                             )
                         }
@@ -1266,18 +1281,18 @@ fun HomeScreen(
                         }) {
                             Icon(
                                 imageVector = Icons.Default.Done,
-                                contentDescription = "הוסף",
+                                contentDescription = localizedString("add", selectedLanguage),
                                 tint = Color.White
                             )
                         }
                     }
                 },
-                title = { Text("הוסף רשימה") },
+                title = { Text(localizedString("add_list", selectedLanguage)) },
                 text = {
                     OutlinedTextField(
                         value = notesText,
                         onValueChange = { notesText = it },
-                        label = { Text("הוסף פריטים. כל פריט בשורה נפרדת.") },
+                        label = { Text(localizedString("add_items_instructions", selectedLanguage)) },
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(200.dp),
@@ -1299,7 +1314,7 @@ fun HomeScreen(
                         Button(onClick = { showCategoriesList = false }) {
                             Icon(
                                 imageVector = Icons.Default.Close,
-                                contentDescription = stringResource(R.string.close),
+                                contentDescription = localizedString("close", selectedLanguage),
                                 tint = Color.White
                             )
                         }
@@ -1311,13 +1326,13 @@ fun HomeScreen(
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Add,
-                                contentDescription = "צור קטגוריה חדשה",
+                                contentDescription = localizedString("create_new_category", selectedLanguage),
                                 tint = Color.White
                             )
                         }
                     }
                 },
-                title = { Text("רשימת קטגוריות") },
+                title = { Text(localizedString("categories_list", selectedLanguage)) },
                 text = {
                     LazyColumn(
                         modifier = Modifier
@@ -1356,7 +1371,7 @@ fun HomeScreen(
                                 ) {
                                     Icon(
                                         imageVector = Icons.Default.KeyboardArrowUp,
-                                        contentDescription = "העלה",
+                                        contentDescription = localizedString("move_up", selectedLanguage),
                                         tint = if (customCategories.indexOf(category) > 0) Color.Black else Color.Gray
                                     )
                                 }
@@ -1380,7 +1395,7 @@ fun HomeScreen(
                                 ) {
                                     Icon(
                                         imageVector = Icons.Default.KeyboardArrowDown,
-                                        contentDescription = "הורד",
+                                        contentDescription = localizedString("move_down", selectedLanguage),
                                         tint = if (customCategories.indexOf(category) < customCategories.size - 1) Color.Black else Color.Gray
                                     )
                                 }
@@ -1758,7 +1773,7 @@ fun HomeScreen(
                         Button(
                             onClick = { showAlertNotification = false }
                         ) {
-                            Text("סגור")
+                            Text(localizedString("close", selectedLanguage))
                         }
                         Button(
                             onClick = { 
@@ -1788,7 +1803,7 @@ fun HomeScreen(
                     Button(
                         onClick = { showLanguageSelection = false }
                     ) {
-                        Text("סגור")
+                        Text(localizedString("close", selectedLanguage))
                     }
                 },
                 title = { Text(localizedString("choose_language", selectedLanguage)) },
