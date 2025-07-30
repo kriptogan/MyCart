@@ -483,6 +483,7 @@ fun HomeScreen(
     var selectedGroceryForHistory by remember { mutableStateOf<GroceryWithDate?>(null) } // Grocery to show history for
     var showAddToShoppingListConfirm by remember { mutableStateOf(false) } // For confirmation dialog when adding new item
     var showAlertNotification by remember { mutableStateOf(false) } // For alert notification popup
+    var showLanguageSelection by remember { mutableStateOf(false) } // For language selection dialog
 
     // Helper to check if a grocery is expired or expiring soon
     fun isExpiringOrExpired(grocery: GroceryWithDate): Boolean {
@@ -664,6 +665,19 @@ fun HomeScreen(
                                 },
                                 onClick = {
                                     showNotesDialog = true
+                                    showMenu = false
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { 
+                                    Text(
+                                        "שפות",
+                                        modifier = Modifier.fillMaxWidth(),
+                                        textAlign = TextAlign.Center
+                                    ) 
+                                },
+                                onClick = {
+                                    showLanguageSelection = true
                                     showMenu = false
                                 }
                             )
@@ -1535,6 +1549,67 @@ fun HomeScreen(
                 title = { Text("פריטים שדורשים תשומת לב") },
                 text = { 
                     Text("יש פריטים שפג תוקפם, עומדים לפוג, או עבר ממוצע הקנייה שלהם. האם ברצונך לראות אותם?")
+                }
+            )
+        }
+        
+        // Language selection dialog
+        if (showLanguageSelection) {
+            AlertDialog(
+                onDismissRequest = { showLanguageSelection = false },
+                confirmButton = {
+                    Button(
+                        onClick = { showLanguageSelection = false }
+                    ) {
+                        Text("סגור")
+                    }
+                },
+                title = { Text("בחר שפה") },
+                text = {
+                    Column {
+                        Button(
+                            onClick = { 
+                                // TODO: Implement Hebrew language selection
+                                showLanguageSelection = false
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 4.dp),
+                            colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                                containerColor = Color(0xFF4CAF50)
+                            )
+                        ) {
+                            Text("עברית", color = Color.White, fontWeight = FontWeight.Bold)
+                        }
+                        Button(
+                            onClick = { 
+                                // TODO: Implement English language selection
+                                showLanguageSelection = false
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 4.dp),
+                            colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                                containerColor = Color.Gray
+                            )
+                        ) {
+                            Text("English", color = Color.White)
+                        }
+                        Button(
+                            onClick = { 
+                                // TODO: Implement Russian language selection
+                                showLanguageSelection = false
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 4.dp),
+                            colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                                containerColor = Color.Gray
+                            )
+                        ) {
+                            Text("Русский", color = Color.White)
+                        }
+                    }
                 }
             )
         }
