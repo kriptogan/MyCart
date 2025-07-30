@@ -24,6 +24,8 @@ Clear shopping list
 Update purchase history
 Effort: 4-6 hours
 Impact: Better user experience and data accuracy
+
+7. When entering app, if there are notification, alert the user with a message. 
 _______________________________________________________________________________________________________________
 
 Priority 3: High Impact, High Complexity
