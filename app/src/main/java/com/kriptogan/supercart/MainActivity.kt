@@ -392,6 +392,59 @@ object StringResources {
              fun translateCategoryName(categoryName: String, language: String): String {
                  return getString(categoryName, language)
              }
+             
+             fun getOriginalCategoryName(translatedName: String, language: String): String {
+                 // Reverse mapping to get original Hebrew name
+                 return when (language) {
+                     "en" -> {
+                         when (translatedName) {
+                             "Other" -> "אחר"
+                             "Fruits" -> "פירות"
+                             "Vegetables" -> "ירקות"
+                             "Breads & Pastries" -> "מאפים ולחמים"
+                             "Snacks & Sweets" -> "חטיפים ומתוקים"
+                             "Grains & Legumes" -> "דגנים וקטניות"
+                             "Canned Goods" -> "שימורים"
+                             "Disposable" -> "חד פעמי"
+                             "Cleaning Products" -> "מוצרי נקיון"
+                             "Baby Products" -> "מוצרים לתינוקות"
+                             "Dry Food" -> "מזון יבש"
+                             "Spices & Sauces" -> "תבלינים ורטבים"
+                             "Toiletries" -> "מוצרי טואלטיקה"
+                             "Beverages" -> "משקאות"
+                             "Frozen" -> "קפואים"
+                             "Dairy Products" -> "מוצרי חלב"
+                             "Meat & Fish" -> "בשר ודגים"
+                             "Home Products" -> "מוצרים לבית"
+                             else -> translatedName // Return as-is if not found in mapping
+                         }
+                     }
+                     "ru" -> {
+                         when (translatedName) {
+                             "Другое" -> "אחר"
+                             "Фрукты" -> "פירות"
+                             "Овощи" -> "ירקות"
+                             "Хлеб и выпечка" -> "מאפים ולחמים"
+                             "Закуски и сладости" -> "חטיפים ומתוקים"
+                             "Зерновые и бобовые" -> "דגנים וקטניות"
+                             "Консервы" -> "שימורים"
+                             "Одноразовые" -> "חד פעמי"
+                             "Моющие средства" -> "מוצרי נקיון"
+                             "Детские товары" -> "מוצרים לתינוקות"
+                             "Сухие продукты" -> "מזון יבש"
+                             "Специи и соусы" -> "תבלינים ורטבים"
+                             "Туалетные принадлежности" -> "מוצרי טואלטיקה"
+                             "Напитки" -> "משקאות"
+                             "Замороженные" -> "קפואים"
+                             "Молочные продукты" -> "מוצרי חלב"
+                             "Мясо и рыба" -> "בשר ודגים"
+                             "Товары для дома" -> "מוצרים לבית"
+                             else -> translatedName // Return as-is if not found in mapping
+                         }
+                     }
+                     else -> translatedName // For Hebrew, return as-is
+                 }
+             }
 }
 
 @Composable
@@ -402,6 +455,11 @@ fun localizedString(key: String, language: String, vararg args: Any): String {
 @Composable
 fun localizedCategoryName(categoryName: String, language: String): String {
     return StringResources.translateCategoryName(categoryName, language)
+}
+
+@Composable
+fun getOriginalCategoryName(translatedName: String, language: String): String {
+    return StringResources.getOriginalCategoryName(translatedName, language)
 }
 
 data class TabItem(
@@ -1547,7 +1605,10 @@ fun HomeScreen(
                                 IconButton(
                                     onClick = {
                                         editingCategory = category
-                                        editingCategoryName = category.name
+                                        // Show translated name in input field for better UX
+                                        // If user doesn't change it, we'll save the original Hebrew name
+                                        // If user changes it, we'll save the new custom name
+                                        editingCategoryName = StringResources.translateCategoryName(category.name, selectedLanguage)
                                         showEditCategoryDialog = true
                                     },
                                     enabled = category.name != "אחר" // Keep original Hebrew name for logic
@@ -1617,9 +1678,20 @@ fun HomeScreen(
                             Button(
                                 onClick = {
                                     if (editingCategoryName.isNotBlank()) {
+                                        // Check if the user changed the name or kept the translated version
+                                        val originalName = editingCategory!!.name
+                                        val translatedName = StringResources.translateCategoryName(originalName, selectedLanguage)
+                                        val finalName = if (editingCategoryName == translatedName) {
+                                            // User didn't change the translated name, keep original Hebrew name
+                                            originalName
+                                        } else {
+                                            // User changed the name, save the new custom name
+                                            editingCategoryName
+                                        }
+                                        
                                         val updatedCategories = customCategories.map { cat ->
                                             if (cat.id == editingCategory!!.id) {
-                                                cat.copy(name = editingCategoryName)
+                                                cat.copy(name = finalName)
                                             } else {
                                                 cat
                                             }
