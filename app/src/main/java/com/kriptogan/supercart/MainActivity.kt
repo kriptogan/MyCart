@@ -123,6 +123,8 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.room.util.copy
+import androidx.compose.ui.viewinterop.AndroidView
 
 // Custom string resource system
 object StringResources {
@@ -183,7 +185,8 @@ object StringResources {
                  "show_items" to "הצג פריטים",
                  "items_need_attention" to "פריטים שדורשים תשומת לב",
                  "items_need_attention_message" to "יש פריטים שפג תוקפם, עומדים לפוג, או עבר ממוצע הקנייה שלהם. האם ברצונך לראות אותם?",
-                 "show_expiring_items" to "הצג רק מוצרים שפג תוקפם, עומדים לפוג, או עבר ממוצע קנייה"
+                 "show_expiring_items" to "הצג רק מוצרים שפג תוקפם, עומדים לפוג, או עבר ממוצע קנייה",
+                 "create" to "צור"
     )
     
     private val englishStrings = mapOf(
@@ -243,7 +246,8 @@ object StringResources {
                  "show_items" to "Show Items",
                  "items_need_attention" to "Items Need Attention",
                  "items_need_attention_message" to "There are items that have expired, are about to expire, or have exceeded their average buying period. Would you like to see them?",
-                 "show_expiring_items" to "Show only items that have expired, are about to expire, or have exceeded their average buying period"
+                 "show_expiring_items" to "Show only items that have expired, are about to expire, or have exceeded their average buying period",
+                 "create" to "Create"
     )
     
     private val russianStrings = mapOf(
@@ -303,7 +307,8 @@ object StringResources {
                  "show_items" to "Показать товары",
                  "items_need_attention" to "Товары требуют внимания",
                  "items_need_attention_message" to "Есть товары, срок годности которых истек, истекает или превышен средний период покупки. Хотите их увидеть?",
-                 "show_expiring_items" to "Показать только товары, срок годности которых истек, истекает или превышен средний период покупки"
+                 "show_expiring_items" to "Показать только товары, срок годности которых истек, истекает или превышен средний период покупки",
+                 "create" to "Создать"
     )
     
                  fun getString(key: String, language: String, vararg args: Any): String {
@@ -447,13 +452,8 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
-        // Force Hebrew locale and RTL layout
-        val locale = java.util.Locale("iw", "IL") // Hebrew, Israel
-        java.util.Locale.setDefault(locale)
-        val config = resources.configuration
-        config.setLocale(locale)
-        createConfigurationContext(config)
-        resources.updateConfiguration(config, resources.displayMetrics)
+        // Note: We no longer force Hebrew locale at the app level
+        // This allows DatePicker to use the system locale while our custom string system handles app text
         
         // Hide status bar and make app full screen
         window.setFlags(
@@ -499,6 +499,13 @@ fun SuperCartApp() {
         context.languageDataStore.edit { preferences ->
             preferences[LANGUAGE_KEY] = selectedLanguage
         }
+        
+        // Force the locale change for the entire app
+        val locale = java.util.Locale(selectedLanguage)
+        java.util.Locale.setDefault(locale)
+        val config = context.resources.configuration
+        config.setLocale(locale)
+        context.resources.updateConfiguration(config, context.resources.displayMetrics)
     }
     
     var selectedTab by remember { mutableStateOf(0) }
@@ -1086,7 +1093,7 @@ fun HomeScreen(
                                 ) {
                                     Icon(
                                         imageVector = Icons.Default.Delete,
-                                        contentDescription = "מחק",
+                                        contentDescription = localizedString("delete", selectedLanguage),
                                         tint = Color.White
                                     )
                                 }
@@ -1117,7 +1124,7 @@ fun HomeScreen(
                             }) {
                                 Icon(
                                     imageVector = Icons.Default.Done,
-                                    contentDescription = if (isEditMode) "שמור" else "הוסף",
+                                    contentDescription = if (isEditMode) localizedString("save", selectedLanguage) else localizedString("add", selectedLanguage),
                                     tint = Color.White
                                 )
                             }
@@ -1164,22 +1171,27 @@ fun HomeScreen(
                         }
                         if (showDatePicker) {
                             val datePickerState = rememberDatePickerState()
-                            DatePickerDialog(
-                                onDismissRequest = { showDatePicker = false },
-                                confirmButton = {
-                                    Button(onClick = {
-                                        val millis = datePickerState.selectedDateMillis
-                                        expirationDate = millis?.let {
-                                            LocalDate.ofEpochDay(it / (24 * 60 * 60 * 1000))
-                                        }
-                                        showDatePicker = false
-                                    }) { Text(localizedString("save", selectedLanguage)) }
-                                },
-                                dismissButton = {
-                                    Button(onClick = { showDatePicker = false }) { Text(localizedString("cancel", selectedLanguage)) }
-                                }
+                            
+                            CompositionLocalProvider(
+                                LocalLayoutDirection provides layoutDirection
                             ) {
-                                DatePicker(state = datePickerState)
+                                DatePickerDialog(
+                                    onDismissRequest = { showDatePicker = false },
+                                    confirmButton = {
+                                        Button(onClick = {
+                                            val millis = datePickerState.selectedDateMillis
+                                            expirationDate = millis?.let {
+                                                LocalDate.ofEpochDay(it / (24 * 60 * 60 * 1000))
+                                            }
+                                            showDatePicker = false
+                                        }) { Text(localizedString("save", selectedLanguage)) }
+                                    },
+                                    dismissButton = {
+                                        Button(onClick = { showDatePicker = false }) { Text(localizedString("cancel", selectedLanguage)) }
+                                    }
+                                ) {
+                                    DatePicker(state = datePickerState)
+                                }
                             }
                         }
                         Spacer(modifier = Modifier.height(8.dp))
@@ -1229,7 +1241,7 @@ fun HomeScreen(
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Delete,
-                                contentDescription = "מחק",
+                                contentDescription = localizedString("delete", selectedLanguage),
                                 tint = Color.White
                             )
                         }
@@ -1424,7 +1436,7 @@ fun HomeScreen(
                                 ) {
                                     Icon(
                                         imageVector = Icons.Default.Edit,
-                                        contentDescription = "ערוך שם קטגוריה",
+                                        contentDescription = localizedString("edit_category_name", selectedLanguage),
                                         tint = if (category.name == "אחר") Color.Gray else Color.Black
                                     )
                                 }
@@ -1460,7 +1472,7 @@ fun HomeScreen(
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Close,
-                                contentDescription = "ביטול",
+                                contentDescription = localizedString("cancel", selectedLanguage),
                                 tint = Color.White
                             )
                         }
@@ -1478,7 +1490,7 @@ fun HomeScreen(
                                 ) {
                                     Icon(
                                         imageVector = Icons.Default.Delete,
-                                        contentDescription = "מחק",
+                                        contentDescription = localizedString("delete", selectedLanguage),
                                         tint = Color.White
                                     )
                                 }
@@ -1504,7 +1516,7 @@ fun HomeScreen(
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Done,
-                                    contentDescription = "שמור",
+                                    contentDescription = localizedString("save", selectedLanguage),
                                     tint = Color.White
                                 )
                             }
@@ -1616,7 +1628,7 @@ fun HomeScreen(
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Close,
-                                contentDescription = "ביטול",
+                                contentDescription = localizedString("cancel", selectedLanguage),
                                 tint = Color.White
                             )
                         }
@@ -1645,7 +1657,7 @@ fun HomeScreen(
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Done,
-                                contentDescription = "צור",
+                                contentDescription = localizedString("create", selectedLanguage),
                                 tint = Color.White
                             )
                         }
@@ -1886,6 +1898,7 @@ fun ShoppingListScreen(
     selectedLanguage: String
 ) {
     val context = LocalContext.current
+    val layoutDirection = if (selectedLanguage == "iw") LayoutDirection.Rtl else LayoutDirection.Ltr
     val categoryExpansion = remember { mutableStateMapOf<Int, Boolean>() }
     orderedCategories.forEach { cat ->
         if (categoryExpansion[cat.id] == null) categoryExpansion[cat.id] = true
@@ -1987,7 +2000,7 @@ fun ShoppingListScreen(
                                         ) {
                                             Icon(
                                                 imageVector = Icons.Default.Delete,
-                                                contentDescription = "הסר"
+                                                contentDescription = localizedString("remove_from_list", selectedLanguage)
                                             )
                                         }
                                         IconButton(
@@ -2140,7 +2153,7 @@ fun ShoppingListScreen(
                     Button(onClick = { showEditDialog = false }) {
                         Icon(
                             imageVector = Icons.Default.Close,
-                            contentDescription = "ביטול",
+                            contentDescription = localizedString("cancel", selectedLanguage),
                             tint = Color.White
                         )
                     }
@@ -2158,7 +2171,7 @@ fun ShoppingListScreen(
                     }) {
                         Icon(
                             imageVector = Icons.Default.Done,
-                            contentDescription = "שמור",
+                            contentDescription = localizedString("save", selectedLanguage),
                             tint = Color.White
                         )
                     }
@@ -2200,26 +2213,31 @@ fun ShoppingListScreen(
                         onClick = { showDatePicker = true },
                         modifier = Modifier.fillMaxWidth()
                                             ) {
-                            Text(if (expirationDate != null) expirationDate.toString() else stringResource(R.string.expiration_date))
+                            Text(if (expirationDate != null) expirationDate.toString() else localizedString("expiration_date", selectedLanguage))
                         }
                     if (showDatePicker) {
                         val datePickerState = rememberDatePickerState()
-                        DatePickerDialog(
-                            onDismissRequest = { showDatePicker = false },
-                            confirmButton = {
-                                Button(onClick = {
-                                    val millis = datePickerState.selectedDateMillis
-                                    expirationDate = millis?.let {
-                                        LocalDate.ofEpochDay(it / (24 * 60 * 60 * 1000))
-                                    }
-                                    showDatePicker = false
-                                }) { Text(localizedString("save", selectedLanguage)) }
-                            },
-                            dismissButton = {
-                                Button(onClick = { showDatePicker = false }) { Text(localizedString("cancel", selectedLanguage)) }
-                            }
+                        
+                        CompositionLocalProvider(
+                            LocalLayoutDirection provides layoutDirection
                         ) {
-                            DatePicker(state = datePickerState)
+                            DatePickerDialog(
+                                onDismissRequest = { showDatePicker = false },
+                                confirmButton = {
+                                    Button(onClick = {
+                                        val millis = datePickerState.selectedDateMillis
+                                        expirationDate = millis?.let {
+                                            LocalDate.ofEpochDay(it / (24 * 60 * 60 * 1000))
+                                        }
+                                        showDatePicker = false
+                                    }) { Text(localizedString("save", selectedLanguage)) }
+                                },
+                                dismissButton = {
+                                    Button(onClick = { showDatePicker = false }) { Text(localizedString("cancel", selectedLanguage)) }
+                                }
+                            ) {
+                                DatePicker(state = datePickerState)
+                            }
                         }
                     }
                 }
