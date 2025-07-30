@@ -125,6 +125,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.room.util.copy
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.compose.runtime.key
 
 // Custom string resource system
 object StringResources {
@@ -479,12 +480,15 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun SuperCartApp() {
     val configuration = LocalConfiguration.current
-    val layoutDirection = LocalLayoutDirection.current
-    
-    // Language state at the app level
+    // Calculate layout direction based on selected language
     var selectedLanguage by remember { mutableStateOf("iw") } // Current language (iw=Hebrew, en=English, ru=Russian)
     var currentLocale by remember { mutableStateOf(java.util.Locale("iw")) } // Current locale for RTL/LTR support
     var languageChangeKey by remember { mutableStateOf(0) } // Force recomposition when language changes
+    
+    // Calculate layout direction based on selected language
+    val layoutDirection = if (selectedLanguage == "iw") LayoutDirection.Rtl else LayoutDirection.Ltr
+    
+    // Language state is now defined above
     
     // Load selected language from DataStore
     val context = LocalContext.current
@@ -575,7 +579,16 @@ fun SuperCartApp() {
     CompositionLocalProvider(
         LocalLayoutDirection provides layoutDirection
     ) {
-        Box(modifier = Modifier.fillMaxSize()) {
+        // Force recomposition when language changes
+        LaunchedEffect(selectedLanguage) {
+            languageChangeKey++
+        }
+        
+        // Apply layout direction to the entire app
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
             CustomStatusBar()
             Scaffold(
             modifier = Modifier
