@@ -506,6 +506,7 @@ fun HomeScreen(
     var selectedCustomCategoryId by remember { mutableStateOf(1) } // Default to "אחר"
     var expirationDate by remember { mutableStateOf<LocalDate?>(null) }
     var showDatePicker by remember { mutableStateOf(false) }
+    var inShoppingList by remember { mutableStateOf(false) } // Shopping list toggle state
 
     // State for expanded/collapsed categories
     val categoryExpansion = remember { mutableStateMapOf<Int, Boolean>() }
@@ -533,6 +534,7 @@ fun HomeScreen(
         name = grocery.name
         selectedCustomCategoryId = grocery.customCategoryId
         expirationDate = grocery.expirationDate
+        inShoppingList = grocery.inShoppingList
         editIndex = index
         isEditMode = true
         showDialog = true
@@ -562,6 +564,7 @@ fun HomeScreen(
                             name = if (searchQuery.isNotBlank()) searchQuery else ""
                             selectedCustomCategoryId = 1 // Default to "אחר"
                             expirationDate = null
+                            inShoppingList = false
                             isEditMode = false
                             showDialog = true
                         },
@@ -794,21 +797,20 @@ fun HomeScreen(
                             )
                         }
                         Row {
-                            if (isEditMode) {
-                                Button(
-                                    onClick = { showDeleteConfirm = true },
-                                    colors = androidx.compose.material3.ButtonDefaults.buttonColors(
-                                        containerColor = Color.Red
-                                    )
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Delete,
-                                        contentDescription = "מחק",
-                                        tint = Color.White
-                                    )
-                                }
-                                Spacer(modifier = Modifier.width(8.dp))
+                            // Shopping cart toggle button
+                            Button(
+                                onClick = { inShoppingList = !inShoppingList },
+                                colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                                    containerColor = if (inShoppingList) Color.Green else Color.Gray
+                                )
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.ShoppingCart,
+                                    contentDescription = if (inShoppingList) "הסר מרשימת קניות" else "הוסף לרשימת קניות",
+                                    tint = Color.White
+                                )
                             }
+                            Spacer(modifier = Modifier.width(8.dp))
                             Button(onClick = {
                                 if (name.isNotBlank()) {
                                     if (isEditMode && editIndex >= 0) {
@@ -816,7 +818,8 @@ fun HomeScreen(
                                             it[editIndex] = it[editIndex].copy(
                                                 name = name,
                                                 customCategoryId = selectedCustomCategoryId,
-                                                expirationDate = expirationDate
+                                                expirationDate = expirationDate,
+                                                inShoppingList = inShoppingList
                                             )
                                         }
                                         onUpdateGroceries(updatedGroceries)
@@ -824,13 +827,15 @@ fun HomeScreen(
                                         val updatedGroceries = groceries + GroceryWithDate(
                                             name = name,
                                             customCategoryId = selectedCustomCategoryId,
-                                            expirationDate = expirationDate
+                                            expirationDate = expirationDate,
+                                            inShoppingList = inShoppingList
                                         )
                                         onUpdateGroceries(updatedGroceries)
                                     }
                                     name = ""
                                     selectedCustomCategoryId = 1 // Default to "אחר"
                                     expirationDate = null
+                                    inShoppingList = false
                                     showDialog = false
                                 }
                             }) {
