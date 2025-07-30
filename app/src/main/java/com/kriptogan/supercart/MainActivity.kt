@@ -116,6 +116,139 @@ import androidx.compose.ui.res.stringResource
 import kotlinx.coroutines.launch
 import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.CoroutineScope
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.runtime.staticCompositionLocalOf
+
+// Custom string resource system
+object StringResources {
+    private val hebrewStrings = mapOf(
+        "home" to "בית",
+        "shopping_list" to "רשימת קניות",
+        "add_item" to "הוסף מצרך",
+        "menu" to "תפריט",
+        "search_placeholder" to "חפש מצרך...",
+        "languages" to "שפות",
+        "choose_language" to "בחר שפה",
+        "hebrew" to "עברית",
+        "english" to "English",
+        "russian" to "Русский",
+        "close" to "סגור",
+        "cancel" to "ביטול",
+        "save" to "שמור",
+        "edit" to "ערוך",
+        "delete" to "מחק",
+        "add" to "הוסף",
+        "remove_from_list" to "הסר",
+        "bought" to "נרכש",
+        "add_to_bought" to "הוסף לקנוי",
+        "bought_items" to "פריטים שנרכשו:",
+        "finish_shopping" to "סיים קניות",
+        "finish_shopping_with_count" to "סיים קניות (%d פריטים)",
+        "confirm_finish_shopping" to "אישור סיום קניות",
+        "confirm_finish_shopping_message" to "האם אתה בטוח שברצונך לסיים את הקניות? %d פריטים יירשמו כנרכשו.",
+        "manage_categories" to "ניהול קטגוריות",
+        "import_shopping_list" to "ייבוא רשימת קניות",
+        "add_item_title" to "הוסף מצרך",
+        "edit_item_title" to "ערוך מצרך",
+        "item_name" to "שם המצרך",
+        "choose_category" to "בחר קטגוריה",
+        "expiration_date" to "בחר תאריך תפוגה (אופציונלי)"
+    )
+    
+    private val englishStrings = mapOf(
+        "home" to "Home",
+        "shopping_list" to "Shopping List",
+        "add_item" to "Add Item",
+        "menu" to "Menu",
+        "search_placeholder" to "Search items...",
+        "languages" to "Languages",
+        "choose_language" to "Choose Language",
+        "hebrew" to "עברית",
+        "english" to "English",
+        "russian" to "Русский",
+        "close" to "Close",
+        "cancel" to "Cancel",
+        "save" to "Save",
+        "edit" to "Edit",
+        "delete" to "Delete",
+        "add" to "Add",
+        "remove_from_list" to "Remove",
+        "bought" to "Bought",
+        "add_to_bought" to "Add to Bought",
+        "bought_items" to "Bought Items:",
+        "finish_shopping" to "Finish Shopping",
+        "finish_shopping_with_count" to "Finish Shopping (%d items)",
+        "confirm_finish_shopping" to "Confirm Finish Shopping",
+        "confirm_finish_shopping_message" to "Are you sure you want to finish shopping? %d items will be recorded as bought.",
+        "manage_categories" to "Manage Categories",
+        "import_shopping_list" to "Import Shopping List",
+        "add_item_title" to "Add Item",
+        "edit_item_title" to "Edit Item",
+        "item_name" to "Item Name",
+        "choose_category" to "Choose Category",
+        "expiration_date" to "Choose expiration date (optional)"
+    )
+    
+    private val russianStrings = mapOf(
+        "home" to "Главная",
+        "shopping_list" to "Список покупок",
+        "add_item" to "Добавить товар",
+        "menu" to "Меню",
+        "search_placeholder" to "Поиск товаров...",
+        "languages" to "Языки",
+        "choose_language" to "Выберите язык",
+        "hebrew" to "עברית",
+        "english" to "English",
+        "russian" to "Русский",
+        "close" to "Закрыть",
+        "cancel" to "Отмена",
+        "save" to "Сохранить",
+        "edit" to "Редактировать",
+        "delete" to "Удалить",
+        "add" to "Добавить",
+        "remove_from_list" to "Удалить",
+        "bought" to "Куплено",
+        "add_to_bought" to "Добавить в купленное",
+        "bought_items" to "Купленные товары:",
+        "finish_shopping" to "Завершить покупки",
+        "finish_shopping_with_count" to "Завершить покупки (%d товаров)",
+        "confirm_finish_shopping" to "Подтвердить завершение покупок",
+        "confirm_finish_shopping_message" to "Вы уверены, что хотите завершить покупки? %d товаров будут записаны как купленные.",
+        "manage_categories" to "Управление категориями",
+        "import_shopping_list" to "Импорт списка покупок",
+        "add_item_title" to "Добавить товар",
+        "edit_item_title" to "Редактировать товар",
+        "item_name" to "Название товара",
+        "choose_category" to "Выберите категорию",
+        "expiration_date" to "Выберите дату истечения срока (необязательно)"
+    )
+    
+    fun getString(key: String, language: String, vararg args: Any): String {
+        val strings = when (language) {
+            "iw" -> hebrewStrings
+            "en" -> englishStrings
+            "ru" -> russianStrings
+            else -> hebrewStrings
+        }
+        
+        val baseString = strings[key] ?: key
+        return if (args.isNotEmpty()) {
+            baseString.replace("%d", args[0].toString())
+        } else {
+            baseString
+        }
+    }
+}
+
+@Composable
+fun localizedString(key: String, language: String, vararg args: Any): String {
+    return StringResources.getString(key, language, *args)
+}
 
 data class TabItem(
     val title: String,
@@ -263,13 +396,35 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun SuperCartApp() {
+    val configuration = LocalConfiguration.current
+    val layoutDirection = LocalLayoutDirection.current
+    
+    // Language state at the app level
+    var selectedLanguage by remember { mutableStateOf("iw") } // Current language (iw=Hebrew, en=English, ru=Russian)
+    var currentLocale by remember { mutableStateOf(java.util.Locale("iw")) } // Current locale for RTL/LTR support
+    var languageChangeKey by remember { mutableStateOf(0) } // Force recomposition when language changes
+    
+    // Load selected language from DataStore
+    val context = LocalContext.current
+    LaunchedEffect(Unit) {
+        val savedLanguage = context.languageDataStore.data.first()[LANGUAGE_KEY]
+        selectedLanguage = savedLanguage ?: "iw" // Default to Hebrew
+        currentLocale = java.util.Locale(selectedLanguage)
+    }
+    
+    // Save selected language to DataStore
+    LaunchedEffect(selectedLanguage) {
+        context.languageDataStore.edit { preferences ->
+            preferences[LANGUAGE_KEY] = selectedLanguage
+        }
+    }
+    
     var selectedTab by remember { mutableStateOf(0) }
     val tabs = listOf(
-        TabItem("בית", Icons.Default.Home),
-        TabItem("רשימת קניות", Icons.Default.ShoppingCart)
+        TabItem(localizedString("home", selectedLanguage), Icons.Default.Home),
+        TabItem(localizedString("shopping_list", selectedLanguage), Icons.Default.ShoppingCart)
     )
     var groceries by remember { mutableStateOf(listOf<GroceryWithDate>()) }
-    val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
     // Custom categories state
@@ -328,9 +483,12 @@ fun SuperCartApp() {
         groceries.filter { it.inShoppingList }
     }
 
-    Box(modifier = Modifier.fillMaxSize()) {
-        CustomStatusBar()
-        Scaffold(
+    CompositionLocalProvider(
+        LocalLayoutDirection provides layoutDirection
+    ) {
+        Box(modifier = Modifier.fillMaxSize()) {
+            CustomStatusBar()
+            Scaffold(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(top = 48.dp), // Space for custom status bar
@@ -345,7 +503,7 @@ fun SuperCartApp() {
                             selected = selectedTab == index,
                             onClick = { selectedTab = index },
                             icon = {
-                                if (tabItem.title == "רשימת קניות" && shoppingListItems.isNotEmpty()) {
+                                if (tabItem.title == localizedString("shopping_list", selectedLanguage) && shoppingListItems.isNotEmpty()) {
                                     BadgedBox(badge = {
                                         Badge(
                                             containerColor = Color(0xFFFF5722)
@@ -408,7 +566,13 @@ fun SuperCartApp() {
                             customCategories = categories
                             // The orderedCategories will be updated automatically by the LaunchedEffect
                         },
-                        scope = scope
+                        scope = scope,
+                        selectedLanguage = selectedLanguage,
+                        onLanguageChange = { newLanguage ->
+                            selectedLanguage = newLanguage
+                            currentLocale = java.util.Locale(newLanguage)
+                            languageChangeKey++
+                        }
                     )
                     1 -> ShoppingListScreen(
                         shoppingList = shoppingListItems,
@@ -446,6 +610,7 @@ fun SuperCartApp() {
                 }
             }
         }
+        }
     }
 }
 
@@ -459,7 +624,9 @@ fun HomeScreen(
     orderedCategories: List<CustomCategory>,
     customCategories: List<CustomCategory>,
     onUpdateCategories: (List<CustomCategory>) -> Unit,
-    scope: CoroutineScope
+    scope: CoroutineScope,
+    selectedLanguage: String,
+    onLanguageChange: (String) -> Unit
 ) {
     val context = LocalContext.current
     var showDialog by remember { mutableStateOf(false) }
@@ -485,7 +652,10 @@ fun HomeScreen(
     var showAddToShoppingListConfirm by remember { mutableStateOf(false) } // For confirmation dialog when adding new item
     var showAlertNotification by remember { mutableStateOf(false) } // For alert notification popup
     var showLanguageSelection by remember { mutableStateOf(false) } // For language selection dialog
-    var selectedLanguage by remember { mutableStateOf("iw") } // Current language (iw=Hebrew, en=English, ru=Russian)
+    
+    // Update configuration when locale changes
+    val configuration = LocalConfiguration.current
+    val layoutDirection = if (selectedLanguage == "iw") LayoutDirection.Rtl else LayoutDirection.Ltr
 
     // Helper to check if a grocery is expired or expiring soon
     fun isExpiringOrExpired(grocery: GroceryWithDate): Boolean {
@@ -542,18 +712,7 @@ fun HomeScreen(
         }
     }
     
-    // Load selected language from DataStore
-    LaunchedEffect(Unit) {
-        val savedLanguage = context.languageDataStore.data.first()[LANGUAGE_KEY]
-        selectedLanguage = savedLanguage ?: "iw" // Default to Hebrew
-    }
-    
-    // Save selected language to DataStore
-    LaunchedEffect(selectedLanguage) {
-        context.languageDataStore.edit { preferences ->
-            preferences[LANGUAGE_KEY] = selectedLanguage
-        }
-    }
+
 
     fun openEditDialog(index: Int, grocery: GroceryWithDate) {
         name = grocery.name
@@ -602,7 +761,7 @@ fun HomeScreen(
                     ) {
                         Icon(
                             imageVector = Icons.Default.Add,
-                            contentDescription = "הוסף מצרך",
+                            contentDescription = localizedString("add_item", selectedLanguage),
                             tint = Color.White
                         )
                     }
@@ -660,7 +819,7 @@ fun HomeScreen(
                             DropdownMenuItem(
                                 text = { 
                                     Text(
-                                        "ניהול קטגוריות",
+                                        localizedString("manage_categories", selectedLanguage),
                                         modifier = Modifier.fillMaxWidth(),
                                         textAlign = TextAlign.Center
                                     ) 
@@ -673,7 +832,7 @@ fun HomeScreen(
                             DropdownMenuItem(
                                 text = { 
                                     Text(
-                                        "ייבוא רשימת קניות",
+                                        localizedString("import_shopping_list", selectedLanguage),
                                         modifier = Modifier.fillMaxWidth(),
                                         textAlign = TextAlign.Center
                                     ) 
@@ -686,7 +845,7 @@ fun HomeScreen(
                             DropdownMenuItem(
                                 text = { 
                                     Text(
-                                        "שפות",
+                                        localizedString("languages", selectedLanguage),
                                         modifier = Modifier.fillMaxWidth(),
                                         textAlign = TextAlign.Center
                                     ) 
@@ -706,7 +865,7 @@ fun HomeScreen(
                 OutlinedTextField(
                     value = searchQuery,
                     onValueChange = { searchQuery = it },
-                    label = { Text("חפש מצרך...") },
+                    label = { Text(localizedString("search_placeholder", selectedLanguage)) },
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(bottom = 16.dp),
@@ -797,7 +956,7 @@ fun HomeScreen(
                                             ) {
                                                 Icon(
                                                     imageVector = Icons.Default.Edit,
-                                                    contentDescription = "ערוך"
+                                                    contentDescription = stringResource(R.string.edit)
                                                 )
                                             }
                                             IconButton(
@@ -806,7 +965,7 @@ fun HomeScreen(
                                             ) {
                                                 Icon(
                                                     imageVector = Icons.Default.ShoppingCart,
-                                                    contentDescription = if (indexedGrocery.value.inShoppingList) "הסר מרשימת קניות" else "הוסף לרשימת קניות",
+                                                    contentDescription = if (indexedGrocery.value.inShoppingList) stringResource(R.string.remove_from_list) else stringResource(R.string.add_item),
                                                     tint = if (indexedGrocery.value.inShoppingList) Color.Green else Color.Unspecified
                                                 )
                                             }
@@ -882,13 +1041,13 @@ fun HomeScreen(
                         }
                     }
                 },
-                title = { Text(if (isEditMode) "ערוך מצרך" else "הוסף מצרך") },
+                title = { Text(if (isEditMode) localizedString("edit_item_title", selectedLanguage) else localizedString("add_item_title", selectedLanguage)) },
                 text = {
                     Column {
                         OutlinedTextField(
                             value = name,
                             onValueChange = { name = it },
-                            label = { Text("שם המצרך") }
+                            label = { Text(localizedString("item_name", selectedLanguage)) }
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         // Category dropdown
@@ -898,7 +1057,7 @@ fun HomeScreen(
                                 onClick = { expanded = true },
                                 modifier = Modifier.fillMaxWidth()
                             ) {
-                                Text(selectedCategory?.name ?: "בחר קטגוריה")
+                                Text(selectedCategory?.name ?: localizedString("choose_category", selectedLanguage))
                             }
                             DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
                                 customCategories.sortedBy { it.viewOrder }.forEach { cat ->
@@ -918,7 +1077,7 @@ fun HomeScreen(
                             onClick = { showDatePicker = true },
                             modifier = Modifier.fillMaxWidth()
                         ) {
-                            Text(if (expirationDate != null) expirationDate.toString() else "בחר תאריך תפוגה (אופציונלי)")
+                            Text(if (expirationDate != null) expirationDate.toString() else localizedString("expiration_date", selectedLanguage))
                         }
                         if (showDatePicker) {
                             val datePickerState = rememberDatePickerState()
@@ -931,10 +1090,10 @@ fun HomeScreen(
                                             LocalDate.ofEpochDay(it / (24 * 60 * 60 * 1000))
                                         }
                                         showDatePicker = false
-                                    }) { Text("אישור") }
+                                    }) { Text(stringResource(R.string.save)) }
                                 },
                                 dismissButton = {
-                                    Button(onClick = { showDatePicker = false }) { Text("ביטול") }
+                                    Button(onClick = { showDatePicker = false }) { Text(stringResource(R.string.cancel)) }
                                 }
                             ) {
                                 DatePicker(state = datePickerState)
@@ -1013,7 +1172,7 @@ fun HomeScreen(
                         }) {
                             Icon(
                                 imageVector = Icons.Default.Close,
-                                contentDescription = "סגור",
+                                contentDescription = stringResource(R.string.close),
                                 tint = Color.White
                             )
                         }
@@ -1087,7 +1246,7 @@ fun HomeScreen(
                         Button(onClick = { showCategoriesList = false }) {
                             Icon(
                                 imageVector = Icons.Default.Close,
-                                contentDescription = "סגור",
+                                contentDescription = stringResource(R.string.close),
                                 tint = Color.White
                             )
                         }
@@ -1343,7 +1502,7 @@ fun HomeScreen(
                                 categoryToDelete = null
                             }
                         ) {
-                            Text("ביטול")
+                            Text(stringResource(R.string.cancel))
                         }
                     }
                 },
@@ -1579,12 +1738,12 @@ fun HomeScreen(
                         Text("סגור")
                     }
                 },
-                title = { Text(stringResource(R.string.choose_language)) },
+                title = { Text(localizedString("choose_language", selectedLanguage)) },
                 text = {
                     Column {
                         Button(
                             onClick = { 
-                                selectedLanguage = "iw"
+                                onLanguageChange("iw")
                                 showLanguageSelection = false
                             },
                             modifier = Modifier
@@ -1598,7 +1757,7 @@ fun HomeScreen(
                         }
                         Button(
                             onClick = { 
-                                selectedLanguage = "en"
+                                onLanguageChange("en")
                                 showLanguageSelection = false
                             },
                             modifier = Modifier
@@ -1612,7 +1771,7 @@ fun HomeScreen(
                         }
                         Button(
                             onClick = { 
-                                selectedLanguage = "ru"
+                                onLanguageChange("ru")
                                 showLanguageSelection = false
                             },
                             modifier = Modifier
@@ -1753,7 +1912,7 @@ fun ShoppingListScreen(
                                         ) {
                                             Icon(
                                                 imageVector = Icons.Default.Edit,
-                                                contentDescription = "ערוך"
+                                                contentDescription = stringResource(R.string.edit)
                                             )
                                         }
                                         IconButton(
@@ -1766,7 +1925,7 @@ fun ShoppingListScreen(
                                         ) {
                                             Icon(
                                                 imageVector = Icons.Default.Check,
-                                                contentDescription = "הוסף לקנוי"
+                                                contentDescription = stringResource(R.string.add_to_bought)
                                             )
                                         }
                                     }
@@ -1795,7 +1954,7 @@ fun ShoppingListScreen(
         if (boughtItems.isNotEmpty()) {
             item {
                 Text(
-                    text = "פריטים שנרכשו:",
+                    text = stringResource(R.string.bought_items),
                     fontWeight = FontWeight.Bold,
                     fontSize = 18.sp,
                     modifier = Modifier.padding(vertical = 8.dp)
@@ -1817,7 +1976,7 @@ fun ShoppingListScreen(
                     ) {
                         Icon(
                             imageVector = Icons.Default.Check,
-                            contentDescription = "נרכש",
+                            contentDescription = stringResource(R.string.bought),
                             tint = Color.Green,
                             modifier = Modifier.padding(end = 8.dp)
                         )
@@ -1871,12 +2030,12 @@ fun ShoppingListScreen(
                 ) {
                     Icon(
                         imageVector = Icons.Default.Done,
-                        contentDescription = "סיים קניות",
+                        contentDescription = stringResource(R.string.finish_shopping),
                         tint = Color.White,
                         modifier = Modifier.padding(end = 8.dp)
                     )
                     Text(
-                        text = "סיים קניות (${boughtItems.size} פריטים)",
+                        text = stringResource(R.string.finish_shopping_with_count, boughtItems.size),
                         color = Color.White,
                         fontWeight = FontWeight.Bold
                     )
@@ -1927,7 +2086,7 @@ fun ShoppingListScreen(
                     OutlinedTextField(
                         value = name,
                         onValueChange = { name = it },
-                        label = { Text("שם המצרך") }
+                        label = { Text(stringResource(R.string.item_name)) }
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     // Category dropdown
@@ -1937,7 +2096,7 @@ fun ShoppingListScreen(
                             onClick = { expanded = true },
                             modifier = Modifier.fillMaxWidth()
                         ) {
-                            Text(selectedCategory?.name ?: "בחר קטגוריה")
+                            Text(selectedCategory?.name ?: stringResource(R.string.choose_category))
                         }
                         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
                             customCategories.sortedBy { it.viewOrder }.forEach { cat ->
@@ -1956,9 +2115,9 @@ fun ShoppingListScreen(
                     Button(
                         onClick = { showDatePicker = true },
                         modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text(if (expirationDate != null) expirationDate.toString() else "בחר תאריך תפוגה (אופציונלי)")
-                    }
+                                            ) {
+                            Text(if (expirationDate != null) expirationDate.toString() else stringResource(R.string.expiration_date))
+                        }
                     if (showDatePicker) {
                         val datePickerState = rememberDatePickerState()
                         DatePickerDialog(
@@ -1970,10 +2129,10 @@ fun ShoppingListScreen(
                                         LocalDate.ofEpochDay(it / (24 * 60 * 60 * 1000))
                                     }
                                     showDatePicker = false
-                                }) { Text("אישור") }
+                                }) { Text(stringResource(R.string.save)) }
                             },
                             dismissButton = {
-                                Button(onClick = { showDatePicker = false }) { Text("ביטול") }
+                                Button(onClick = { showDatePicker = false }) { Text(stringResource(R.string.cancel)) }
                             }
                         ) {
                             DatePicker(state = datePickerState)
@@ -1996,7 +2155,7 @@ fun ShoppingListScreen(
                     Button(
                         onClick = { showDoneShoppingConfirm = false }
                     ) {
-                        Text("ביטול")
+                        Text(stringResource(R.string.cancel))
                     }
                     Button(
                         onClick = { 
@@ -2012,13 +2171,13 @@ fun ShoppingListScreen(
                             containerColor = Color(0xFF4CAF50)
                         )
                     ) {
-                        Text("אישור", color = Color.White)
+                        Text(stringResource(R.string.save), color = Color.White)
                     }
                 }
             },
-            title = { Text("אישור סיום קניות") },
+                            title = { Text(stringResource(R.string.confirm_finish_shopping)) },
             text = { 
-                Text("האם אתה בטוח שברצונך לסיים את הקניות? ${boughtItems.size} פריטים יירשמו כנרכשו.")
+                Text(stringResource(R.string.confirm_finish_shopping_message, boughtItems.size))
             }
         )
     }
