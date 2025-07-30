@@ -1,12 +1,12 @@
 Priority 1: High Impact, Low Complexity
 _______________________________________________________________________________________________________________
-5. Cart Icon Toggle (Home Page)
+V 5. Cart Icon Toggle (Home Page)
 Why First: Simple UI enhancement that improves user experience immediately
 Implementation: Modify the existing cart icon to toggle between "add to list" and "remove from list" states
 Effort: 1-2 hours
 Impact: Immediate usability improvement
 
-4. Add New Item Directly to Shopping List
+V 4. Add New Item Directly to Shopping List
 Why Second: Natural workflow enhancement that users expect
 Implementation: Add a "Add to Shopping List" option in the add item dialog
 Effort: 2-3 hours

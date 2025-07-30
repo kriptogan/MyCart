@@ -481,6 +481,7 @@ fun HomeScreen(
     var showMenu by remember { mutableStateOf(false) } // For hamburger menu
     var showBuyHistoryDialog by remember { mutableStateOf(false) } // For showing buy history
     var selectedGroceryForHistory by remember { mutableStateOf<GroceryWithDate?>(null) } // Grocery to show history for
+    var showAddToShoppingListConfirm by remember { mutableStateOf(false) } // For confirmation dialog when adding new item
 
     // Helper to check if a grocery is expired or expiring soon
     fun isExpiringOrExpired(grocery: GroceryWithDate): Boolean {
@@ -797,20 +798,21 @@ fun HomeScreen(
                             )
                         }
                         Row {
-                            // Shopping cart toggle button
-                            Button(
-                                onClick = { inShoppingList = !inShoppingList },
-                                colors = androidx.compose.material3.ButtonDefaults.buttonColors(
-                                    containerColor = if (inShoppingList) Color.Green else Color.Gray
-                                )
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.ShoppingCart,
-                                    contentDescription = if (inShoppingList) "הסר מרשימת קניות" else "הוסף לרשימת קניות",
-                                    tint = Color.White
-                                )
+                            if (isEditMode) {
+                                Button(
+                                    onClick = { showDeleteConfirm = true },
+                                    colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                                        containerColor = Color.Red
+                                    )
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Delete,
+                                        contentDescription = "מחק",
+                                        tint = Color.White
+                                    )
+                                }
+                                Spacer(modifier = Modifier.width(8.dp))
                             }
-                            Spacer(modifier = Modifier.width(8.dp))
                             Button(onClick = {
                                 if (name.isNotBlank()) {
                                     if (isEditMode && editIndex >= 0) {
@@ -823,20 +825,15 @@ fun HomeScreen(
                                             )
                                         }
                                         onUpdateGroceries(updatedGroceries)
+                                        name = ""
+                                        selectedCustomCategoryId = 1 // Default to "אחר"
+                                        expirationDate = null
+                                        inShoppingList = false
+                                        showDialog = false
                                     } else {
-                                        val updatedGroceries = groceries + GroceryWithDate(
-                                            name = name,
-                                            customCategoryId = selectedCustomCategoryId,
-                                            expirationDate = expirationDate,
-                                            inShoppingList = inShoppingList
-                                        )
-                                        onUpdateGroceries(updatedGroceries)
+                                        // For new items, show confirmation dialog
+                                        showAddToShoppingListConfirm = true
                                     }
-                                    name = ""
-                                    selectedCustomCategoryId = 1 // Default to "אחר"
-                                    expirationDate = null
-                                    inShoppingList = false
-                                    showDialog = false
                                 }
                             }) {
                                 Icon(
@@ -1434,6 +1431,69 @@ fun HomeScreen(
                         }
                     }
                 }
+            )
+        }
+        
+        // Add to shopping list confirmation dialog
+        if (showAddToShoppingListConfirm) {
+            AlertDialog(
+                onDismissRequest = { 
+                    showAddToShoppingListConfirm = false
+                    showDialog = false
+                    name = ""
+                    selectedCustomCategoryId = 1
+                    expirationDate = null
+                    inShoppingList = false
+                },
+                confirmButton = {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = androidx.compose.foundation.layout.Arrangement.SpaceBetween
+                    ) {
+                        Button(
+                            onClick = { 
+                                // Add item without shopping list
+                                val updatedGroceries = groceries + GroceryWithDate(
+                                    name = name,
+                                    customCategoryId = selectedCustomCategoryId,
+                                    expirationDate = expirationDate,
+                                    inShoppingList = false
+                                )
+                                onUpdateGroceries(updatedGroceries)
+                                showAddToShoppingListConfirm = false
+                                showDialog = false
+                                name = ""
+                                selectedCustomCategoryId = 1
+                                expirationDate = null
+                                inShoppingList = false
+                            }
+                        ) {
+                            Text("לא")
+                        }
+                        Button(
+                            onClick = { 
+                                // Add item with shopping list
+                                val updatedGroceries = groceries + GroceryWithDate(
+                                    name = name,
+                                    customCategoryId = selectedCustomCategoryId,
+                                    expirationDate = expirationDate,
+                                    inShoppingList = true
+                                )
+                                onUpdateGroceries(updatedGroceries)
+                                showAddToShoppingListConfirm = false
+                                showDialog = false
+                                name = ""
+                                selectedCustomCategoryId = 1
+                                expirationDate = null
+                                inShoppingList = false
+                            }
+                        ) {
+                            Text("כן")
+                        }
+                    }
+                },
+                title = { Text("הוסף לרשימת קניות") },
+                text = { Text("האם ברצונך להוסיף את '${name}' לרשימת הקניות?") }
             )
         }
     }
