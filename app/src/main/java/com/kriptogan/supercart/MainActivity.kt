@@ -112,6 +112,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import androidx.compose.ui.res.stringResource
 import kotlinx.coroutines.launch
 import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.CoroutineScope
@@ -484,6 +485,7 @@ fun HomeScreen(
     var showAddToShoppingListConfirm by remember { mutableStateOf(false) } // For confirmation dialog when adding new item
     var showAlertNotification by remember { mutableStateOf(false) } // For alert notification popup
     var showLanguageSelection by remember { mutableStateOf(false) } // For language selection dialog
+    var selectedLanguage by remember { mutableStateOf("iw") } // Current language (iw=Hebrew, en=English, ru=Russian)
 
     // Helper to check if a grocery is expired or expiring soon
     fun isExpiringOrExpired(grocery: GroceryWithDate): Boolean {
@@ -537,6 +539,19 @@ fun HomeScreen(
     LaunchedEffect(hasExpiring) {
         if (hasExpiring && !showAlertNotification) {
             showAlertNotification = true
+        }
+    }
+    
+    // Load selected language from DataStore
+    LaunchedEffect(Unit) {
+        val savedLanguage = context.languageDataStore.data.first()[LANGUAGE_KEY]
+        selectedLanguage = savedLanguage ?: "iw" // Default to Hebrew
+    }
+    
+    // Save selected language to DataStore
+    LaunchedEffect(selectedLanguage) {
+        context.languageDataStore.edit { preferences ->
+            preferences[LANGUAGE_KEY] = selectedLanguage
         }
     }
 
@@ -1564,50 +1579,50 @@ fun HomeScreen(
                         Text("סגור")
                     }
                 },
-                title = { Text("בחר שפה") },
+                title = { Text(stringResource(R.string.choose_language)) },
                 text = {
                     Column {
                         Button(
                             onClick = { 
-                                // TODO: Implement Hebrew language selection
+                                selectedLanguage = "iw"
                                 showLanguageSelection = false
                             },
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(vertical = 4.dp),
                             colors = androidx.compose.material3.ButtonDefaults.buttonColors(
-                                containerColor = Color(0xFF4CAF50)
+                                containerColor = if (selectedLanguage == "iw") Color(0xFF4CAF50) else Color.Gray
                             )
                         ) {
-                            Text("עברית", color = Color.White, fontWeight = FontWeight.Bold)
+                            Text("עברית", color = Color.White, fontWeight = if (selectedLanguage == "iw") FontWeight.Bold else FontWeight.Normal)
                         }
                         Button(
                             onClick = { 
-                                // TODO: Implement English language selection
+                                selectedLanguage = "en"
                                 showLanguageSelection = false
                             },
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(vertical = 4.dp),
                             colors = androidx.compose.material3.ButtonDefaults.buttonColors(
-                                containerColor = Color.Gray
+                                containerColor = if (selectedLanguage == "en") Color(0xFF4CAF50) else Color.Gray
                             )
                         ) {
-                            Text("English", color = Color.White)
+                            Text("English", color = Color.White, fontWeight = if (selectedLanguage == "en") FontWeight.Bold else FontWeight.Normal)
                         }
                         Button(
                             onClick = { 
-                                // TODO: Implement Russian language selection
+                                selectedLanguage = "ru"
                                 showLanguageSelection = false
                             },
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(vertical = 4.dp),
                             colors = androidx.compose.material3.ButtonDefaults.buttonColors(
-                                containerColor = Color.Gray
+                                containerColor = if (selectedLanguage == "ru") Color(0xFF4CAF50) else Color.Gray
                             )
                         ) {
-                            Text("Русский", color = Color.White)
+                            Text("Русский", color = Color.White, fontWeight = if (selectedLanguage == "ru") FontWeight.Bold else FontWeight.Normal)
                         }
                     }
                 }
@@ -2041,6 +2056,10 @@ val Context.boughtItemsDataStore: DataStore<List<Grocery>> by dataStore(
     fileName = "bought_items.json",
     serializer = GroceryListSerializer
 )
+
+// Language selection DataStore
+val Context.languageDataStore by preferencesDataStore(name = "language_prefs")
+val LANGUAGE_KEY = stringPreferencesKey("selected_language")
 
 // Custom categories DataStore
 val Context.customCategoriesDataStore: DataStore<List<CustomCategory>> by dataStore(

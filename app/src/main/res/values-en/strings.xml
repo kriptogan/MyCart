@@ -1,0 +1,101 @@
+<resources>
+    <string name="app_name">SuperCart</string>
+    
+    <!-- Navigation -->
+    <string name="home">Home</string>
+    <string name="shopping_list">Shopping List</string>
+    
+    <!-- Home Screen -->
+    <string name="add_item">Add Item</string>
+    <string name="menu">Menu</string>
+    <string name="search_placeholder">Search items...</string>
+    <string name="show_expiring_only">Show only expired, expiring, or overdue items</string>
+    
+    <!-- Menu Items -->
+    <string name="manage_categories">Manage Categories</string>
+    <string name="import_shopping_list">Import Shopping List</string>
+    <string name="languages">Languages</string>
+    
+    <!-- Dialogs -->
+    <string name="add_item_title">Add Item</string>
+    <string name="edit_item_title">Edit Item</string>
+    <string name="item_name">Item Name</string>
+    <string name="choose_category">Choose Category</string>
+    <string name="expiration_date">Choose expiration date (optional)</string>
+    <string name="cancel">Cancel</string>
+    <string name="save">Save</string>
+    <string name="add">Add</string>
+    <string name="delete">Delete</string>
+    <string name="close">Close</string>
+    <string name="confirm_delete">Confirm Delete</string>
+    <string name="confirm_delete_message">Are you sure you want to delete?</string>
+    
+    <!-- Shopping List -->
+    <string name="remove_from_list">Remove</string>
+    <string name="edit">Edit</string>
+    <string name="bought">Bought</string>
+    <string name="add_to_bought">Add to Bought</string>
+    <string name="return_to_shopping_list">Return to Shopping List</string>
+    <string name="bought_items">Bought Items:</string>
+    <string name="finish_shopping">Finish Shopping</string>
+    <string name="finish_shopping_with_count">Finish Shopping (%d items)</string>
+    <string name="confirm_finish_shopping">Confirm Finish Shopping</string>
+    <string name="confirm_finish_shopping_message">Are you sure you want to finish shopping? %d items will be recorded as bought.</string>
+    
+    <!-- Categories -->
+    <string name="categories_list">Categories List</string>
+    <string name="create_new_category">Create New Category</string>
+    <string name="edit_category_name">Edit Category Name</string>
+    <string name="category_name">Category Name</string>
+    <string name="delete_category">Delete Category</string>
+    <string name="delete_category_message">The category \'%s\' contains items. What would you like to do?</string>
+    <string name="delete_all_items">Delete All Items</string>
+    <string name="move_to_other">Move to \'Other\'</string>
+    
+    <!-- Import Shopping List -->
+    <string name="add_list">Add List</string>
+    <string name="add_items_placeholder">Add items. Each item on a separate line.</string>
+    
+    <!-- Alert Notification -->
+    <string name="items_need_attention">Items Need Attention</string>
+    <string name="items_need_attention_message">There are items that have expired, are about to expire, or have passed their average buying time. Would you like to see them?</string>
+    <string name="show_items">Show Items</string>
+    
+    <!-- Language Selection -->
+    <string name="choose_language">Choose Language</string>
+    <string name="hebrew">עברית</string>
+    <string name="english">English</string>
+    <string name="russian">Русский</string>
+    
+    <!-- Buy History -->
+    <string name="buy_history">Buy History</string>
+    <string name="buy_history_with_name">Buy History - %s</string>
+    <string name="buy_history_count">Buy History (%d purchases)</string>
+    <string name="days_ago">%d days ago</string>
+    
+    <!-- Add to Shopping List Confirmation -->
+    <string name="add_to_shopping_list">Add to Shopping List</string>
+    <string name="add_to_shopping_list_message">Would you like to add \'%s\' to the shopping list?</string>
+    <string name="yes">Yes</string>
+    <string name="no">No</string>
+    
+    <!-- Default Categories -->
+    <string name="other">Other</string>
+    <string name="fruits">Fruits</string>
+    <string name="vegetables">Vegetables</string>
+    <string name="breads">Breads &amp; Pastries</string>
+    <string name="snacks">Snacks &amp; Sweets</string>
+    <string name="grains">Grains &amp; Legumes</string>
+    <string name="canned">Canned Goods</string>
+    <string name="disposable">Disposable</string>
+    <string name="cleaning">Cleaning Products</string>
+    <string name="baby">Baby Products</string>
+    <string name="dry_food">Dry Food</string>
+    <string name="spices">Spices &amp; Sauces</string>
+    <string name="toiletries">Toiletries</string>
+    <string name="beverages">Beverages</string>
+    <string name="frozen">Frozen</string>
+    <string name="dairy">Dairy Products</string>
+    <string name="meat">Meat &amp; Fish</string>
+    <string name="household">Household Items</string>
+</resources> 

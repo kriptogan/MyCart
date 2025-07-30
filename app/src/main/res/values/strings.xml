@@ -1,3 +1,101 @@
 <resources>
     <string name="app_name">SuperCart</string>
+    
+    <!-- Navigation -->
+    <string name="home">בית</string>
+    <string name="shopping_list">רשימת קניות</string>
+    
+    <!-- Home Screen -->
+    <string name="add_item">הוסף מצרך</string>
+    <string name="menu">תפריט</string>
+    <string name="search_placeholder">חפש מצרך...</string>
+    <string name="show_expiring_only">הצג רק מוצרים שפג תוקפם, עומדים לפוג, או עבר ממוצע קנייה</string>
+    
+    <!-- Menu Items -->
+    <string name="manage_categories">ניהול קטגוריות</string>
+    <string name="import_shopping_list">ייבוא רשימת קניות</string>
+    <string name="languages">שפות</string>
+    
+    <!-- Dialogs -->
+    <string name="add_item_title">הוסף מצרך</string>
+    <string name="edit_item_title">ערוך מצרך</string>
+    <string name="item_name">שם המצרך</string>
+    <string name="choose_category">בחר קטגוריה</string>
+    <string name="expiration_date">בחר תאריך תפוגה (אופציונלי)</string>
+    <string name="cancel">ביטול</string>
+    <string name="save">שמור</string>
+    <string name="add">הוסף</string>
+    <string name="delete">מחק</string>
+    <string name="close">סגור</string>
+    <string name="confirm_delete">אישור מחיקה</string>
+    <string name="confirm_delete_message">האם אתה בטוח שברצונך למחוק?</string>
+    
+    <!-- Shopping List -->
+    <string name="remove_from_list">הסר</string>
+    <string name="edit">ערוך</string>
+    <string name="bought">נרכש</string>
+    <string name="add_to_bought">הוסף לקנוי</string>
+    <string name="return_to_shopping_list">החזר לרשימת קניות</string>
+    <string name="bought_items">פריטים שנרכשו:</string>
+    <string name="finish_shopping">סיים קניות</string>
+    <string name="finish_shopping_with_count">סיים קניות (%d פריטים)</string>
+    <string name="confirm_finish_shopping">אישור סיום קניות</string>
+    <string name="confirm_finish_shopping_message">האם אתה בטוח שברצונך לסיים את הקניות? %d פריטים יירשמו כנרכשו.</string>
+    
+    <!-- Categories -->
+    <string name="categories_list">רשימת קטגוריות</string>
+    <string name="create_new_category">צור קטגוריה חדשה</string>
+    <string name="edit_category_name">ערוך שם קטגוריה</string>
+    <string name="category_name">שם הקטגוריה</string>
+    <string name="delete_category">מחק קטגוריה</string>
+    <string name="delete_category_message">הקטגוריה \'%s\' מכילה פריטים. מה ברצונך לעשות?</string>
+    <string name="delete_all_items">מחק את כל הפריטים</string>
+    <string name="move_to_other">העבר ל\'אחר\'</string>
+    
+    <!-- Import Shopping List -->
+    <string name="add_list">הוסף רשימה</string>
+    <string name="add_items_placeholder">הוסף פריטים. כל פריט בשורה נפרדת.</string>
+    
+    <!-- Alert Notification -->
+    <string name="items_need_attention">פריטים שדורשים תשומת לב</string>
+    <string name="items_need_attention_message">יש פריטים שפג תוקפם, עומדים לפוג, או עבר ממוצע הקנייה שלהם. האם ברצונך לראות אותם?</string>
+    <string name="show_items">הצג פריטים</string>
+    
+    <!-- Language Selection -->
+    <string name="choose_language">בחר שפה</string>
+    <string name="hebrew">עברית</string>
+    <string name="english">English</string>
+    <string name="russian">Русский</string>
+    
+    <!-- Buy History -->
+    <string name="buy_history">היסטוריית קניות</string>
+    <string name="buy_history_with_name">היסטוריית קניות - %s</string>
+    <string name="buy_history_count">היסטוריית קניות (%d קניות)</string>
+    <string name="days_ago">%d ימים</string>
+    
+    <!-- Add to Shopping List Confirmation -->
+    <string name="add_to_shopping_list">הוסף לרשימת קניות</string>
+    <string name="add_to_shopping_list_message">האם ברצונך להוסיף את \'%s\' לרשימת הקניות?</string>
+    <string name="yes">כן</string>
+    <string name="no">לא</string>
+    
+    <!-- Default Categories -->
+    <string name="other">אחר</string>
+    <string name="fruits">פירות</string>
+    <string name="vegetables">ירקות</string>
+    <string name="breads">מאפים &amp; לחמים</string>
+    <string name="snacks">חטיפים ומתוקים</string>
+    <string name="grains">דגנים וקטניות</string>
+    <string name="canned">שימורים</string>
+    <string name="disposable">חד פעמי</string>
+    <string name="cleaning">מוצרי נקיון</string>
+    <string name="baby">מוצרים לתינוקות</string>
+    <string name="dry_food">מזון יבש</string>
+    <string name="spices">תבלינים ורטבים</string>
+    <string name="toiletries">מוצרי טואלטיקה</string>
+    <string name="beverages">משקאות</string>
+    <string name="frozen">קפואים</string>
+    <string name="dairy">מוצרי חלב</string>
+    <string name="meat">בשר ודגים</string>
+    <string name="household">מוצרים לבית</string>
 </resources>

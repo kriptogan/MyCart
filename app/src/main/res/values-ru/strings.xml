@@ -1,0 +1,101 @@
+<resources>
+    <string name="app_name">SuperCart</string>
+    
+    <!-- Navigation -->
+    <string name="home">Главная</string>
+    <string name="shopping_list">Список покупок</string>
+    
+    <!-- Home Screen -->
+    <string name="add_item">Добавить товар</string>
+    <string name="menu">Меню</string>
+    <string name="search_placeholder">Поиск товаров...</string>
+    <string name="show_expiring_only">Показать только просроченные, истекающие или просроченные товары</string>
+    
+    <!-- Menu Items -->
+    <string name="manage_categories">Управление категориями</string>
+    <string name="import_shopping_list">Импорт списка покупок</string>
+    <string name="languages">Языки</string>
+    
+    <!-- Dialogs -->
+    <string name="add_item_title">Добавить товар</string>
+    <string name="edit_item_title">Редактировать товар</string>
+    <string name="item_name">Название товара</string>
+    <string name="choose_category">Выберите категорию</string>
+    <string name="expiration_date">Выберите дату истечения срока (необязательно)</string>
+    <string name="cancel">Отмена</string>
+    <string name="save">Сохранить</string>
+    <string name="add">Добавить</string>
+    <string name="delete">Удалить</string>
+    <string name="close">Закрыть</string>
+    <string name="confirm_delete">Подтвердить удаление</string>
+    <string name="confirm_delete_message">Вы уверены, что хотите удалить?</string>
+    
+    <!-- Shopping List -->
+    <string name="remove_from_list">Удалить</string>
+    <string name="edit">Редактировать</string>
+    <string name="bought">Куплено</string>
+    <string name="add_to_bought">Добавить в купленное</string>
+    <string name="return_to_shopping_list">Вернуть в список покупок</string>
+    <string name="bought_items">Купленные товары:</string>
+    <string name="finish_shopping">Завершить покупки</string>
+    <string name="finish_shopping_with_count">Завершить покупки (%d товаров)</string>
+    <string name="confirm_finish_shopping">Подтвердить завершение покупок</string>
+    <string name="confirm_finish_shopping_message">Вы уверены, что хотите завершить покупки? %d товаров будут записаны как купленные.</string>
+    
+    <!-- Categories -->
+    <string name="categories_list">Список категорий</string>
+    <string name="create_new_category">Создать новую категорию</string>
+    <string name="edit_category_name">Редактировать название категории</string>
+    <string name="category_name">Название категории</string>
+    <string name="delete_category">Удалить категорию</string>
+    <string name="delete_category_message">Категория \'%s\' содержит товары. Что вы хотите сделать?</string>
+    <string name="delete_all_items">Удалить все товары</string>
+    <string name="move_to_other">Переместить в \'Другое\'</string>
+    
+    <!-- Import Shopping List -->
+    <string name="add_list">Добавить список</string>
+    <string name="add_items_placeholder">Добавьте товары. Каждый товар с новой строки.</string>
+    
+    <!-- Alert Notification -->
+    <string name="items_need_attention">Товары требуют внимания</string>
+    <string name="items_need_attention_message">Есть товары, срок годности которых истек, истекает или прошло среднее время покупки. Хотите их увидеть?</string>
+    <string name="show_items">Показать товары</string>
+    
+    <!-- Language Selection -->
+    <string name="choose_language">Выберите язык</string>
+    <string name="hebrew">עברית</string>
+    <string name="english">English</string>
+    <string name="russian">Русский</string>
+    
+    <!-- Buy History -->
+    <string name="buy_history">История покупок</string>
+    <string name="buy_history_with_name">История покупок - %s</string>
+    <string name="buy_history_count">История покупок (%d покупок)</string>
+    <string name="days_ago">%d дней назад</string>
+    
+    <!-- Add to Shopping List Confirmation -->
+    <string name="add_to_shopping_list">Добавить в список покупок</string>
+    <string name="add_to_shopping_list_message">Хотите добавить \'%s\' в список покупок?</string>
+    <string name="yes">Да</string>
+    <string name="no">Нет</string>
+    
+    <!-- Default Categories -->
+    <string name="other">Другое</string>
+    <string name="fruits">Фрукты</string>
+    <string name="vegetables">Овощи</string>
+    <string name="breads">Хлеб &amp; выпечка</string>
+    <string name="snacks">Закуски и сладости</string>
+    <string name="grains">Крупы и бобовые</string>
+    <string name="canned">Консервы</string>
+    <string name="disposable">Одноразовое</string>
+    <string name="cleaning">Средства для уборки</string>
+    <string name="baby">Детские товары</string>
+    <string name="dry_food">Сухие продукты</string>
+    <string name="spices">Специи и соусы</string>
+    <string name="toiletries">Товары для гигиены</string>
+    <string name="beverages">Напитки</string>
+    <string name="frozen">Замороженные</string>
+    <string name="dairy">Молочные продукты</string>
+    <string name="meat">Мясо и рыба</string>
+    <string name="household">Товары для дома</string>
+</resources> 
