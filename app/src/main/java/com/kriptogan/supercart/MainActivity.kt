@@ -178,7 +178,12 @@ object StringResources {
                  "move_up" to "העלה",
                  "move_down" to "הורד",
                  "add_list" to "הוסף רשימה",
-                 "add_items_instructions" to "הוסף פריטים. כל פריט בשורה נפרדת."
+                 "add_items_instructions" to "הוסף פריטים. כל פריט בשורה נפרדת.",
+                 "edit_category_name" to "ערוך שם קטגוריה",
+                 "show_items" to "הצג פריטים",
+                 "items_need_attention" to "פריטים שדורשים תשומת לב",
+                 "items_need_attention_message" to "יש פריטים שפג תוקפם, עומדים לפוג, או עבר ממוצע הקנייה שלהם. האם ברצונך לראות אותם?",
+                 "show_expiring_items" to "הצג רק מוצרים שפג תוקפם, עומדים לפוג, או עבר ממוצע קנייה"
     )
     
     private val englishStrings = mapOf(
@@ -233,7 +238,12 @@ object StringResources {
                  "move_up" to "Move Up",
                  "move_down" to "Move Down",
                  "add_list" to "Add List",
-                 "add_items_instructions" to "Add items. Each item on a separate line."
+                 "add_items_instructions" to "Add items. Each item on a separate line.",
+                 "edit_category_name" to "Edit Category Name",
+                 "show_items" to "Show Items",
+                 "items_need_attention" to "Items Need Attention",
+                 "items_need_attention_message" to "There are items that have expired, are about to expire, or have exceeded their average buying period. Would you like to see them?",
+                 "show_expiring_items" to "Show only items that have expired, are about to expire, or have exceeded their average buying period"
     )
     
     private val russianStrings = mapOf(
@@ -288,7 +298,12 @@ object StringResources {
                  "move_up" to "Поднять",
                  "move_down" to "Опустить",
                  "add_list" to "Добавить список",
-                 "add_items_instructions" to "Добавьте товары. Каждый товар с новой строки."
+                 "add_items_instructions" to "Добавьте товары. Каждый товар с новой строки.",
+                 "edit_category_name" to "Редактировать название категории",
+                 "show_items" to "Показать товары",
+                 "items_need_attention" to "Товары требуют внимания",
+                 "items_need_attention_message" to "Есть товары, срок годности которых истек, истекает или превышен средний период покупки. Хотите их увидеть?",
+                 "show_expiring_items" to "Показать только товары, срок годности которых истек, истекает или превышен средний период покупки"
     )
     
                  fun getString(key: String, language: String, vararg args: Any): String {
@@ -845,7 +860,7 @@ fun HomeScreen(
                     ) {
                         Icon(
                             imageVector = Icons.Default.Menu,
-                            contentDescription = "תפריט",
+                            contentDescription = localizedString("menu", selectedLanguage),
                             tint = Color.White
                         )
                     }
@@ -862,7 +877,7 @@ fun HomeScreen(
                     ) {
                         Icon(
                             imageVector = Icons.Default.Warning,
-                            contentDescription = "הצג רק מוצרים שפג תוקפם, עומדים לפוג, או עבר ממוצע קנייה",
+                            contentDescription = localizedString("show_expiring_items", selectedLanguage),
                             tint = Color.White
                         )
                     }
@@ -1057,7 +1072,7 @@ fun HomeScreen(
                         Button(onClick = { showDialog = false }) {
                             Icon(
                                 imageVector = Icons.Default.Close,
-                                contentDescription = "ביטול",
+                                contentDescription = localizedString("cancel", selectedLanguage),
                                 tint = Color.White
                             )
                         }
@@ -1197,7 +1212,7 @@ fun HomeScreen(
                         Button(onClick = { showDeleteConfirm = false }) {
                             Icon(
                                 imageVector = Icons.Default.Close,
-                                contentDescription = "ביטול",
+                                contentDescription = localizedString("cancel", selectedLanguage),
                                 tint = Color.White
                             )
                         }
@@ -1496,7 +1511,7 @@ fun HomeScreen(
                         }
                     }
                 },
-                title = { Text("ערוך שם קטגוריה") },
+                title = { Text(localizedString("edit_category_name", selectedLanguage)) },
                 text = {
                     OutlinedTextField(
                         value = editingCategoryName,
@@ -1784,13 +1799,13 @@ fun HomeScreen(
                                 containerColor = Color(0xFFFF9800)
                             )
                         ) {
-                            Text("הצג פריטים", color = Color.White)
+                            Text(localizedString("show_items", selectedLanguage), color = Color.White)
                         }
                     }
                 },
-                title = { Text("פריטים שדורשים תשומת לב") },
+                title = { Text(localizedString("items_need_attention", selectedLanguage)) },
                 text = { 
-                    Text("יש פריטים שפג תוקפם, עומדים לפוג, או עבר ממוצע הקנייה שלהם. האם ברצונך לראות אותם?")
+                    Text(localizedString("items_need_attention_message", selectedLanguage))
                 }
             )
         }
@@ -2149,7 +2164,7 @@ fun ShoppingListScreen(
                     }
                 }
             },
-            title = { Text("ערוך מצרך") },
+                            title = { Text(localizedString("edit_item_title", selectedLanguage)) },
             text = {
                 Column {
                     OutlinedTextField(
