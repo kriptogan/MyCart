@@ -643,6 +643,7 @@ fun SuperCartApp() {
     var selectedLanguage by remember { mutableStateOf("iw") } // Current language (iw=Hebrew, en=English, ru=Russian)
     var currentLocale by remember { mutableStateOf(java.util.Locale("iw")) } // Current locale for RTL/LTR support
     var languageChangeKey by remember { mutableStateOf(0) } // Force recomposition when language changes
+    var isAppFirstStart by remember { mutableStateOf(true) } // Track if app just started for alert notification
     
     // Calculate layout direction based on selected language
     val layoutDirection = if (selectedLanguage == "iw") LayoutDirection.Rtl else LayoutDirection.Ltr
@@ -837,7 +838,9 @@ fun SuperCartApp() {
                             selectedLanguage = newLanguage
                             currentLocale = java.util.Locale(newLanguage)
                             languageChangeKey++
-                        }
+                        },
+                        isAppFirstStart = isAppFirstStart,
+                        onAppFirstStartComplete = { isAppFirstStart = false }
                     )
                     1 -> ShoppingListScreen(
                         shoppingList = shoppingListItems,
@@ -892,7 +895,9 @@ fun HomeScreen(
     onUpdateCategories: (List<CustomCategory>) -> Unit,
     scope: CoroutineScope,
     selectedLanguage: String,
-    onLanguageChange: (String) -> Unit
+    onLanguageChange: (String) -> Unit,
+    isAppFirstStart: Boolean,
+    onAppFirstStartComplete: () -> Unit
 ) {
     val context = LocalContext.current
     var showDialog by remember { mutableStateOf(false) }
@@ -971,10 +976,11 @@ fun HomeScreen(
         }
     }
     
-    // Show alert notification when app starts and there are items needing attention
+    // Show alert notification only when app first starts and there are items needing attention
     LaunchedEffect(hasExpiring) {
-        if (hasExpiring && !showAlertNotification) {
+        if (hasExpiring && !showAlertNotification && isAppFirstStart) {
             showAlertNotification = true
+            onAppFirstStartComplete() // Mark that we've shown the alert for this app session
         }
     }
     
