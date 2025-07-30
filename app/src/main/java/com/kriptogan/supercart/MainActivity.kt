@@ -395,7 +395,7 @@ fun SuperCartApp() {
                         onAddToShoppingList = { grocery ->
                             groceries = groceries.map {
                                 if (it.name == grocery.name && it.customCategoryId == grocery.customCategoryId) {
-                                    it.copy(inShoppingList = true)
+                                    it.copy(inShoppingList = !it.inShoppingList)
                                 } else {
                                     it
                                 }
@@ -765,7 +765,7 @@ fun HomeScreen(
                                             ) {
                                                 Icon(
                                                     imageVector = Icons.Default.ShoppingCart,
-                                                    contentDescription = "הוסף לרשימת קניות",
+                                                    contentDescription = if (indexedGrocery.value.inShoppingList) "הסר מרשימת קניות" else "הוסף לרשימת קניות",
                                                     tint = if (indexedGrocery.value.inShoppingList) Color.Green else Color.Unspecified
                                                 )
                                             }
@@ -1166,28 +1166,6 @@ fun HomeScreen(
                     editingCategoryName = ""
                 },
                 confirmButton = {
-                    Button(
-                        onClick = {
-                            if (editingCategoryName.isNotBlank()) {
-                                val updatedCategories = customCategories.map { cat ->
-                                    if (cat.id == editingCategory!!.id) {
-                                        cat.copy(name = editingCategoryName)
-                                    } else {
-                                        cat
-                                    }
-                                }
-                                onUpdateCategories(updatedCategories)
-                                showEditCategoryDialog = false
-                                editingCategory = null
-                                editingCategoryName = ""
-                            }
-                        },
-                        enabled = editingCategoryName.isNotBlank() && editingCategory?.name != "אחר"
-                    ) {
-                        Text("שמור")
-                    }
-                },
-                dismissButton = {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = androidx.compose.foundation.layout.Arrangement.SpaceBetween
@@ -1199,23 +1177,56 @@ fun HomeScreen(
                                 editingCategoryName = ""
                             }
                         ) {
-                            Text("ביטול")
+                            Icon(
+                                imageVector = Icons.Default.Close,
+                                contentDescription = "ביטול",
+                                tint = Color.White
+                            )
                         }
-                        if (editingCategory?.name != "אחר") {
-                            Button(
-                                onClick = { 
-                                    categoryToDelete = editingCategory
-                                    showEditCategoryDialog = false
-                                    showDeleteCategoryDialog = true
-                                },
-                                colors = androidx.compose.material3.ButtonDefaults.buttonColors(
-                                    containerColor = Color.Red
-                                )
-                            ) {
-                                Text("מחק", color = Color.White)
+                        Row {
+                            if (editingCategory?.name != "אחר") {
+                                Button(
+                                    onClick = { 
+                                        categoryToDelete = editingCategory
+                                        showEditCategoryDialog = false
+                                        showDeleteCategoryDialog = true
+                                    },
+                                    colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                                        containerColor = Color.Red
+                                    )
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Delete,
+                                        contentDescription = "מחק",
+                                        tint = Color.White
+                                    )
+                                }
+                                Spacer(modifier = Modifier.width(8.dp))
                             }
-                        } else {
-                            Spacer(modifier = Modifier.width(48.dp))
+                            Button(
+                                onClick = {
+                                    if (editingCategoryName.isNotBlank()) {
+                                        val updatedCategories = customCategories.map { cat ->
+                                            if (cat.id == editingCategory!!.id) {
+                                                cat.copy(name = editingCategoryName)
+                                            } else {
+                                                cat
+                                            }
+                                        }
+                                        onUpdateCategories(updatedCategories)
+                                        showEditCategoryDialog = false
+                                        editingCategory = null
+                                        editingCategoryName = ""
+                                    }
+                                },
+                                enabled = editingCategoryName.isNotBlank() && editingCategory?.name != "אחר"
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Done,
+                                    contentDescription = "שמור",
+                                    tint = Color.White
+                                )
+                            }
                         }
                     }
                 },
