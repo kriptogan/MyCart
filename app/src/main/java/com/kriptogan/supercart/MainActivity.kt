@@ -1527,6 +1527,21 @@ fun ShoppingListScreen(
     var expirationDate by remember { mutableStateOf<LocalDate?>(null) }
     var showDatePicker by remember { mutableStateOf(false) }
     var expanded by remember { mutableStateOf(false) } // For category dropdown
+    
+    // Shopping workflow state
+    var boughtItems by remember { mutableStateOf<List<GroceryWithDate>>(emptyList()) }
+    var showDoneShoppingConfirm by remember { mutableStateOf(false) }
+    
+    // Load bought items from DataStore on first composition
+    LaunchedEffect(Unit) {
+        val loaded = context.boughtItemsDataStore.data.first().map { it.withLocalDate() }
+        boughtItems = loaded
+    }
+    
+    // Save bought items to DataStore whenever they change
+    LaunchedEffect(boughtItems) {
+        context.boughtItemsDataStore.updateData { boughtItems.map { it.toSerializable() } }
+    }
 
     fun openEditDialog(grocery: GroceryWithDate) {
         name = grocery.name
@@ -1610,12 +1625,16 @@ fun ShoppingListScreen(
                                             )
                                         }
                                         IconButton(
-                                            onClick = { onBuy(grocery) },
+                                            onClick = { 
+                                                // Move item to bought list instead of buying immediately
+                                                boughtItems = boughtItems + grocery
+                                                onRemove(grocery) // Remove from shopping list
+                                            },
                                             modifier = Modifier.padding(start = 4.dp)
                                         ) {
                                             Icon(
                                                 imageVector = Icons.Default.Check,
-                                                contentDescription = "נרכש"
+                                                contentDescription = "הוסף לקנוי"
                                             )
                                         }
                                     }
@@ -1623,6 +1642,112 @@ fun ShoppingListScreen(
                             }
                         }
                     }
+                }
+            }
+        }
+        
+        // Separator line
+        if (shoppingList.isNotEmpty() || boughtItems.isNotEmpty()) {
+            item {
+                Divider(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 16.dp),
+                    thickness = 2.dp,
+                    color = Color.Gray
+                )
+            }
+        }
+        
+        // Bought items section
+        if (boughtItems.isNotEmpty()) {
+            item {
+                Text(
+                    text = "פריטים שנרכשו:",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 18.sp,
+                    modifier = Modifier.padding(vertical = 8.dp)
+                )
+            }
+            
+            boughtItems.forEach { boughtItem ->
+                item(key = "bought_${boughtItem.name}_${boughtItem.customCategoryId}") {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 8.dp)
+                            .background(
+                                Color(0xFFE8F5E8), // Light green background for bought items
+                                shape = androidx.compose.foundation.shape.RoundedCornerShape(8.dp)
+                            )
+                            .padding(horizontal = 12.dp, vertical = 8.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Check,
+                            contentDescription = "נרכש",
+                            tint = Color.Green,
+                            modifier = Modifier.padding(end = 8.dp)
+                        )
+                        Text(
+                            text = boughtItem.name,
+                            modifier = Modifier.weight(1f),
+                            fontWeight = FontWeight.Medium
+                        )
+                        val category = customCategories.find { it.id == boughtItem.customCategoryId }
+                        Text(
+                            text = category?.name ?: "",
+                            color = Color.Gray,
+                            fontSize = 12.sp
+                        )
+                        IconButton(
+                            onClick = { 
+                                // Return item to shopping list
+                                boughtItems = boughtItems.filter { it != boughtItem }
+                                // Add back to shopping list
+                                val updatedGroceries = groceries.map {
+                                    if (it.name == boughtItem.name && it.customCategoryId == boughtItem.customCategoryId) {
+                                        it.copy(inShoppingList = true)
+                                    } else {
+                                        it
+                                    }
+                                }
+                                onUpdateGroceries(updatedGroceries)
+                            },
+                            modifier = Modifier.padding(start = 4.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Close,
+                                contentDescription = "החזר לרשימת קניות",
+                                tint = Color.Red
+                            )
+                        }
+                    }
+                }
+            }
+            
+            // Done shopping button
+            item {
+                Button(
+                    onClick = { showDoneShoppingConfirm = true },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 16.dp),
+                    colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFF4CAF50)
+                    )
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Done,
+                        contentDescription = "סיים קניות",
+                        tint = Color.White,
+                        modifier = Modifier.padding(end = 8.dp)
+                    )
+                    Text(
+                        text = "סיים קניות (${boughtItems.size} פריטים)",
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold
+                    )
                 }
             }
         }
@@ -1726,6 +1851,45 @@ fun ShoppingListScreen(
             }
         )
     }
+    
+    // Done shopping confirmation dialog
+    if (showDoneShoppingConfirm) {
+        AlertDialog(
+            onDismissRequest = { showDoneShoppingConfirm = false },
+            confirmButton = {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = androidx.compose.foundation.layout.Arrangement.SpaceBetween
+                ) {
+                    Button(
+                        onClick = { showDoneShoppingConfirm = false }
+                    ) {
+                        Text("ביטול")
+                    }
+                    Button(
+                        onClick = { 
+                            // Execute buy process for all bought items
+                            boughtItems.forEach { boughtItem ->
+                                onBuy(boughtItem)
+                            }
+                            // Clear bought items list (DataStore will be updated automatically via LaunchedEffect)
+                            boughtItems = emptyList()
+                            showDoneShoppingConfirm = false
+                        },
+                        colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                            containerColor = Color(0xFF4CAF50)
+                        )
+                    ) {
+                        Text("אישור", color = Color.White)
+                    }
+                }
+            },
+            title = { Text("אישור סיום קניות") },
+            text = { 
+                Text("האם אתה בטוח שברצונך לסיים את הקניות? ${boughtItems.size} פריטים יירשמו כנרכשו.")
+            }
+        )
+    }
 }
 
 @Preview(showBackground = true)
@@ -1754,6 +1918,12 @@ object GroceryListSerializer : Serializer<List<Grocery>> {
 
 val Context.categoryOrderDataStore by preferencesDataStore(name = "category_order_prefs")
 val CATEGORY_ORDER_KEY = stringPreferencesKey("category_order")
+
+// Bought items DataStore
+val Context.boughtItemsDataStore: DataStore<List<Grocery>> by dataStore(
+    fileName = "bought_items.json",
+    serializer = GroceryListSerializer
+)
 
 // Custom categories DataStore
 val Context.customCategoriesDataStore: DataStore<List<CustomCategory>> by dataStore(
