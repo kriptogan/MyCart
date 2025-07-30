@@ -31,7 +31,7 @@ ________________________________________________________________________________
 Priority 3: High Impact, High Complexity
 _______________________________________________________________________________________________________________
 
-6. Multi-Language Support (English & Russian)
+V 6. Multi-Language Support (English & Russian)
 Why Fourth: Expands user base significantly
 Implementation:
 Create string resources for English and Russian

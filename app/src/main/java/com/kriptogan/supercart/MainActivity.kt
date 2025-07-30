@@ -344,7 +344,7 @@ data class TabItem(
 )
 
 @Composable
-fun CustomStatusBar() {
+fun CustomStatusBar(layoutDirection: LayoutDirection = LocalLayoutDirection.current) {
     val context = LocalContext.current
     var currentTime by remember { mutableStateOf("") }
     var batteryLevel by remember { mutableStateOf(0) }
@@ -415,36 +415,71 @@ fun CustomStatusBar() {
                 .padding(horizontal = 16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Battery (right side in RTL)
-            Row(
-                verticalAlignment = Alignment.CenterVertically
-            ) {
+            if (layoutDirection == LayoutDirection.Rtl) {
+                // RTL Layout: Clock on right, Battery on left
+                // Clock
                 Text(
-                    text = "$batteryLevel%",
+                    text = currentTime,
                     color = Color.White,
-                    fontSize = 14.sp,
+                    fontSize = 16.sp,
                     fontWeight = FontWeight.Medium
                 )
-                Spacer(modifier = Modifier.width(4.dp))
-                Box(
-                    modifier = Modifier
-                        .size(20.dp, 12.dp)
-                        .background(
-                            color = Color.White,
-                            shape = androidx.compose.foundation.shape.RoundedCornerShape(2.dp)
-                        )
+                
+                Spacer(modifier = Modifier.weight(1f))
+                
+                // Battery
+                Row(
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "$batteryLevel%",
+                        color = Color.White,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Box(
+                        modifier = Modifier
+                            .size(20.dp, 12.dp)
+                            .background(
+                                color = Color.White,
+                                shape = androidx.compose.foundation.shape.RoundedCornerShape(2.dp)
+                            )
+                    )
+                }
+            } else {
+                // LTR Layout: Battery on right, Clock on left
+                // Battery
+                Row(
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "$batteryLevel%",
+                        color = Color.White,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Box(
+                        modifier = Modifier
+                            .size(20.dp, 12.dp)
+                            .background(
+                                color = Color.White,
+                                shape = androidx.compose.foundation.shape.RoundedCornerShape(2.dp)
+                            )
+                    )
+                }
+                
+                Spacer(modifier = Modifier.weight(1f))
+                
+                // Clock
+                Text(
+                    text = currentTime,
+                    color = Color.White,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Medium
                 )
             }
-            
-            Spacer(modifier = Modifier.weight(1f))
-            
-            // Clock (left side in RTL)
-            Text(
-                text = currentTime,
-                color = Color.White,
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Medium
-            )
         }
     }
 }
@@ -586,10 +621,14 @@ fun SuperCartApp() {
         
         // Apply layout direction to the entire app
         Box(
-            modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center
+            modifier = Modifier.fillMaxSize()
         ) {
-            CustomStatusBar()
+            Box(
+                modifier = Modifier.fillMaxWidth(),
+                contentAlignment = Alignment.TopStart
+            ) {
+                CustomStatusBar(layoutDirection = layoutDirection)
+            }
             Scaffold(
             modifier = Modifier
                 .fillMaxSize()
