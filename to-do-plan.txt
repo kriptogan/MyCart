@@ -15,7 +15,7 @@ ________________________________________________________________________________
 
 Priority 2: Medium Impact, Medium Complexity
 _______________________________________________________________________________________________________________
-3. Shopping List Completion Confirmation
+V 3. Shopping List Completion Confirmation
 Why Third: Important user feedback and data management
 Implementation:
 Add completion dialog/confirmation

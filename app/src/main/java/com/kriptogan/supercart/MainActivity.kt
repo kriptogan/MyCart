@@ -482,6 +482,7 @@ fun HomeScreen(
     var showBuyHistoryDialog by remember { mutableStateOf(false) } // For showing buy history
     var selectedGroceryForHistory by remember { mutableStateOf<GroceryWithDate?>(null) } // Grocery to show history for
     var showAddToShoppingListConfirm by remember { mutableStateOf(false) } // For confirmation dialog when adding new item
+    var showAlertNotification by remember { mutableStateOf(false) } // For alert notification popup
 
     // Helper to check if a grocery is expired or expiring soon
     fun isExpiringOrExpired(grocery: GroceryWithDate): Boolean {
@@ -528,6 +529,13 @@ fun HomeScreen(
         groceries.forEach { grocery ->
             val category = customCategories.find { it.id == grocery.customCategoryId }
             println("DEBUG: Grocery '${grocery.name}' -> Category: ${category?.name ?: "UNKNOWN"} (ID: ${grocery.customCategoryId})")
+        }
+    }
+    
+    // Show alert notification when app starts and there are items needing attention
+    LaunchedEffect(hasExpiring) {
+        if (hasExpiring && !showAlertNotification) {
+            showAlertNotification = true
         }
     }
 
@@ -1494,6 +1502,40 @@ fun HomeScreen(
                 },
                 title = { Text("הוסף לרשימת קניות") },
                 text = { Text("האם ברצונך להוסיף את '${name}' לרשימת הקניות?") }
+            )
+        }
+        
+        // Alert notification dialog
+        if (showAlertNotification) {
+            AlertDialog(
+                onDismissRequest = { showAlertNotification = false },
+                confirmButton = {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = androidx.compose.foundation.layout.Arrangement.SpaceBetween
+                    ) {
+                        Button(
+                            onClick = { showAlertNotification = false }
+                        ) {
+                            Text("סגור")
+                        }
+                        Button(
+                            onClick = { 
+                                showExpiringOnly = true
+                                showAlertNotification = false
+                            },
+                            colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                                containerColor = Color(0xFFFF9800)
+                            )
+                        ) {
+                            Text("הצג פריטים", color = Color.White)
+                        }
+                    }
+                },
+                title = { Text("פריטים שדורשים תשומת לב") },
+                text = { 
+                    Text("יש פריטים שפג תוקפם, עומדים לפוג, או עבר ממוצע הקנייה שלהם. האם ברצונך לראות אותם?")
+                }
             )
         }
     }
