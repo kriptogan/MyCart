@@ -2280,7 +2280,7 @@ fun ShoppingListScreen(
                         )
                         val category = customCategories.find { it.id == boughtItem.customCategoryId }
                         Text(
-                            text = category?.name ?: "",
+                            text = localizedCategoryName(category?.name ?: "", selectedLanguage),
                             color = Color.Gray,
                             fontSize = 12.sp
                         )
