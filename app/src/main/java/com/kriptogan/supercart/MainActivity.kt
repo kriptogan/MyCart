@@ -187,7 +187,26 @@ object StringResources {
                  "items_need_attention" to "פריטים שדורשים תשומת לב",
                  "items_need_attention_message" to "יש פריטים שפג תוקפם, עומדים לפוג, או עבר ממוצע הקנייה שלהם. האם ברצונך לראות אותם?",
                  "show_expiring_items" to "הצג רק מוצרים שפג תוקפם, עומדים לפוג, או עבר ממוצע קנייה",
-                 "create" to "צור"
+                 "create" to "צור",
+                 // Category translations
+                 "אחר" to "אחר",
+                 "פירות" to "פירות",
+                 "ירקות" to "ירקות",
+                 "מאפים ולחמים" to "מאפים ולחמים",
+                 "חטיפים ומתוקים" to "חטיפים ומתוקים",
+                 "דגנים וקטניות" to "דגנים וקטניות",
+                 "שימורים" to "שימורים",
+                 "חד פעמי" to "חד פעמי",
+                 "מוצרי נקיון" to "מוצרי נקיון",
+                 "מוצרים לתינוקות" to "מוצרים לתינוקות",
+                 "מזון יבש" to "מזון יבש",
+                 "תבלינים ורטבים" to "תבלינים ורטבים",
+                 "מוצרי טואלטיקה" to "מוצרי טואלטיקה",
+                 "משקאות" to "משקאות",
+                 "קפואים" to "קפואים",
+                 "מוצרי חלב" to "מוצרי חלב",
+                 "בשר ודגים" to "בשר ודגים",
+                 "מוצרים לבית" to "מוצרים לבית"
     )
     
     private val englishStrings = mapOf(
@@ -248,7 +267,26 @@ object StringResources {
                  "items_need_attention" to "Items Need Attention",
                  "items_need_attention_message" to "There are items that have expired, are about to expire, or have exceeded their average buying period. Would you like to see them?",
                  "show_expiring_items" to "Show only items that have expired, are about to expire, or have exceeded their average buying period",
-                 "create" to "Create"
+                 "create" to "Create",
+                 // Category translations
+                 "אחר" to "Other",
+                 "פירות" to "Fruits",
+                 "ירקות" to "Vegetables",
+                 "מאפים ולחמים" to "Breads & Pastries",
+                 "חטיפים ומתוקים" to "Snacks & Sweets",
+                 "דגנים וקטניות" to "Grains & Legumes",
+                 "שימורים" to "Canned Goods",
+                 "חד פעמי" to "Disposable",
+                 "מוצרי נקיון" to "Cleaning Products",
+                 "מוצרים לתינוקות" to "Baby Products",
+                 "מזון יבש" to "Dry Food",
+                 "תבלינים ורטבים" to "Spices & Sauces",
+                 "מוצרי טואלטיקה" to "Toiletries",
+                 "משקאות" to "Beverages",
+                 "קפואים" to "Frozen",
+                 "מוצרי חלב" to "Dairy Products",
+                 "בשר ודגים" to "Meat & Fish",
+                 "מוצרים לבית" to "Home Products"
     )
     
     private val russianStrings = mapOf(
@@ -309,7 +347,26 @@ object StringResources {
                  "items_need_attention" to "Товары требуют внимания",
                  "items_need_attention_message" to "Есть товары, срок годности которых истек, истекает или превышен средний период покупки. Хотите их увидеть?",
                  "show_expiring_items" to "Показать только товары, срок годности которых истек, истекает или превышен средний период покупки",
-                 "create" to "Создать"
+                 "create" to "Создать",
+                 // Category translations
+                 "אחר" to "Другое",
+                 "פירות" to "Фрукты",
+                 "ירקות" to "Овощи",
+                 "מאפים ולחמים" to "Хлеб и выпечка",
+                 "חטיפים ומתוקים" to "Закуски и сладости",
+                 "דגנים וקטניות" to "Зерновые и бобовые",
+                 "שימורים" to "Консервы",
+                 "חד פעמי" to "Одноразовые",
+                 "מוצרי נקיון" to "Моющие средства",
+                 "מוצרים לתינוקות" to "Детские товары",
+                 "מזון יבש" to "Сухие продукты",
+                 "תבלינים ורטבים" to "Специи и соусы",
+                 "מוצרי טואלטיקה" to "Туалетные принадлежности",
+                 "משקאות" to "Напитки",
+                 "קפואים" to "Замороженные",
+                 "מוצרי חלב" to "Молочные продукты",
+                 "בשר ודגים" to "Мясо и рыба",
+                 "מוצרים לבית" to "Товары для дома"
     )
     
                  fun getString(key: String, language: String, vararg args: Any): String {
@@ -331,11 +388,20 @@ object StringResources {
                      baseString
                  }
              }
+             
+             fun translateCategoryName(categoryName: String, language: String): String {
+                 return getString(categoryName, language)
+             }
 }
 
 @Composable
 fun localizedString(key: String, language: String, vararg args: Any): String {
     return StringResources.getString(key, language, *args)
+}
+
+@Composable
+fun localizedCategoryName(categoryName: String, language: String): String {
+    return StringResources.translateCategoryName(categoryName, language)
 }
 
 data class TabItem(
@@ -1052,7 +1118,7 @@ fun HomeScreen(
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Text(
-                                        text = category.name,
+                                        text = localizedCategoryName(category.name, selectedLanguage),
                                         fontWeight = FontWeight.Bold,
                                         fontSize = 18.sp,
                                         modifier = Modifier.weight(1f)
@@ -1199,12 +1265,12 @@ fun HomeScreen(
                                 onClick = { expanded = true },
                                 modifier = Modifier.fillMaxWidth()
                             ) {
-                                Text(selectedCategory?.name ?: localizedString("choose_category", selectedLanguage))
+                                Text(selectedCategory?.let { localizedCategoryName(it.name, selectedLanguage) } ?: localizedString("choose_category", selectedLanguage))
                             }
                             DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
                                 customCategories.sortedBy { it.viewOrder }.forEach { cat ->
                                     DropdownMenuItem(
-                                        text = { Text(cat.name) },
+                                        text = { Text(localizedCategoryName(cat.name, selectedLanguage)) },
                                         onClick = {
                                             selectedCustomCategoryId = cat.id
                                             expanded = false
@@ -1426,7 +1492,7 @@ fun HomeScreen(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text(
-                                    text = category.name,
+                                    text = localizedCategoryName(category.name, selectedLanguage),
                                     modifier = Modifier.weight(1f),
                                     fontWeight = FontWeight.Bold
                                 )
@@ -1484,12 +1550,12 @@ fun HomeScreen(
                                         editingCategoryName = category.name
                                         showEditCategoryDialog = true
                                     },
-                                    enabled = category.name != "אחר"
+                                    enabled = category.name != "אחר" // Keep original Hebrew name for logic
                                 ) {
                                     Icon(
                                         imageVector = Icons.Default.Edit,
                                         contentDescription = localizedString("edit_category_name", selectedLanguage),
-                                        tint = if (category.name == "אחר") Color.Gray else Color.Black
+                                        tint = if (category.name == "אחר") Color.Gray else Color.Black // Keep original Hebrew name for logic
                                     )
                                 }
                             }
@@ -2016,7 +2082,7 @@ fun ShoppingListScreen(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text(
-                                    text = category.name,
+                                    text = localizedCategoryName(category.name, selectedLanguage),
                                     fontWeight = FontWeight.Bold,
                                     fontSize = 18.sp,
                                     modifier = Modifier.weight(1f)
@@ -2245,12 +2311,12 @@ fun ShoppingListScreen(
                             onClick = { expanded = true },
                             modifier = Modifier.fillMaxWidth()
                         ) {
-                            Text(selectedCategory?.name ?: stringResource(R.string.choose_category))
+                            Text(selectedCategory?.let { localizedCategoryName(it.name, selectedLanguage) } ?: localizedString("choose_category", selectedLanguage))
                         }
                         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
                             customCategories.sortedBy { it.viewOrder }.forEach { cat ->
                                 DropdownMenuItem(
-                                    text = { Text(cat.name) },
+                                    text = { Text(localizedCategoryName(cat.name, selectedLanguage)) },
                                     onClick = {
                                         selectedCustomCategoryId = cat.id
                                         expanded = false
