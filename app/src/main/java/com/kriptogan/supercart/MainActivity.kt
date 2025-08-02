@@ -380,8 +380,17 @@ object StringResources {
                  val baseString = strings[key] ?: key
                  return if (args.isNotEmpty()) {
                      var result = baseString
-                     args.forEachIndexed { index, arg ->
-                         result = result.replace(if (index == 0) "%d" else "%s", arg.toString())
+                     var argIndex = 0
+                     
+                     // Replace placeholders one by one
+                     while (argIndex < args.size && (result.contains("%s") || result.contains("%d"))) {
+                         val placeholder = when {
+                             result.contains("%s") -> "%s"
+                             result.contains("%d") -> "%d"
+                             else -> break
+                         }
+                         result = result.replaceFirst(placeholder, args[argIndex].toString())
+                         argIndex++
                      }
                      result
                  } else {
@@ -943,7 +952,7 @@ fun HomeScreen(
             daysUntil <= 1L
         } catch (e: Exception) { false }
         val daysSinceLastBuy = grocery.buyEvents.maxOrNull()?.let { date -> ChronoUnit.DAYS.between(date, LocalDate.now()).toInt() } ?: -1
-        val shouldHighlightYellow = !isExpiringOrExpired && grocery.averageBuyingDays != null && daysSinceLastBuy >= (grocery.averageBuyingDays!! - 1)
+        val shouldHighlightYellow = !isExpiringOrExpired && grocery.averageBuyingDays != null && daysSinceLastBuy >= grocery.averageBuyingDays!!
         isExpiringOrExpired || shouldHighlightYellow
     }
 
@@ -1003,7 +1012,7 @@ fun HomeScreen(
             daysUntil <= 1L
         } catch (e: Exception) { false }
         val daysSinceLastBuy = grocery.buyEvents.maxOrNull()?.let { date -> ChronoUnit.DAYS.between(date, LocalDate.now()).toInt() } ?: -1
-        val shouldHighlightYellow = !isExpiringOrExpired && grocery.averageBuyingDays != null && daysSinceLastBuy >= (grocery.averageBuyingDays!! - 1)
+        val shouldHighlightYellow = !isExpiringOrExpired && grocery.averageBuyingDays != null && daysSinceLastBuy >= grocery.averageBuyingDays!!
         return isExpiringOrExpired || shouldHighlightYellow
     }
 
@@ -1202,7 +1211,7 @@ fun HomeScreen(
                                                 daysUntil <= 1L
                                             } catch (e: Exception) { false }
                                         val daysSinceLastBuy = indexedGrocery.value.buyEvents.maxOrNull()?.let { ChronoUnit.DAYS.between(it, LocalDate.now()).toInt() } ?: -1
-                                        val shouldHighlightYellow = !isExpiringOrExpired && indexedGrocery.value.averageBuyingDays != null && daysSinceLastBuy >= (indexedGrocery.value.averageBuyingDays!! - 1)
+                                        val shouldHighlightYellow = !isExpiringOrExpired && indexedGrocery.value.averageBuyingDays != null && daysSinceLastBuy >= indexedGrocery.value.averageBuyingDays!!
                                         Row(
                                             verticalAlignment = Alignment.CenterVertically,
                                             modifier = Modifier
@@ -1888,7 +1897,7 @@ fun HomeScreen(
                         Text(localizedString("close", selectedLanguage))
                     }
                 },
-                                                title = { Text(localizedString("buy_history", selectedLanguage, selectedGroceryForHistory?.name ?: "")) },
+                title = { Text(localizedString("buy_history", selectedLanguage, selectedGroceryForHistory?.name ?: "")) },
                 text = {
                     LazyColumn(
                         modifier = Modifier
