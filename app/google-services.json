@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "49638780250",
+    "project_id": "supercart-14dfe",
+    "storage_bucket": "supercart-14dfe.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:49638780250:android:fa9dac74584e1296845763",
+        "android_client_info": {
+          "package_name": "com.kriptogan.supercart"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAYDwxk0uzeYg3-uBowLs_ioZz-hhJaYJE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

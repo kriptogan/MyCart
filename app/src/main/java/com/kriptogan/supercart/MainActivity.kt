@@ -77,6 +77,7 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.filled.Add
 import androidx.datastore.core.DataStore
 import androidx.datastore.core.Serializer
@@ -98,6 +99,8 @@ import java.time.temporal.ChronoUnit
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Share
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.KeyboardArrowDown
@@ -188,6 +191,27 @@ object StringResources {
                  "items_need_attention_message" to "יש פריטים שפג תוקפם, עומדים לפוג, או עבר ממוצע הקנייה שלהם. האם ברצונך לראות אותם?",
                  "show_expiring_items" to "הצג רק מוצרים שפג תוקפם, עומדים לפוג, או עבר ממוצע קנייה",
                  "create" to "צור",
+                 "family_sharing" to "שיתוף משפחה",
+                 "create_family" to "צור משפחה חדשה",
+                 "join_family" to "הצטרף למשפחה",
+                 "family_code" to "קוד משפחה",
+                 "enter_family_code" to "הכנס קוד משפחה",
+                 "share_family_code" to "שתף קוד משפחה",
+                 "family_created" to "משפחה נוצרה בהצלחה",
+                 "family_joined" to "הצטרפת למשפחה בהצלחה",
+                 "invalid_family_code" to "קוד משפחה לא תקין",
+                 "already_family_member" to "אתה כבר חבר במשפחה זו",
+                 "leave_family" to "עזוב משפחה",
+                 "confirm_leave_family" to "האם אתה בטוח שברצונך לעזוב את המשפחה?",
+                 "confirm_leave_family_message" to "הנתונים המקומיים יישארו, אך לא יהיו מקושרים יותר למשפחה זו.",
+                 "create_family_confirm" to "האם ברצונך ליצור משפחה חדשה עם הנתונים הנוכחיים?",
+                 "create_family_confirm_message" to "הנתונים המקומיים יועלו לענן לשיתוף.",
+                 "creating" to "יוצר...",
+                 "joining" to "מצטרף...",
+                 "uploading_data" to "מעלה נתונים לענן",
+                 "joining_family" to "מצטרף למשפחה",
+                 "please_wait" to "אנא המתן",
+                 "tap_to_copy" to "לחץ להעתקה",
                  // Category translations
                  "אחר" to "אחר",
                  "פירות" to "פירות",
@@ -267,6 +291,27 @@ object StringResources {
                  "items_need_attention" to "Items Need Attention",
                  "items_need_attention_message" to "There are items that have expired, are about to expire, or have exceeded their average buying period. Would you like to see them?",
                  "show_expiring_items" to "Show only items that have expired, are about to expire, or have exceeded their average buying period",
+                 "family_sharing" to "Family Sharing",
+                 "create_family" to "Create New Family",
+                 "join_family" to "Join Family",
+                 "family_code" to "Family Code",
+                 "enter_family_code" to "Enter Family Code",
+                 "share_family_code" to "Share Family Code",
+                 "family_created" to "Family Created Successfully",
+                 "family_joined" to "Joined Family Successfully",
+                 "invalid_family_code" to "Invalid Family Code",
+                 "already_family_member" to "You are already a member of this family",
+                 "leave_family" to "Leave Family",
+                 "confirm_leave_family" to "Are you sure you want to leave the family?",
+                 "confirm_leave_family_message" to "Local data will remain, but will no longer be connected to this family.",
+                 "create_family_confirm" to "Do you want to create a new family with current data?",
+                 "create_family_confirm_message" to "Local data will be uploaded to cloud for sharing.",
+                 "creating" to "Creating...",
+                 "joining" to "Joining...",
+                 "uploading_data" to "Uploading data to cloud",
+                 "joining_family" to "Joining family",
+                 "please_wait" to "Please wait",
+                 "tap_to_copy" to "Tap to copy",
                  "create" to "Create",
                  // Category translations
                  "אחר" to "Other",
@@ -347,6 +392,27 @@ object StringResources {
                  "items_need_attention" to "Товары требуют внимания",
                  "items_need_attention_message" to "Есть товары, срок годности которых истек, истекает или превышен средний период покупки. Хотите их увидеть?",
                  "show_expiring_items" to "Показать только товары, срок годности которых истек, истекает или превышен средний период покупки",
+                 "family_sharing" to "Семейное совместное использование",
+                 "create_family" to "Создать новую семью",
+                 "join_family" to "Присоединиться к семье",
+                 "family_code" to "Код семьи",
+                 "enter_family_code" to "Введите код семьи",
+                 "share_family_code" to "Поделиться кодом семьи",
+                 "family_created" to "Семья успешно создана",
+                 "family_joined" to "Успешно присоединились к семье",
+                 "invalid_family_code" to "Неверный код семьи",
+                 "already_family_member" to "Вы уже являетесь членом этой семьи",
+                 "leave_family" to "Покинуть семью",
+                 "confirm_leave_family" to "Вы уверены, что хотите покинуть семью?",
+                 "confirm_leave_family_message" to "Локальные данные останутся, но больше не будут связаны с этой семьей.",
+                 "create_family_confirm" to "Хотите создать новую семью с текущими данными?",
+                 "create_family_confirm_message" to "Локальные данные будут загружены в облако для совместного использования.",
+                 "creating" to "Создание...",
+                 "joining" to "Присоединение...",
+                 "uploading_data" to "Загрузка данных в облако",
+                 "joining_family" to "Присоединение к семье",
+                 "please_wait" to "Пожалуйста, подождите",
+                 "tap_to_copy" to "Нажмите, чтобы скопировать",
                  "create" to "Создать",
                  // Category translations
                  "אחר" to "Другое",
@@ -703,18 +769,15 @@ fun SuperCartApp() {
     // Compute ordered categories - ensure all categories are included
     val currentCategoryOrder = categoryOrder
     var orderedCategories by remember { mutableStateOf<List<CustomCategory>>(emptyList()) }
+    var categoryReorderTrigger by remember { mutableStateOf(0) }
     
-    // Update ordered categories when customCategories or categoryOrder changes
-    LaunchedEffect(customCategories, categoryOrder) {
-        orderedCategories = if (currentCategoryOrder != null && currentCategoryOrder.isNotEmpty()) {
-            // Use saved order, but ensure all categories are included
-            val orderedFromPrefs = currentCategoryOrder.mapNotNull { id -> customCategories.find { it.id == id } }
-            val missingCategories = customCategories.filter { cat -> !orderedFromPrefs.any { it.id == cat.id } }
-            orderedFromPrefs + missingCategories.sortedBy { it.viewOrder }
-        } else {
-            // Use default order
-            customCategories.sortedBy { it.viewOrder }
-        }
+    // Update ordered categories when customCategories, categoryOrder, or reorder trigger changes
+    LaunchedEffect(customCategories, categoryOrder, categoryReorderTrigger) {
+        println("DEBUG: LaunchedEffect triggered - categoryReorderTrigger: $categoryReorderTrigger")
+        println("DEBUG: customCategories: ${customCategories.map { "${it.name} (viewOrder: ${it.viewOrder})" }}")
+        // Always sort by viewOrder to ensure correct order
+        orderedCategories = customCategories.sortedBy { it.viewOrder }
+        println("DEBUG: orderedCategories updated: ${orderedCategories.map { "${it.name} (viewOrder: ${it.viewOrder})" }}")
     }
 
     // Load groceries from DataStore on first composition
@@ -838,9 +901,15 @@ fun SuperCartApp() {
                         orderedCategories = orderedCategories,
                         customCategories = customCategories,
                         onUpdateCategories = { categories -> 
+                            println("DEBUG: onUpdateCategories called with ${categories.size} categories")
+                            println("DEBUG: Categories: ${categories.map { "${it.name} (viewOrder: ${it.viewOrder})" }}")
+                            println("DEBUG: Before updating customCategories: ${customCategories.map { "${it.name} (viewOrder: ${it.viewOrder})" }}")
                             customCategories = categories
-                            // The orderedCategories will be updated automatically by the LaunchedEffect
+                            println("DEBUG: After updating customCategories: ${customCategories.map { "${it.name} (viewOrder: ${it.viewOrder})" }}")
+                            categoryReorderTrigger++ // Trigger reorder update
+                            println("DEBUG: categoryReorderTrigger incremented to: $categoryReorderTrigger")
                         },
+                        onCategoryReorder = { categoryReorderTrigger++ },
                         scope = scope,
                         selectedLanguage = selectedLanguage,
                         onLanguageChange = { newLanguage ->
@@ -902,12 +971,15 @@ fun HomeScreen(
     orderedCategories: List<CustomCategory>,
     customCategories: List<CustomCategory>,
     onUpdateCategories: (List<CustomCategory>) -> Unit,
+    onCategoryReorder: () -> Unit,
     scope: CoroutineScope,
     selectedLanguage: String,
     onLanguageChange: (String) -> Unit,
     isAppFirstStart: Boolean,
     onAppFirstStartComplete: () -> Unit
 ) {
+    // Use orderedCategories directly to ensure recomposition
+    val currentOrderedCategories = orderedCategories
     val context = LocalContext.current
     var showDialog by remember { mutableStateOf(false) }
     var isEditMode by remember { mutableStateOf(false) }
@@ -932,6 +1004,54 @@ fun HomeScreen(
     var showAddToShoppingListConfirm by remember { mutableStateOf(false) } // For confirmation dialog when adding new item
     var showAlertNotification by remember { mutableStateOf(false) } // For alert notification popup
     var showLanguageSelection by remember { mutableStateOf(false) } // For language selection dialog
+    
+    // Family sharing state
+    var showFamilySharingDialog by remember { mutableStateOf(false) }
+    var showCreateFamilyDialog by remember { mutableStateOf(false) }
+    var showJoinFamilyDialog by remember { mutableStateOf(false) }
+    var showFamilyCodeDialog by remember { mutableStateOf(false) }
+    var showLeaveFamilyConfirm by remember { mutableStateOf(false) }
+    var joinFamilyCode by remember { mutableStateOf("") }
+    
+    // Family sharing manager
+    val firebaseService = remember { FirebaseService() }
+    val familySharingManager = remember { 
+        FamilySharingManager(firebaseService, scope).apply {
+            onDataUpdate = { newGroceries, newCategories ->
+                onUpdateGroceries(newGroceries)
+                onUpdateCategories(newCategories)
+            }
+            onDialogClose = {
+                showCreateFamilyDialog = false
+                showJoinFamilyDialog = false
+            }
+        }
+    }
+    
+    // Load family sharing state from DataStore
+    LaunchedEffect(Unit) {
+        val familyData = context.familyDataStore.data.first()
+        if (familyData.isSharingEnabled && familyData.projectId.isNotEmpty()) {
+            familySharingManager.currentProjectId = familyData.projectId
+            familySharingManager.familyCode = familyData.projectId
+            familySharingManager.isSharingEnabled = true
+            // Restart real-time sync
+            familySharingManager.startRealTimeSync(familyData.projectId)
+        }
+    }
+    
+    // Save family sharing state to DataStore
+    LaunchedEffect(familySharingManager.isSharingEnabled, familySharingManager.currentProjectId) {
+        context.familyDataStore.updateData {
+            FamilyData(
+                isSharingEnabled = familySharingManager.isSharingEnabled,
+                projectId = familySharingManager.currentProjectId ?: "",
+                familyCode = familySharingManager.familyCode ?: ""
+            )
+        }
+    }
+    
+
     
     // Update configuration when locale changes
     val configuration = LocalConfiguration.current
@@ -1113,6 +1233,19 @@ fun HomeScreen(
                             DropdownMenuItem(
                                 text = { 
                                     Text(
+                                        localizedString("family_sharing", selectedLanguage),
+                                        modifier = Modifier.fillMaxWidth(),
+                                        textAlign = TextAlign.Center
+                                    ) 
+                                },
+                                onClick = {
+                                    showFamilySharingDialog = true
+                                    showMenu = false
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { 
+                                    Text(
                                         localizedString("import_shopping_list", selectedLanguage),
                                         modifier = Modifier.fillMaxWidth(),
                                         textAlign = TextAlign.Center
@@ -1158,7 +1291,8 @@ fun HomeScreen(
                     shape = androidx.compose.foundation.shape.RoundedCornerShape(8.dp)
                 )
             }
-            orderedCategories.forEach { category ->
+            println("DEBUG: UI using orderedCategories: ${currentOrderedCategories.map { "${it.name} (${it.id})" }}")
+            currentOrderedCategories.forEach { category ->
                 val itemsInCategory = groceries.withIndex()
                     .filter { it.value.customCategoryId == category.id && it.value.name.contains(searchQuery, ignoreCase = true) }
                     .filter { !showExpiringOnly || shouldShowInAlertFilter(it.value) }
@@ -1169,7 +1303,7 @@ fun HomeScreen(
                 }
                 
                 if (itemsInCategory.isNotEmpty()) {
-                    item(key = category.id) {
+                    item(key = "${category.id}_${category.viewOrder}") {
                         Card(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -1523,13 +1657,23 @@ fun HomeScreen(
         // Categories list dialog
         if (showCategoriesList) {
             AlertDialog(
-                onDismissRequest = { showCategoriesList = false },
+                onDismissRequest = { 
+                    println("DEBUG: Category dialog dismissed")
+                    showCategoriesList = false
+                    onCategoryReorder() // Trigger refresh when dialog is closed
+                    println("DEBUG: onCategoryReorder() called from dismiss")
+                },
                 confirmButton = {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = androidx.compose.foundation.layout.Arrangement.SpaceBetween
                     ) {
-                        Button(onClick = { showCategoriesList = false }) {
+                        Button(onClick = { 
+                            println("DEBUG: Category dialog closed via button")
+                            showCategoriesList = false
+                            onCategoryReorder() // Trigger refresh when dialog is closed
+                            println("DEBUG: onCategoryReorder() called from button")
+                        }) {
                             Icon(
                                 imageVector = Icons.Default.Close,
                                 contentDescription = localizedString("close", selectedLanguage),
@@ -1557,7 +1701,8 @@ fun HomeScreen(
                             .fillMaxWidth()
                             .heightIn(max = 400.dp)
                     ) {
-                        items(customCategories.sortedBy { it.viewOrder }) { category ->
+                        val sortedCategories = customCategories.sortedBy { it.viewOrder }
+                        items(sortedCategories) { category ->
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -1572,9 +1717,11 @@ fun HomeScreen(
                                 IconButton(
                                     onClick = {
                                         // Move category up
-                                        val currentIndex = customCategories.indexOf(category)
+                                        val currentIndex = sortedCategories.indexOf(category)
                                         if (currentIndex > 0) {
-                                            val updatedCategories = customCategories.toMutableList()
+                                            println("DEBUG: Moving category UP - ${category.name}")
+                                            println("DEBUG: Before reorder - sortedCategories: ${sortedCategories.map { "${it.name} (viewOrder: ${it.viewOrder})" }}")
+                                            val updatedCategories = sortedCategories.toMutableList()
                                             val temp = updatedCategories[currentIndex]
                                             updatedCategories[currentIndex] = updatedCategories[currentIndex - 1]
                                             updatedCategories[currentIndex - 1] = temp
@@ -1582,10 +1729,13 @@ fun HomeScreen(
                                             updatedCategories.forEachIndexed { index, cat ->
                                                 updatedCategories[index] = cat.copy(viewOrder = index + 1)
                                             }
+                                            println("DEBUG: After reorder - updatedCategories: ${updatedCategories.map { "${it.name} (viewOrder: ${it.viewOrder})" }}")
                                             onUpdateCategories(updatedCategories)
+                                            onCategoryReorder()
+                                            println("DEBUG: onCategoryReorder() called")
                                         }
                                     },
-                                    enabled = customCategories.indexOf(category) > 0
+                                    enabled = sortedCategories.indexOf(category) > 0
                                 ) {
                                     Icon(
                                         imageVector = Icons.Default.KeyboardArrowUp,
@@ -1596,9 +1746,11 @@ fun HomeScreen(
                                 IconButton(
                                     onClick = {
                                         // Move category down
-                                        val currentIndex = customCategories.indexOf(category)
-                                        if (currentIndex < customCategories.size - 1) {
-                                            val updatedCategories = customCategories.toMutableList()
+                                        val currentIndex = sortedCategories.indexOf(category)
+                                        if (currentIndex < sortedCategories.size - 1) {
+                                            println("DEBUG: Moving category DOWN - ${category.name}")
+                                            println("DEBUG: Before reorder - sortedCategories: ${sortedCategories.map { "${it.name} (viewOrder: ${it.viewOrder})" }}")
+                                            val updatedCategories = sortedCategories.toMutableList()
                                             val temp = updatedCategories[currentIndex]
                                             updatedCategories[currentIndex] = updatedCategories[currentIndex + 1]
                                             updatedCategories[currentIndex + 1] = temp
@@ -1606,10 +1758,13 @@ fun HomeScreen(
                                             updatedCategories.forEachIndexed { index, cat ->
                                                 updatedCategories[index] = cat.copy(viewOrder = index + 1)
                                             }
+                                            println("DEBUG: After reorder - updatedCategories: ${updatedCategories.map { "${it.name} (viewOrder: ${it.viewOrder})" }}")
                                             onUpdateCategories(updatedCategories)
+                                            onCategoryReorder()
+                                            println("DEBUG: onCategoryReorder() called")
                                         }
                                     },
-                                    enabled = customCategories.indexOf(category) < customCategories.size - 1
+                                    enabled = sortedCategories.indexOf(category) < sortedCategories.size - 1
                                 ) {
                                     Icon(
                                         imageVector = Icons.Default.KeyboardArrowDown,
@@ -2087,6 +2242,364 @@ fun HomeScreen(
                 }
             )
         }
+        
+        // Family sharing main dialog
+        if (showFamilySharingDialog) {
+            AlertDialog(
+                onDismissRequest = { showFamilySharingDialog = false },
+                confirmButton = {
+                    Button(
+                        onClick = { showFamilySharingDialog = false }
+                    ) {
+                        Text(localizedString("close", selectedLanguage))
+                    }
+                },
+                title = { Text(localizedString("family_sharing", selectedLanguage)) },
+                text = {
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        if (familySharingManager.isSharingEnabled) {
+                            // Show family code and leave option
+                            Column(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Text(
+                                    text = "${localizedString("family_code", selectedLanguage)}:",
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 16.sp,
+                                    modifier = Modifier.padding(bottom = 8.dp)
+                                )
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier
+                                        .clickable {
+                                            val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+                                            val clip = android.content.ClipData.newPlainText("Family Code", familySharingManager.familyCode ?: "")
+                                            clipboard.setPrimaryClip(clip)
+                                        }
+                                        .background(
+                                            color = Color(0xFFE8F5E8),
+                                            shape = RoundedCornerShape(8.dp)
+                                        )
+                                        .padding(horizontal = 16.dp, vertical = 8.dp)
+                                ) {
+                                    Text(
+                                        text = familySharingManager.familyCode ?: "",
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 20.sp,
+                                        color = Color(0xFF4CAF50),
+                                        textAlign = TextAlign.Center,
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                    Icon(
+                                        imageVector = Icons.Default.Share,
+                                        contentDescription = localizedString("tap_to_copy", selectedLanguage),
+                                        tint = Color(0xFF4CAF50),
+                                        modifier = Modifier
+                                            .size(20.dp)
+                                            .padding(start = 8.dp)
+                                    )
+                                }
+                                Text(
+                                    text = localizedString("tap_to_copy", selectedLanguage),
+                                    textAlign = TextAlign.Center,
+                                    color = Color.Gray,
+                                    fontSize = 12.sp,
+                                    modifier = Modifier.padding(bottom = 8.dp)
+                                )
+                            }
+                            Button(
+                                onClick = { showLeaveFamilyConfirm = true },
+                                colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                                    containerColor = Color.Red
+                                ),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text(localizedString("leave_family", selectedLanguage), color = Color.White)
+                            }
+                        } else {
+                            // Show create/join options
+                            Button(
+                                onClick = { showCreateFamilyDialog = true },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(bottom = 8.dp),
+                                colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                                    containerColor = Color(0xFF4CAF50)
+                                )
+                            ) {
+                                Text(localizedString("create_family", selectedLanguage), color = Color.White)
+                            }
+                            Button(
+                                onClick = { showJoinFamilyDialog = true },
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                                    containerColor = Color(0xFF2196F3)
+                                )
+                            ) {
+                                Text(localizedString("join_family", selectedLanguage), color = Color.White)
+                            }
+                        }
+                    }
+                }
+            )
+        }
+        
+        // Create family dialog
+        if (showCreateFamilyDialog) {
+            AlertDialog(
+                onDismissRequest = { if (!familySharingManager.isLoading) showCreateFamilyDialog = false },
+                confirmButton = {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = androidx.compose.foundation.layout.Arrangement.SpaceBetween
+                    ) {
+                        Button(
+                            onClick = { showCreateFamilyDialog = false },
+                            enabled = !familySharingManager.isLoading
+                        ) {
+                            Text(localizedString("cancel", selectedLanguage))
+                        }
+                        Button(
+                            onClick = {
+                                familySharingManager.createFamily(groceries, customCategories)
+                                // Don't close dialog immediately - let it show loading state
+                            },
+                            enabled = !familySharingManager.isLoading
+                        ) {
+                            if (familySharingManager.isLoading) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(16.dp),
+                                        strokeWidth = 2.dp,
+                                        color = Color.White
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(localizedString("creating", selectedLanguage), color = Color.White)
+                                }
+                            } else {
+                                Text(localizedString("create", selectedLanguage))
+                            }
+                        }
+                    }
+                },
+                title = { Text(localizedString("create_family_confirm", selectedLanguage)) },
+                text = {
+                    if (familySharingManager.isLoading) {
+                        Column(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(48.dp),
+                                color = Color(0xFF4CAF50)
+                            )
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Text(
+                                text = localizedString("uploading_data", selectedLanguage),
+                                textAlign = TextAlign.Center,
+                                fontWeight = FontWeight.Medium
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = localizedString("please_wait", selectedLanguage),
+                                textAlign = TextAlign.Center,
+                                color = Color.Gray,
+                                fontSize = 12.sp
+                            )
+                        }
+                    } else {
+                        Text(
+                            text = localizedString("create_family_confirm_message", selectedLanguage),
+                            modifier = Modifier.padding(bottom = 16.dp)
+                        )
+                    }
+                }
+            )
+        }
+        
+        // Join family dialog
+        if (showJoinFamilyDialog) {
+            AlertDialog(
+                onDismissRequest = { if (!familySharingManager.isLoading) showJoinFamilyDialog = false },
+                confirmButton = {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = androidx.compose.foundation.layout.Arrangement.SpaceBetween
+                    ) {
+                        Button(
+                            onClick = { showJoinFamilyDialog = false },
+                            enabled = !familySharingManager.isLoading
+                        ) {
+                            Text(localizedString("cancel", selectedLanguage))
+                        }
+                        Button(
+                            onClick = {
+                                familySharingManager.joinFamily(joinFamilyCode)
+                                // Don't close dialog immediately - let it show loading state
+                            },
+                            enabled = familySharingManager.validateJoinCode(joinFamilyCode) && !familySharingManager.isLoading
+                        ) {
+                            if (familySharingManager.isLoading) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(16.dp),
+                                        strokeWidth = 2.dp,
+                                        color = Color.White
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(localizedString("joining", selectedLanguage), color = Color.White)
+                                }
+                            } else {
+                                Text(localizedString("join_family", selectedLanguage))
+                            }
+                        }
+                    }
+                },
+                title = { Text(localizedString("join_family", selectedLanguage)) },
+                text = {
+                    if (familySharingManager.isLoading) {
+                        Column(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(48.dp),
+                                color = Color(0xFF2196F3)
+                            )
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Text(
+                                text = localizedString("joining_family", selectedLanguage),
+                                textAlign = TextAlign.Center,
+                                fontWeight = FontWeight.Medium
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = localizedString("please_wait", selectedLanguage),
+                                textAlign = TextAlign.Center,
+                                color = Color.Gray,
+                                fontSize = 12.sp
+                            )
+                        }
+                    } else {
+                        Column {
+                            OutlinedTextField(
+                                value = joinFamilyCode,
+                                onValueChange = { joinFamilyCode = it },
+                                label = { Text(localizedString("enter_family_code", selectedLanguage)) },
+                                modifier = Modifier.fillMaxWidth(),
+                                singleLine = true,
+                                keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                                    keyboardType = androidx.compose.ui.text.input.KeyboardType.Number
+                                )
+                            )
+                            if (familySharingManager.errorMessage != null) {
+                                Text(
+                                    text = familySharingManager.errorMessage!!,
+                                    color = Color.Red,
+                                    modifier = Modifier.padding(top = 8.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+            )
+        }
+        
+        // Family code display dialog
+        if (showFamilyCodeDialog && familySharingManager.familyCode != null) {
+            AlertDialog(
+                onDismissRequest = { showFamilyCodeDialog = false },
+                confirmButton = {
+                    Button(
+                        onClick = { showFamilyCodeDialog = false }
+                    ) {
+                        Text(localizedString("close", selectedLanguage))
+                    }
+                },
+                title = { Text(localizedString("family_created", selectedLanguage)) },
+                text = {
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            text = "${localizedString("family_code", selectedLanguage)}:",
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(bottom = 8.dp)
+                        )
+                        Text(
+                            text = familySharingManager.familyCode!!,
+                            fontSize = 24.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFF4CAF50),
+                            modifier = Modifier
+                                .padding(bottom = 16.dp)
+                                .clickable {
+                                    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+                                    val clip = android.content.ClipData.newPlainText("Family Code", familySharingManager.familyCode!!)
+                                    clipboard.setPrimaryClip(clip)
+                                }
+                                .background(
+                                    color = Color(0xFFE8F5E8),
+                                    shape = RoundedCornerShape(8.dp)
+                                )
+                                .padding(horizontal = 16.dp, vertical = 8.dp),
+                            textAlign = TextAlign.Center
+                        )
+                        Text(
+                            text = localizedString("share_family_code", selectedLanguage),
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.padding(bottom = 8.dp)
+                        )
+                        Text(
+                            text = localizedString("tap_to_copy", selectedLanguage),
+                            textAlign = TextAlign.Center,
+                            color = Color.Gray,
+                            fontSize = 12.sp,
+                            modifier = Modifier.padding(top = 4.dp)
+                        )
+                    }
+                }
+            )
+        }
+        
+        // Leave family confirmation dialog
+        if (showLeaveFamilyConfirm) {
+            AlertDialog(
+                onDismissRequest = { showLeaveFamilyConfirm = false },
+                confirmButton = {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = androidx.compose.foundation.layout.Arrangement.SpaceBetween
+                    ) {
+                        Button(
+                            onClick = { showLeaveFamilyConfirm = false }
+                        ) {
+                            Text(localizedString("cancel", selectedLanguage))
+                        }
+                        Button(
+                            onClick = {
+                                familySharingManager.leaveFamily()
+                                showLeaveFamilyConfirm = false
+                            },
+                            colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                                containerColor = Color.Red
+                            )
+                        ) {
+                            Text(localizedString("leave_family", selectedLanguage), color = Color.White)
+                        }
+                    }
+                },
+                title = { Text(localizedString("confirm_leave_family", selectedLanguage)) },
+                text = {
+                    Text(localizedString("confirm_leave_family_message", selectedLanguage))
+                }
+            )
+        }
     }
 }
 
@@ -2532,6 +3045,31 @@ val Context.customCategoriesDataStore: DataStore<List<CustomCategory>> by dataSt
     fileName = "custom_categories.json",
     serializer = CustomCategoryListSerializer
 )
+
+// Family sharing DataStore
+val Context.familyDataStore: DataStore<FamilyData> by dataStore(
+    fileName = "family_data.json",
+    serializer = FamilyDataSerializer
+)
+
+// Family data class for persistence
+@Serializable
+data class FamilyData(
+    val isSharingEnabled: Boolean = false,
+    val projectId: String = "",
+    val familyCode: String = ""
+)
+
+object FamilyDataSerializer : Serializer<FamilyData> {
+    override val defaultValue: FamilyData = FamilyData()
+    override suspend fun readFrom(input: InputStream): FamilyData =
+        runCatching {
+            Json.decodeFromString(FamilyData.serializer(), input.readBytes().decodeToString())
+        }.getOrDefault(FamilyData())
+    override suspend fun writeTo(t: FamilyData, output: OutputStream) {
+        output.write(Json.encodeToString(FamilyData.serializer(), t).encodeToByteArray())
+    }
+}
 
 object CustomCategoryListSerializer : Serializer<List<CustomCategory>> {
     override val defaultValue: List<CustomCategory> = emptyList()

@@ -6,17 +6,17 @@ import kotlinx.serialization.Serializable
 // Custom category data class
 @Serializable
 data class CustomCategory(
-    val id: Int,           // Unique identifier
-    val name: String,       // Display name
-    val default: Boolean,   // Whether this is a default category
-    val viewOrder: Int      // Order for display
+    val id: Int = 0,           // Unique identifier
+    val name: String = "",       // Display name
+    val default: Boolean = false,   // Whether this is a default category
+    val viewOrder: Int = 0      // Order for display
 )
 
 // מודל נתונים עבור מצרך
 @Serializable
 data class Grocery(
-    val name: String, // שם המצרך
-    val customCategoryId: Int, // קישור לקטגוריה מותאמת (חובה)
+    val name: String = "", // שם המצרך
+    val customCategoryId: Int = 0, // קישור לקטגוריה מותאמת (חובה)
     val expirationDate: String? = null, // תאריך תפוגה (אופציונלי, as ISO string)
     val lastTimeBoughtDays: Int? = null, // מספר ימים מאז הקנייה האחרונה (אופציונלי)
     val averageBuyingDays: Int? = null, // ממוצע ימים בין קניות (אופציונלי)
