@@ -1062,6 +1062,14 @@ fun HomeScreen(
         }
     }
     
+    // Sync bought items when family data changes (for cross-device sync)
+    LaunchedEffect(familySharingManager.isSharingEnabled) {
+        if (familySharingManager.isSharingEnabled) {
+            // Sync current bought items state to Firebase
+            familySharingManager.updateFamilyData(groceries, customCategories)
+        }
+    }
+    
     // Save family sharing state to DataStore
     LaunchedEffect(familySharingManager.isSharingEnabled, familySharingManager.currentProjectId) {
         context.familyDataStore.updateData {
@@ -2711,6 +2719,45 @@ fun ShoppingListScreen(
     val categoryExpansion = remember { mutableStateMapOf<Int, Boolean>() }
     orderedCategories.forEach { cat ->
         if (categoryExpansion[cat.id] == null) categoryExpansion[cat.id] = true
+    }
+
+    // Family sharing manager for Firebase sync
+    val scope = rememberCoroutineScope()
+    val firebaseService = remember { FirebaseService() }
+    val familySharingManager = remember { 
+        FamilySharingManager(firebaseService, scope).apply {
+            onDataUpdate = { newGroceries, newCategories ->
+                onUpdateGroceries(newGroceries)
+            }
+        }
+    }
+    
+    // Load family sharing state from DataStore
+    LaunchedEffect(Unit) {
+        val familyData = context.familyDataStore.data.first()
+        if (familyData.isSharingEnabled && familyData.projectId.isNotEmpty()) {
+            familySharingManager.currentProjectId = familyData.projectId
+            familySharingManager.familyCode = familyData.projectId
+            familySharingManager.isSharingEnabled = true
+            // Restart real-time sync
+            familySharingManager.startRealTimeSync(familyData.projectId)
+            // Process any pending offline updates
+            familySharingManager.processOfflineQueue()
+        }
+    }
+    
+    // Sync groceries to Firebase when they change (if family sharing is enabled)
+    LaunchedEffect(groceries) {
+        if (familySharingManager.isSharingEnabled) {
+            familySharingManager.updateFamilyData(groceries, customCategories)
+        }
+    }
+    
+    // Sync categories to Firebase when they change (if family sharing is enabled)
+    LaunchedEffect(customCategories) {
+        if (familySharingManager.isSharingEnabled) {
+            familySharingManager.updateFamilyData(groceries, customCategories)
+        }
     }
 
     // Edit state variables
