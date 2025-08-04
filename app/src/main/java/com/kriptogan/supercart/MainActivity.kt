@@ -212,6 +212,11 @@ object StringResources {
                  "joining_family" to "מצטרף למשפחה",
                  "please_wait" to "אנא המתן",
                  "tap_to_copy" to "לחץ להעתקה",
+                 "syncing" to "מסנכרן...",
+                 "synced" to "מסונכרן",
+                 "sync_error" to "שגיאת סנכרון",
+                 "offline_mode" to "מצב לא מקוון",
+                 "pending_updates" to "עדכונים ממתינים",
                  // Category translations
                  "אחר" to "אחר",
                  "פירות" to "פירות",
@@ -313,6 +318,11 @@ object StringResources {
                  "please_wait" to "Please wait",
                  "tap_to_copy" to "Tap to copy",
                  "create" to "Create",
+                 "syncing" to "Syncing...",
+                 "synced" to "Synced",
+                 "sync_error" to "Sync Error",
+                 "offline_mode" to "Offline Mode",
+                 "pending_updates" to "Pending Updates",
                  // Category translations
                  "אחר" to "Other",
                  "פירות" to "Fruits",
@@ -414,6 +424,11 @@ object StringResources {
                  "please_wait" to "Пожалуйста, подождите",
                  "tap_to_copy" to "Нажмите, чтобы скопировать",
                  "create" to "Создать",
+                 "syncing" to "Синхронизация...",
+                 "synced" to "Синхронизировано",
+                 "sync_error" to "Ошибка синхронизации",
+                 "offline_mode" to "Режим офлайн",
+                 "pending_updates" to "Обновления ожидаются",
                  // Category translations
                  "אחר" to "Другое",
                  "פירות" to "Фрукты",
@@ -788,11 +803,21 @@ fun SuperCartApp() {
     // Save groceries to DataStore whenever they change
     LaunchedEffect(groceries) {
         context.groceryDataStore.updateData { groceries.map { it.toSerializable() } }
+        
+        // Sync to Firebase if family sharing is enabled
+        if (familySharingManager.isSharingEnabled) {
+            familySharingManager.updateFamilyData(groceries, customCategories)
+        }
     }
     
     // Save custom categories to DataStore whenever they change
     LaunchedEffect(customCategories) {
         context.customCategoriesDataStore.updateData { customCategories }
+        
+        // Sync to Firebase if family sharing is enabled
+        if (familySharingManager.isSharingEnabled) {
+            familySharingManager.updateFamilyData(groceries, customCategories)
+        }
     }
     
     // Save category order to DataStore whenever it changes
@@ -1025,6 +1050,10 @@ fun HomeScreen(
                 showCreateFamilyDialog = false
                 showJoinFamilyDialog = false
             }
+            onSyncStatusChange = { isSyncing, error ->
+                // Sync status updates are handled by the UI state
+                // The sync status is already observable through familySharingManager.isSyncing and familySharingManager.syncError
+            }
         }
     }
     
@@ -1037,6 +1066,8 @@ fun HomeScreen(
             familySharingManager.isSharingEnabled = true
             // Restart real-time sync
             familySharingManager.startRealTimeSync(familyData.projectId)
+            // Process any pending offline updates
+            familySharingManager.processOfflineQueue()
         }
     }
     
@@ -2310,6 +2341,63 @@ fun HomeScreen(
                                     fontSize = 12.sp,
                                     modifier = Modifier.padding(bottom = 8.dp)
                                 )
+                                
+                                // Sync status indicator
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = 8.dp)
+                                        .background(
+                                            color = when {
+                                                familySharingManager.isSyncing -> Color(0xFFE3F2FD)
+                                                familySharingManager.syncError != null -> Color(0xFFFFEBEE)
+                                                else -> Color(0xFFE8F5E8)
+                                            },
+                                            shape = RoundedCornerShape(8.dp)
+                                        )
+                                        .padding(horizontal = 12.dp, vertical = 8.dp)
+                                ) {
+                                    if (familySharingManager.isSyncing) {
+                                        CircularProgressIndicator(
+                                            modifier = Modifier.size(16.dp),
+                                            strokeWidth = 2.dp,
+                                            color = Color(0xFF2196F3)
+                                        )
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text(
+                                            text = localizedString("syncing", selectedLanguage),
+                                            fontSize = 12.sp,
+                                            color = Color(0xFF2196F3)
+                                        )
+                                    } else if (familySharingManager.syncError != null) {
+                                        Icon(
+                                            imageVector = Icons.Default.Warning,
+                                            contentDescription = localizedString("sync_error", selectedLanguage),
+                                            tint = Color(0xFFF44336),
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text(
+                                            text = familySharingManager.syncError!!,
+                                            fontSize = 12.sp,
+                                            color = Color(0xFFF44336)
+                                        )
+                                    } else {
+                                        Icon(
+                                            imageVector = Icons.Default.Check,
+                                            contentDescription = localizedString("synced", selectedLanguage),
+                                            tint = Color(0xFF4CAF50),
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text(
+                                            text = localizedString("synced", selectedLanguage),
+                                            fontSize = 12.sp,
+                                            color = Color(0xFF4CAF50)
+                                        )
+                                    }
+                                }
                             }
                             Button(
                                 onClick = { showLeaveFamilyConfirm = true },

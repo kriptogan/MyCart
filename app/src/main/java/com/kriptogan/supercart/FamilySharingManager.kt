@@ -22,12 +22,23 @@ class FamilySharingManager(
     var isLoading by mutableStateOf(false)
     var errorMessage by mutableStateOf<String?>(null)
     
+    // Sync status
+    var isSyncing by mutableStateOf(false)
+    var lastSyncTime by mutableStateOf<Long?>(null)
+    var syncError by mutableStateOf<String?>(null)
+    
     // Real-time sync
     private var syncListener: ListenerRegistration? = null
     
-         // Callbacks
-     var onDataUpdate: ((List<GroceryWithDate>, List<CustomCategory>) -> Unit)? = null
-     var onDialogClose: (() -> Unit)? = null
+    // Retry mechanism
+    private var pendingUpdates = mutableListOf<Pair<List<GroceryWithDate>, List<CustomCategory>>>()
+    private var retryCount = 0
+    private val maxRetries = 3
+    
+    // Callbacks
+    var onDataUpdate: ((List<GroceryWithDate>, List<CustomCategory>) -> Unit)? = null
+    var onDialogClose: (() -> Unit)? = null
+    var onSyncStatusChange: ((Boolean, String?) -> Unit)? = null
     
     // Create new family sharing
     fun createFamily(groceries: List<GroceryWithDate>, categories: List<CustomCategory>) {
@@ -102,16 +113,79 @@ class FamilySharingManager(
         }
     }
     
-    // Update family data
+    // Update family data with retry mechanism
     fun updateFamilyData(groceries: List<GroceryWithDate>, categories: List<CustomCategory>) {
-        currentProjectId?.let { projectId ->
-            scope.launch {
-                try {
-                    firebaseService.updateFamilyProject(projectId, groceries, categories)
-                } catch (e: Exception) {
-                    // Handle update error
+        if (!isSharingEnabled || currentProjectId == null) {
+            return
+        }
+        
+        scope.launch {
+            isSyncing = true
+            syncError = null
+            onSyncStatusChange?.invoke(true, null)
+            
+            try {
+                val success = firebaseService.updateFamilyProject(currentProjectId!!, groceries, categories)
+                
+                if (success) {
+                    lastSyncTime = System.currentTimeMillis()
+                    retryCount = 0
+                    // Clear any pending updates that were successfully synced
+                    pendingUpdates.clear()
+                    onSyncStatusChange?.invoke(false, null)
+                } else {
+                    // Add to pending updates for retry
+                    pendingUpdates.add(Pair(groceries, categories))
+                    syncError = "Failed to sync changes"
+                    onSyncStatusChange?.invoke(false, syncError)
+                    
+                    // Retry after a delay
+                    if (retryCount < maxRetries) {
+                        retryCount++
+                        kotlinx.coroutines.delay(2000L * retryCount) // Exponential backoff
+                        retryPendingUpdates()
+                    }
                 }
+            } catch (e: Exception) {
+                syncError = "Sync error: ${e.message}"
+                onSyncStatusChange?.invoke(false, syncError)
+                println("Error syncing family data: ${e.message}")
+            } finally {
+                isSyncing = false
             }
+        }
+    }
+    
+    // Retry pending updates
+    private suspend fun retryPendingUpdates() {
+        if (pendingUpdates.isEmpty() || retryCount >= maxRetries) {
+            return
+        }
+        
+        val updates = pendingUpdates.toList()
+        pendingUpdates.clear()
+        
+        for ((groceries, categories) in updates) {
+            try {
+                val success = firebaseService.updateFamilyProject(currentProjectId!!, groceries, categories)
+                if (success) {
+                    lastSyncTime = System.currentTimeMillis()
+                    retryCount = 0
+                } else {
+                    // Add back to pending updates
+                    pendingUpdates.add(Pair(groceries, categories))
+                }
+            } catch (e: Exception) {
+                pendingUpdates.add(Pair(groceries, categories))
+                println("Retry failed: ${e.message}")
+            }
+        }
+        
+        // If we still have pending updates, retry again
+        if (pendingUpdates.isNotEmpty() && retryCount < maxRetries) {
+            retryCount++
+            kotlinx.coroutines.delay(2000L * retryCount)
+            retryPendingUpdates()
         }
     }
     
@@ -142,9 +216,25 @@ class FamilySharingManager(
         // Note: Local data remains unchanged - only disconnecting from family sharing
     }
     
+    // Process offline queue when connection is restored
+    fun processOfflineQueue() {
+        if (!isSharingEnabled || currentProjectId == null) {
+            return
+        }
+        
+        scope.launch {
+            try {
+                firebaseService.processOfflineQueue()
+            } catch (e: Exception) {
+                println("Error processing offline queue: ${e.message}")
+            }
+        }
+    }
+    
     // Clear error
     fun clearError() {
         errorMessage = null
+        syncError = null
     }
     
     // Validate join code
