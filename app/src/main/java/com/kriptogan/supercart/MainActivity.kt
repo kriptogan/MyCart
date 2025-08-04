@@ -712,9 +712,10 @@ class MainActivity : ComponentActivity() {
         )
         
         // Initialize default custom categories and migrate existing data
+        val context = this // Capture the context
         kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
-            initializeDefaultCustomCategories()
-            migrateGroceriesToCustomCategories()
+            context.initializeDefaultCustomCategories()
+            context.migrateGroceriesToCustomCategories()
         }
         
         enableEdgeToEdge()
@@ -803,21 +804,11 @@ fun SuperCartApp() {
     // Save groceries to DataStore whenever they change
     LaunchedEffect(groceries) {
         context.groceryDataStore.updateData { groceries.map { it.toSerializable() } }
-        
-        // Sync to Firebase if family sharing is enabled
-        if (familySharingManager.isSharingEnabled) {
-            familySharingManager.updateFamilyData(groceries, customCategories)
-        }
     }
     
     // Save custom categories to DataStore whenever they change
     LaunchedEffect(customCategories) {
         context.customCategoriesDataStore.updateData { customCategories }
-        
-        // Sync to Firebase if family sharing is enabled
-        if (familySharingManager.isSharingEnabled) {
-            familySharingManager.updateFamilyData(groceries, customCategories)
-        }
     }
     
     // Save category order to DataStore whenever it changes
@@ -1082,7 +1073,19 @@ fun HomeScreen(
         }
     }
     
-
+    // Sync groceries to Firebase when they change (if family sharing is enabled)
+    LaunchedEffect(groceries) {
+        if (familySharingManager.isSharingEnabled) {
+            familySharingManager.updateFamilyData(groceries, customCategories)
+        }
+    }
+    
+    // Sync categories to Firebase when they change (if family sharing is enabled)
+    LaunchedEffect(customCategories) {
+        if (familySharingManager.isSharingEnabled) {
+            familySharingManager.updateFamilyData(groceries, customCategories)
+        }
+    }
     
     // Update configuration when locale changes
     val configuration = LocalConfiguration.current
