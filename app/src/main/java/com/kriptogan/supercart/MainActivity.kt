@@ -1162,161 +1162,169 @@ fun HomeScreen(
         return isExpiringOrExpired || shouldHighlightYellow
     }
 
-    Box(modifier = Modifier.fillMaxSize()) {
-        LazyColumn(modifier = Modifier.fillMaxSize().padding(16.dp)) {
+    Column(modifier = Modifier.fillMaxSize()) {
+        // Fixed top section with buttons and search bar
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(Color(0xFFF5F5F5))
+                .padding(16.dp)
+        ) {
             // Top buttons row
-            item {
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
-                    verticalAlignment = Alignment.CenterVertically
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                IconButton(
+                    onClick = {
+                        name = if (searchQuery.isNotBlank()) searchQuery else ""
+                        selectedCustomCategoryId = 1 // Default to "אחר"
+                        expirationDate = null
+                        inShoppingList = false
+                        isEditMode = false
+                        showDialog = true
+                    },
+                    modifier = Modifier
+                        .background(
+                            color = Color(0xFF4CAF50),
+                            shape = androidx.compose.foundation.shape.CircleShape
+                        )
+                        .size(48.dp)
                 ) {
-                    IconButton(
-                        onClick = {
-                            name = if (searchQuery.isNotBlank()) searchQuery else ""
-                            selectedCustomCategoryId = 1 // Default to "אחר"
-                            expirationDate = null
-                            inShoppingList = false
-                            isEditMode = false
-                            showDialog = true
-                        },
-                        modifier = Modifier
-                            .background(
-                                color = Color(0xFF4CAF50),
-                                shape = androidx.compose.foundation.shape.CircleShape
-                            )
-                            .size(48.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Add,
-                            contentDescription = localizedString("add_item", selectedLanguage),
-                            tint = Color.White
+                    Icon(
+                        imageVector = Icons.Default.Add,
+                        contentDescription = localizedString("add_item", selectedLanguage),
+                        tint = Color.White
+                    )
+                }
+                Spacer(modifier = Modifier.weight(1f))
+                IconButton(
+                    onClick = { showMenu = true },
+                    modifier = Modifier
+                        .background(
+                            color = Color(0xFF607D8B),
+                            shape = androidx.compose.foundation.shape.CircleShape
                         )
-                    }
-                    Spacer(modifier = Modifier.weight(1f))
-                    IconButton(
-                        onClick = { showMenu = true },
-                        modifier = Modifier
-                            .background(
-                                color = Color(0xFF607D8B),
-                                shape = androidx.compose.foundation.shape.CircleShape
-                            )
-                            .size(48.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Menu,
-                            contentDescription = localizedString("menu", selectedLanguage),
-                            tint = Color.White
+                        .size(48.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Menu,
+                        contentDescription = localizedString("menu", selectedLanguage),
+                        tint = Color.White
+                    )
+                }
+                Spacer(modifier = Modifier.weight(1f))
+                IconButton(
+                    onClick = { if (hasExpiring) showExpiringOnly = !showExpiringOnly },
+                    enabled = hasExpiring,
+                    modifier = Modifier
+                        .background(
+                            color = if (hasExpiring) Color(0xFFFF9800) else Color(0xFFBDBDBD),
+                            shape = androidx.compose.foundation.shape.CircleShape
                         )
-                    }
-                    Spacer(modifier = Modifier.weight(1f))
-                    IconButton(
-                        onClick = { if (hasExpiring) showExpiringOnly = !showExpiringOnly },
-                        enabled = hasExpiring,
-                        modifier = Modifier
-                            .background(
-                                color = if (hasExpiring) Color(0xFFFF9800) else Color(0xFFBDBDBD),
-                                shape = androidx.compose.foundation.shape.CircleShape
-                            )
-                            .size(48.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Warning,
-                            contentDescription = localizedString("show_expiring_items", selectedLanguage),
-                            tint = Color.White
-                        )
-                    }
+                        .size(48.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Warning,
+                        contentDescription = localizedString("show_expiring_items", selectedLanguage),
+                        tint = Color.White
+                    )
                 }
             }
             
             // Hamburger menu dropdown
-            item {
+            Box(
+                modifier = Modifier.fillMaxWidth(),
+                contentAlignment = Alignment.Center
+            ) {
+                // Invisible anchor for dropdown positioning
                 Box(
-                    modifier = Modifier.fillMaxWidth(),
-                    contentAlignment = Alignment.Center
+                    modifier = Modifier.size(0.dp)
                 ) {
-                    // Invisible anchor for dropdown positioning
-                    Box(
-                        modifier = Modifier.size(0.dp)
+                    DropdownMenu(
+                        expanded = showMenu,
+                        onDismissRequest = { showMenu = false },
+                        modifier = Modifier.width(200.dp)
                     ) {
-                        DropdownMenu(
-                            expanded = showMenu,
-                            onDismissRequest = { showMenu = false },
-                            modifier = Modifier.width(200.dp)
-                        ) {
-                            DropdownMenuItem(
-                                text = { 
-                                    Text(
-                                        localizedString("manage_categories", selectedLanguage),
-                                        modifier = Modifier.fillMaxWidth(),
-                                        textAlign = TextAlign.Center
-                                    ) 
-                                },
-                                onClick = {
-                                    showCategoriesList = true
-                                    showMenu = false
-                                }
-                            )
-                            DropdownMenuItem(
-                                text = { 
-                                    Text(
-                                        localizedString("family_sharing", selectedLanguage),
-                                        modifier = Modifier.fillMaxWidth(),
-                                        textAlign = TextAlign.Center
-                                    ) 
-                                },
-                                onClick = {
-                                    showFamilySharingDialog = true
-                                    showMenu = false
-                                }
-                            )
-                            DropdownMenuItem(
-                                text = { 
-                                    Text(
-                                        localizedString("import_shopping_list", selectedLanguage),
-                                        modifier = Modifier.fillMaxWidth(),
-                                        textAlign = TextAlign.Center
-                                    ) 
-                                },
-                                onClick = {
-                                    showNotesDialog = true
-                                    showMenu = false
-                                }
-                            )
-                            DropdownMenuItem(
-                                text = { 
-                                    Text(
-                                        localizedString("languages", selectedLanguage),
-                                        modifier = Modifier.fillMaxWidth(),
-                                        textAlign = TextAlign.Center
-                                    ) 
-                                },
-                                onClick = {
-                                    showLanguageSelection = true
-                                    showMenu = false
-                                }
-                            )
-                        }
+                        DropdownMenuItem(
+                            text = { 
+                                Text(
+                                    localizedString("manage_categories", selectedLanguage),
+                                    modifier = Modifier.fillMaxWidth(),
+                                    textAlign = TextAlign.Center
+                                ) 
+                            },
+                            onClick = {
+                                showCategoriesList = true
+                                showMenu = false
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { 
+                                Text(
+                                    localizedString("family_sharing", selectedLanguage),
+                                    modifier = Modifier.fillMaxWidth(),
+                                    textAlign = TextAlign.Center
+                                ) 
+                            },
+                            onClick = {
+                                showFamilySharingDialog = true
+                                showMenu = false
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { 
+                                Text(
+                                    localizedString("import_shopping_list", selectedLanguage),
+                                    modifier = Modifier.fillMaxWidth(),
+                                    textAlign = TextAlign.Center
+                                ) 
+                            },
+                            onClick = {
+                                showNotesDialog = true
+                                showMenu = false
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { 
+                                Text(
+                                    localizedString("languages", selectedLanguage),
+                                    modifier = Modifier.fillMaxWidth(),
+                                    textAlign = TextAlign.Center
+                                ) 
+                            },
+                            onClick = {
+                                showLanguageSelection = true
+                                showMenu = false
+                            }
+                        )
                     }
                 }
             }
             
             // Search bar
-            item {
-                OutlinedTextField(
-                    value = searchQuery,
-                    onValueChange = { searchQuery = it },
-                    label = { Text(localizedString("search_placeholder", selectedLanguage)) },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(bottom = 16.dp),
-                    colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = Color(0xFF4CAF50),
-                        unfocusedBorderColor = Color(0xFFBDBDBD),
-                        focusedLabelColor = Color(0xFF4CAF50)
-                    ),
-                    shape = androidx.compose.foundation.shape.RoundedCornerShape(8.dp)
-                )
-            }
+            OutlinedTextField(
+                value = searchQuery,
+                onValueChange = { searchQuery = it },
+                label = { Text(localizedString("search_placeholder", selectedLanguage)) },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 16.dp),
+                colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = Color(0xFF4CAF50),
+                    unfocusedBorderColor = Color(0xFFBDBDBD),
+                    focusedLabelColor = Color(0xFF4CAF50)
+                ),
+                shape = androidx.compose.foundation.shape.RoundedCornerShape(8.dp)
+            )
+        }
+        
+        // Scrollable content
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 16.dp)
+        ) {
             println("DEBUG: UI using orderedCategories: ${currentOrderedCategories.map { "${it.name} (${it.id})" }}")
             currentOrderedCategories.forEach { category ->
                 val itemsInCategory = groceries.withIndex()
