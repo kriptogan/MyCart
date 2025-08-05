@@ -1035,15 +1035,6 @@ fun HomeScreen(
         FamilySharingManager(firebaseService, scope).apply {
             onDataUpdate = { newGroceries, newCategories ->
                 onUpdateGroceries(newGroceries)
-                onUpdateCategories(newCategories)
-            }
-            onDialogClose = {
-                showCreateFamilyDialog = false
-                showJoinFamilyDialog = false
-            }
-            onSyncStatusChange = { isSyncing, error ->
-                // Sync status updates are handled by the UI state
-                // The sync status is already observable through familySharingManager.isSyncing and familySharingManager.syncError
             }
         }
     }
@@ -2721,6 +2712,10 @@ fun ShoppingListScreen(
         if (categoryExpansion[cat.id] == null) categoryExpansion[cat.id] = true
     }
 
+    // Shopping workflow state
+    var boughtItems by remember { mutableStateOf<List<GroceryWithDate>>(emptyList()) }
+    var showDoneShoppingConfirm by remember { mutableStateOf(false) }
+    
     // Family sharing manager for Firebase sync
     val scope = rememberCoroutineScope()
     val firebaseService = remember { FirebaseService() }
@@ -2728,6 +2723,9 @@ fun ShoppingListScreen(
         FamilySharingManager(firebaseService, scope).apply {
             onDataUpdate = { newGroceries, newCategories ->
                 onUpdateGroceries(newGroceries)
+            }
+            onBoughtItemsUpdate = { newBoughtItems ->
+                boughtItems = newBoughtItems
             }
         }
     }
@@ -2749,14 +2747,21 @@ fun ShoppingListScreen(
     // Sync groceries to Firebase when they change (if family sharing is enabled)
     LaunchedEffect(groceries) {
         if (familySharingManager.isSharingEnabled) {
-            familySharingManager.updateFamilyData(groceries, customCategories)
+            familySharingManager.updateFamilyData(groceries, customCategories, boughtItems)
         }
     }
     
     // Sync categories to Firebase when they change (if family sharing is enabled)
     LaunchedEffect(customCategories) {
         if (familySharingManager.isSharingEnabled) {
-            familySharingManager.updateFamilyData(groceries, customCategories)
+            familySharingManager.updateFamilyData(groceries, customCategories, boughtItems)
+        }
+    }
+    
+    // Sync bought items to Firebase when they change (if family sharing is enabled)
+    LaunchedEffect(boughtItems) {
+        if (familySharingManager.isSharingEnabled) {
+            familySharingManager.updateFamilyData(groceries, customCategories, boughtItems)
         }
     }
 
@@ -2771,10 +2776,6 @@ fun ShoppingListScreen(
     var expirationDate by remember { mutableStateOf<LocalDate?>(null) }
     var showDatePicker by remember { mutableStateOf(false) }
     var expanded by remember { mutableStateOf(false) } // For category dropdown
-    
-    // Shopping workflow state
-    var boughtItems by remember { mutableStateOf<List<GroceryWithDate>>(emptyList()) }
-    var showDoneShoppingConfirm by remember { mutableStateOf(false) }
     
     // Load bought items from DataStore on first composition
     LaunchedEffect(Unit) {

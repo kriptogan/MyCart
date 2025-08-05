@@ -31,12 +31,13 @@ class FamilySharingManager(
     private var syncListener: ListenerRegistration? = null
     
     // Retry mechanism
-    private var pendingUpdates = mutableListOf<Pair<List<GroceryWithDate>, List<CustomCategory>>>()
+    private var pendingUpdates = mutableListOf<Triple<List<GroceryWithDate>, List<CustomCategory>, List<GroceryWithDate>>>()
     private var retryCount = 0
     private val maxRetries = 3
     
     // Callbacks
     var onDataUpdate: ((List<GroceryWithDate>, List<CustomCategory>) -> Unit)? = null
+    var onBoughtItemsUpdate: ((List<GroceryWithDate>) -> Unit)? = null
     var onDialogClose: (() -> Unit)? = null
     var onSyncStatusChange: ((Boolean, String?) -> Unit)? = null
     
@@ -114,7 +115,7 @@ class FamilySharingManager(
     }
     
     // Update family data with retry mechanism
-    fun updateFamilyData(groceries: List<GroceryWithDate>, categories: List<CustomCategory>) {
+    fun updateFamilyData(groceries: List<GroceryWithDate>, categories: List<CustomCategory>, boughtItems: List<GroceryWithDate> = emptyList()) {
         if (!isSharingEnabled || currentProjectId == null) {
             return
         }
@@ -125,7 +126,7 @@ class FamilySharingManager(
             onSyncStatusChange?.invoke(true, null)
             
             try {
-                val success = firebaseService.updateFamilyProject(currentProjectId!!, groceries, categories)
+                val success = firebaseService.updateFamilyProject(currentProjectId!!, groceries, categories, boughtItems)
                 
                 if (success) {
                     lastSyncTime = System.currentTimeMillis()
@@ -135,7 +136,7 @@ class FamilySharingManager(
                     onSyncStatusChange?.invoke(false, null)
                 } else {
                     // Add to pending updates for retry
-                    pendingUpdates.add(Pair(groceries, categories))
+                    pendingUpdates.add(Triple(groceries, categories, boughtItems))
                     syncError = "Failed to sync changes"
                     onSyncStatusChange?.invoke(false, syncError)
                     
@@ -165,18 +166,18 @@ class FamilySharingManager(
         val updates = pendingUpdates.toList()
         pendingUpdates.clear()
         
-        for ((groceries, categories) in updates) {
+        for ((groceries, categories, boughtItems) in updates) {
             try {
-                val success = firebaseService.updateFamilyProject(currentProjectId!!, groceries, categories)
+                val success = firebaseService.updateFamilyProject(currentProjectId!!, groceries, categories, boughtItems)
                 if (success) {
                     lastSyncTime = System.currentTimeMillis()
                     retryCount = 0
                 } else {
                     // Add back to pending updates
-                    pendingUpdates.add(Pair(groceries, categories))
+                    pendingUpdates.add(Triple(groceries, categories, boughtItems))
                 }
             } catch (e: Exception) {
-                pendingUpdates.add(Pair(groceries, categories))
+                pendingUpdates.add(Triple(groceries, categories, boughtItems))
                 println("Retry failed: ${e.message}")
             }
         }
@@ -196,7 +197,10 @@ class FamilySharingManager(
             familyProject?.let { project ->
                 val groceries = project.groceries.map { it.withLocalDate() }
                 val categories = project.categories
+                val boughtItems = project.boughtItems.map { it.withLocalDate() }
+                
                 onDataUpdate?.invoke(groceries, categories)
+                onBoughtItemsUpdate?.invoke(boughtItems)
             }
         }
     }

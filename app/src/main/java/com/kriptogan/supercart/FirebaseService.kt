@@ -29,11 +29,12 @@ class FirebaseService {
     }
     
     // Add update to offline queue
-    private suspend fun addToOfflineQueue(projectId: String, groceries: List<GroceryWithDate>, categories: List<CustomCategory>) {
+    private suspend fun addToOfflineQueue(projectId: String, groceries: List<GroceryWithDate>, categories: List<CustomCategory>, boughtItems: List<GroceryWithDate> = emptyList()) {
         val update = OfflineUpdate(
             projectId = projectId,
             groceries = groceries.map { it.toSerializable() },
             categories = categories,
+            boughtItems = boughtItems.map { it.toSerializable() },
             timestamp = System.currentTimeMillis()
         )
         offlineQueue.add(update)
@@ -54,7 +55,12 @@ class FirebaseService {
         
         for (update in updates) {
             try {
-                val success = updateFamilyProject(update.projectId, update.groceries.map { it.withLocalDate() }, update.categories)
+                val success = updateFamilyProject(
+                    update.projectId, 
+                    update.groceries.map { it.withLocalDate() }, 
+                    update.categories,
+                    update.boughtItems.map { it.withLocalDate() }
+                )
                 if (!success) {
                     // Add back to queue if failed
                     offlineQueue.add(update)
@@ -106,7 +112,8 @@ class FirebaseService {
                 createdAt = System.currentTimeMillis(),
                 members = listOf(deviceId),
                 groceries = groceries.map { it.toSerializable() },
-                categories = categories
+                categories = categories,
+                boughtItems = emptyList() // Initialize with empty bought items
             )
             
             db.collection(FAMILY_PROJECTS_COLLECTION)
@@ -181,7 +188,8 @@ class FirebaseService {
     suspend fun updateFamilyProject(
         projectId: String,
         groceries: List<GroceryWithDate>,
-        categories: List<CustomCategory>
+        categories: List<CustomCategory>,
+        boughtItems: List<GroceryWithDate> = emptyList() // Add bought items parameter
     ): Boolean {
         // If offline, add to queue and return true (pretend success)
         if (!isOnline()) {
@@ -218,6 +226,7 @@ class FirebaseService {
             val updates = mapOf(
                 "groceries" to groceries.map { it.toSerializable() },
                 "categories" to categories,
+                "boughtItems" to boughtItems.map { it.toSerializable() },
                 "lastUpdated" to ourLastUpdated
             )
             
@@ -286,10 +295,11 @@ data class FamilyProject(
     val members: List<String> = emptyList(),
     val groceries: List<Grocery> = emptyList(),
     val categories: List<CustomCategory> = emptyList(),
+    val boughtItems: List<Grocery> = emptyList(), // Add bought items state
     val lastUpdated: Long = 0L
 ) {
     // No-argument constructor for Firestore
-    constructor() : this("", "", 0L, emptyList(), emptyList(), emptyList(), 0L)
+    constructor() : this("", "", 0L, emptyList(), emptyList(), emptyList(), emptyList(), 0L)
 }
 
 data class DeviceRegistration(
@@ -307,8 +317,9 @@ data class OfflineUpdate(
     val projectId: String = "",
     val groceries: List<Grocery> = emptyList(),
     val categories: List<CustomCategory> = emptyList(),
+    val boughtItems: List<Grocery> = emptyList(), // Add bought items state
     val timestamp: Long = 0L
 ) {
     // No-argument constructor for Firestore
-    constructor() : this("", emptyList(), emptyList(), 0L)
+    constructor() : this("", emptyList(), emptyList(), emptyList(), 0L)
 } 
