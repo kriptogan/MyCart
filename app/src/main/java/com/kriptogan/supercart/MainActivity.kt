@@ -1025,7 +1025,6 @@ fun HomeScreen(
     var showFamilySharingDialog by remember { mutableStateOf(false) }
     var showCreateFamilyDialog by remember { mutableStateOf(false) }
     var showJoinFamilyDialog by remember { mutableStateOf(false) }
-    var showFamilyCodeDialog by remember { mutableStateOf(false) }
     var showLeaveFamilyConfirm by remember { mutableStateOf(false) }
     var joinFamilyCode by remember { mutableStateOf("") }
     
@@ -1083,6 +1082,26 @@ fun HomeScreen(
     LaunchedEffect(customCategories) {
         if (familySharingManager.isSharingEnabled) {
             familySharingManager.updateFamilyData(groceries, customCategories)
+        }
+    }
+    
+    // Monitor family sharing operations and close dialogs when they succeed
+    LaunchedEffect(familySharingManager.isSharingEnabled, familySharingManager.errorMessage) {
+        if (familySharingManager.isSharingEnabled && familySharingManager.familyCode != null) {
+            // Family operation succeeded - just close create/join dialogs
+            showCreateFamilyDialog = false
+            showJoinFamilyDialog = false
+        } else if (familySharingManager.errorMessage != null && !familySharingManager.isLoading) {
+            // Family operation failed - close dialogs but don't show family code dialog
+            showCreateFamilyDialog = false
+            showJoinFamilyDialog = false
+        }
+    }
+    
+    // Clear error message when dialogs are closed
+    LaunchedEffect(showCreateFamilyDialog, showJoinFamilyDialog) {
+        if (!showCreateFamilyDialog && !showJoinFamilyDialog) {
+            familySharingManager.clearError()
         }
     }
     
@@ -2594,64 +2613,6 @@ fun HomeScreen(
                                 )
                             }
                         }
-                    }
-                }
-            )
-        }
-        
-        // Family code display dialog
-        if (showFamilyCodeDialog && familySharingManager.familyCode != null) {
-            AlertDialog(
-                onDismissRequest = { showFamilyCodeDialog = false },
-                confirmButton = {
-                    Button(
-                        onClick = { showFamilyCodeDialog = false }
-                    ) {
-                        Text(localizedString("close", selectedLanguage))
-                    }
-                },
-                title = { Text(localizedString("family_created", selectedLanguage)) },
-                text = {
-                    Column(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Text(
-                            text = "${localizedString("family_code", selectedLanguage)}:",
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier.padding(bottom = 8.dp)
-                        )
-                        Text(
-                            text = familySharingManager.familyCode!!,
-                            fontSize = 24.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color(0xFF4CAF50),
-                            modifier = Modifier
-                                .padding(bottom = 16.dp)
-                                .clickable {
-                                    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
-                                    val clip = android.content.ClipData.newPlainText("Family Code", familySharingManager.familyCode!!)
-                                    clipboard.setPrimaryClip(clip)
-                                }
-                                .background(
-                                    color = Color(0xFFE8F5E8),
-                                    shape = RoundedCornerShape(8.dp)
-                                )
-                                .padding(horizontal = 16.dp, vertical = 8.dp),
-                            textAlign = TextAlign.Center
-                        )
-                        Text(
-                            text = localizedString("share_family_code", selectedLanguage),
-                            textAlign = TextAlign.Center,
-                            modifier = Modifier.padding(bottom = 8.dp)
-                        )
-                        Text(
-                            text = localizedString("tap_to_copy", selectedLanguage),
-                            textAlign = TextAlign.Center,
-                            color = Color.Gray,
-                            fontSize = 12.sp,
-                            modifier = Modifier.padding(top = 4.dp)
-                        )
                     }
                 }
             )
