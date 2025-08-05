@@ -442,7 +442,7 @@ object StringResources {
                  "מוצרים לתינוקות" to "Детские товары",
                  "מזון יבש" to "Сухие продукты",
                  "תבלינים ורטבים" to "Специи и соусы",
-                 "מוצרי טואלטיקה" to "Туалетные принадлежности",
+                 "מוצרי טואלטיקה" to "Тоалетни принадлежности",
                  "משקאות" to "Напитки",
                  "קפואים" to "Замороженные",
                  "מוצרי חלב" to "Молочные продукты",
@@ -450,11 +450,119 @@ object StringResources {
                  "מוצרים לבית" to "Товары для дома"
     )
     
+    private val bulgarianStrings = mapOf(
+        "home" to "Начало",
+        "shopping_list" to "Списък за пазаруване",
+        "add_item" to "Добави артикул",
+        "menu" to "Меню",
+        "search_placeholder" to "Търси артикули...",
+        "languages" to "Езици",
+        "choose_language" to "Избери език",
+        "hebrew" to "עברית",
+        "english" to "English",
+        "russian" to "Русский",
+        "bulgarian" to "Български",
+        "close" to "Затвори",
+        "cancel" to "Отказ",
+        "save" to "Запази",
+        "edit" to "Редактирай",
+        "delete" to "Изтрий",
+        "add" to "Добави",
+        "remove_from_list" to "Премахни",
+        "bought" to "Купено",
+        "add_to_bought" to "Добави към купеното",
+        "bought_items" to "Купени артикули:",
+        "finish_shopping" to "Приключи пазаруването",
+        "finish_shopping_with_count" to "Приключи пазаруването (%d артикула)",
+        "confirm_finish_shopping" to "Потвърди приключване на пазаруването",
+        "confirm_finish_shopping_message" to "Сигурни ли сте, че искате да приключите пазаруването? %d артикула ще бъдат записани като купени.",
+        "manage_categories" to "Управление на категории",
+        "import_shopping_list" to "Импортирай списък за пазаруване",
+        "add_item_title" to "Добави артикул",
+        "edit_item_title" to "Редактирай артикул",
+        "item_name" to "Име на артикула",
+        "choose_category" to "Избери категория",
+        "expiration_date" to "Избери дата на изтичане (по желание)",
+        "confirm_delete" to "Потвърди изтриване",
+        "confirm_delete_message" to "Сигурни ли сте, че искате да изтриете?",
+        "delete_category" to "Изтрий категория",
+        "delete_category_message" to "Категорията '%s' съдържа артикули. Какво искате да направите?",
+        "delete_all_items" to "Изтрий всички артикули",
+        "move_to_other" to "Премести в 'Друго'",
+        "create_new_category" to "Създай нова категория",
+        "category_name" to "Име на категорията",
+        "buy_history" to "История на покупките - %s",
+        "buy_history_button" to "История на покупките (%d покупки)",
+        "days_ago" to "%d дни",
+        "add_to_shopping_list" to "Добави в списъка за пазаруване",
+        "add_to_shopping_list_message" to "Искате ли да добавите '%s' в списъка за пазаруване?",
+        "yes" to "Да",
+        "no" to "Не",
+        "return_to_shopping_list" to "Върни в списъка за пазаруване",
+        "categories_list" to "Списък на категориите",
+        "move_up" to "Премести нагоре",
+        "move_down" to "Премести надолу",
+        "add_list" to "Добави списък",
+        "add_items_instructions" to "Добави артикули. Всеки артикул на отделен ред.",
+        "edit_category_name" to "Редактирай име на категория",
+        "show_items" to "Покажи артикули",
+        "items_need_attention" to "Артикули, които се нуждаят от внимание",
+        "items_need_attention_message" to "Има артикули, които са изтекли, ще изтекат скоро или са преминали средния период на покупка. Искате ли да ги видите?",
+        "show_expiring_items" to "Покажи само артикули, които са изтекли, ще изтекат скоро или са преминали средния период на покупка",
+        "family_sharing" to "Семейно споделяне",
+        "create_family" to "Създай ново семейство",
+        "join_family" to "Присъедини се към семейство",
+        "family_code" to "Код на семейството",
+        "enter_family_code" to "Въведи код на семейството",
+        "share_family_code" to "Сподели код на семейството",
+        "family_created" to "Семейството е създадено успешно",
+        "family_joined" to "Присъединихте се към семейството успешно",
+        "invalid_family_code" to "Невалиден код на семейството",
+        "already_family_member" to "Вече сте член на това семейство",
+        "leave_family" to "Напусни семейството",
+        "confirm_leave_family" to "Сигурни ли сте, че искате да напуснете семейството?",
+        "confirm_leave_family_message" to "Локалните данни ще останат, но вече няма да бъдат свързани с това семейство.",
+        "create_family_confirm" to "Искате ли да създадете ново семейство с текущите данни?",
+        "create_family_confirm_message" to "Локалните данни ще бъдат качени в облака за споделяне.",
+        "creating" to "Създаване...",
+        "joining" to "Присъединяване...",
+        "uploading_data" to "Качване на данни в облака",
+        "joining_family" to "Присъединяване към семейството",
+        "please_wait" to "Моля, изчакайте",
+        "tap_to_copy" to "Докоснете за копиране",
+        "create" to "Създай",
+        "syncing" to "Синхронизиране...",
+        "synced" to "Синхронизирано",
+        "sync_error" to "Грешка при синхронизация",
+        "offline_mode" to "Офлайн режим",
+        "pending_updates" to "Чакащи обновления",
+        // Category translations
+        "אחר" to "Друго",
+        "פירות" to "Плодове",
+        "ירקות" to "Зеленчуци",
+        "מאפים ולחמים" to "Хлебни изделия и хляб",
+        "חטיפים ומתוקים" to "Закуски и сладкиши",
+        "דגנים וקטניות" to "Зърнени храни и бобови култури",
+        "שימורים" to "Консерви",
+        "חד פעמי" to "Еднократни",
+        "מוצרי נקיון" to "Продукти за почистване",
+        "מוצרים לתינוקות" to "Детски продукти",
+        "מזון יבש" to "Суха храна",
+        "תבלינים ורטבים" to "Подправки и сосове",
+        "מוצרי טואלטיקה" to "Тоалетни принадлежности",
+        "משקאות" to "Напитки",
+        "קפואים" to "Замразени",
+        "מוצרי חלב" to "Млечни продукти",
+        "בשר ודגים" to "Месо и риба",
+        "מוצרים לבית" to "Продукти за дома"
+    )
+    
                  fun getString(key: String, language: String, vararg args: Any): String {
                  val strings = when (language) {
                      "iw" -> hebrewStrings
                      "en" -> englishStrings
                      "ru" -> russianStrings
+                     "bg" -> bulgarianStrings
                      else -> hebrewStrings
                  }
                  
@@ -529,6 +637,29 @@ object StringResources {
                              "Молочные продукты" -> "מוצרי חלב"
                              "Мясо и рыба" -> "בשר ודגים"
                              "Товары для дома" -> "מוצרים לבית"
+                             else -> translatedName // Return as-is if not found in mapping
+                         }
+                     }
+                     "bg" -> {
+                         when (translatedName) {
+                             "Друго" -> "אחר"
+                             "Плодове" -> "פירות"
+                             "Зеленчуци" -> "ירקות"
+                             "Хлебни изделия и хляб" -> "מאפים ולחמים"
+                             "Закуски и сладкиши" -> "חטיפים ומתוקים"
+                             "Зърнени храни и бобови култури" -> "דגנים וקטניות"
+                             "Консерви" -> "שימורים"
+                             "Еднократни" -> "חד פעמי"
+                             "Продукти за почистване" -> "מוצרי נקיון"
+                             "Детски продукти" -> "מוצרים לתינוקות"
+                             "Суха храна" -> "מזון יבש"
+                             "Подправки и сосове" -> "תבלינים ורטבים"
+                             "Тоалетни принадлежности" -> "מוצרי טואלטיקה"
+                             "Напитки" -> "משקאות"
+                             "Замразени" -> "קפואים"
+                             "Млечни продукти" -> "מוצרי חלב"
+                             "Месо и риба" -> "בשר ודגים"
+                             "Продукти за дома" -> "מוצרים לבית"
                              else -> translatedName // Return as-is if not found in mapping
                          }
                      }
@@ -2289,6 +2420,20 @@ fun HomeScreen(
                             )
                         ) {
                             Text("Русский", color = Color.White, fontWeight = if (selectedLanguage == "ru") FontWeight.Bold else FontWeight.Normal)
+                        }
+                        Button(
+                            onClick = { 
+                                onLanguageChange("bg")
+                                showLanguageSelection = false
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 4.dp),
+                            colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                                containerColor = if (selectedLanguage == "bg") Color(0xFF4CAF50) else Color.Gray
+                            )
+                        ) {
+                            Text("Български", color = Color.White, fontWeight = if (selectedLanguage == "bg") FontWeight.Bold else FontWeight.Normal)
                         }
                     }
                 }
