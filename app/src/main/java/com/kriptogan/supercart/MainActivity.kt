@@ -688,146 +688,7 @@ data class TabItem(
     val icon: ImageVector
 )
 
-@Composable
-fun CustomStatusBar(layoutDirection: LayoutDirection = LocalLayoutDirection.current) {
-    val context = LocalContext.current
-    var currentTime by remember { mutableStateOf("") }
-    var batteryLevel by remember { mutableStateOf(0) }
-    
-    // Update time every second
-    DisposableEffect(Unit) {
-        val timeUpdateRunnable = object : Runnable {
-            override fun run() {
-                val sdf = SimpleDateFormat("HH:mm", Locale.getDefault())
-                currentTime = sdf.format(Date())
-            }
-        }
-        
-        // Initial update
-        timeUpdateRunnable.run()
-        
-        // Set up periodic updates
-        val handler = android.os.Handler(android.os.Looper.getMainLooper())
-        val updateTime = object : Runnable {
-            override fun run() {
-                timeUpdateRunnable.run()
-                handler.postDelayed(this, 1000) // Update every second
-            }
-        }
-        handler.post(updateTime)
-        
-        // Battery level receiver
-        val batteryReceiver = object : BroadcastReceiver() {
-            override fun onReceive(context: Context?, intent: Intent?) {
-                if (intent?.action == Intent.ACTION_BATTERY_CHANGED) {
-                    val level = intent.getIntExtra(BatteryManager.EXTRA_LEVEL, -1)
-                    val scale = intent.getIntExtra(BatteryManager.EXTRA_SCALE, -1)
-                    batteryLevel = if (level != -1 && scale != -1) {
-                        (level * 100 / scale.toFloat()).toInt()
-                    } else 0
-                }
-            }
-        }
-        
-        context.registerReceiver(
-            batteryReceiver,
-            IntentFilter(Intent.ACTION_BATTERY_CHANGED)
-        )
-        
-        onDispose {
-            handler.removeCallbacksAndMessages(null)
-            context.unregisterReceiver(batteryReceiver)
-        }
-    }
-    
-    Surface(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(48.dp)
-            .background(
-                Brush.verticalGradient(
-                    colors = listOf(
-                        Color(0xFF4CAF50), // Green gradient
-                        Color(0xFF66BB6A)
-                    )
-                )
-            ),
-        color = Color.Transparent
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            if (layoutDirection == LayoutDirection.Rtl) {
-                // RTL Layout: Clock on right, Battery on left
-                // Clock
-                Text(
-                    text = currentTime,
-                    color = Color.White,
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Medium
-                )
-                
-                Spacer(modifier = Modifier.weight(1f))
-                
-                // Battery
-                Row(
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "$batteryLevel%",
-                        color = Color.White,
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Medium
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Box(
-                        modifier = Modifier
-                            .size(20.dp, 12.dp)
-                            .background(
-                                color = Color.White,
-                                shape = androidx.compose.foundation.shape.RoundedCornerShape(2.dp)
-                            )
-                    )
-                }
-            } else {
-                // LTR Layout: Battery on right, Clock on left
-                // Battery
-                Row(
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "$batteryLevel%",
-                        color = Color.White,
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Medium
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Box(
-                        modifier = Modifier
-                            .size(20.dp, 12.dp)
-                            .background(
-                                color = Color.White,
-                                shape = androidx.compose.foundation.shape.RoundedCornerShape(2.dp)
-                            )
-                    )
-                }
-                
-                Spacer(modifier = Modifier.weight(1f))
-                
-                // Clock
-                Text(
-                    text = currentTime,
-                    color = Color.White,
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Medium
-                )
-            }
-        }
-    }
-}
+
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -835,12 +696,6 @@ class MainActivity : ComponentActivity() {
         
         // Note: We no longer force Hebrew locale at the app level
         // This allows DatePicker to use the system locale while our custom string system handles app text
-        
-        // Hide status bar and make app full screen
-        window.setFlags(
-            WindowManager.LayoutParams.FLAG_FULLSCREEN,
-            WindowManager.LayoutParams.FLAG_FULLSCREEN
-        )
         
         // Initialize default custom categories and migrate existing data
         val context = this // Capture the context
@@ -964,19 +819,8 @@ fun SuperCartApp() {
         }
         
         // Apply layout direction to the entire app
-        Box(
-            modifier = Modifier.fillMaxSize()
-        ) {
-            Box(
-                modifier = Modifier.fillMaxWidth(),
-                contentAlignment = Alignment.TopStart
-            ) {
-                CustomStatusBar(layoutDirection = layoutDirection)
-            }
-            Scaffold(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(top = 48.dp), // Space for custom status bar
+        Scaffold(
+            modifier = Modifier.fillMaxSize(),
             containerColor = Color(0xFFF5F5F5), // Light gray background
             bottomBar = {
                 NavigationBar(
@@ -1103,7 +947,6 @@ fun SuperCartApp() {
                     )
                 }
             }
-        }
         }
     }
 }
