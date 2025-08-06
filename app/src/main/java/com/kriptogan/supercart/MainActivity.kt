@@ -129,6 +129,7 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.room.util.copy
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.runtime.key
+import androidx.compose.material.icons.filled.Refresh
 
 // Custom string resource system
 object StringResources {
@@ -927,15 +928,7 @@ fun SuperCartApp() {
                         onBuy = { grocery ->
                             groceries = groceries.map {
                                 if (it.name == grocery.name && it.customCategoryId == grocery.customCategoryId) {
-                                    val today = LocalDate.now()
-                                    val newBuyEvents = (it.buyEvents + today).sorted()
-                                    val avg = newBuyEvents.averageDaysBetween()
-                                    it.copy(
-                                        lastTimeBoughtDays = 0,
-                                        averageBuyingDays = avg,
-                                        buyEvents = newBuyEvents,
-                                        inShoppingList = false
-                                    )
+                                    it.addPurchaseEvent()
                                 } else {
                                     it
                                 }
@@ -1002,12 +995,20 @@ fun HomeScreen(
     var showLeaveFamilyConfirm by remember { mutableStateOf(false) }
     var joinFamilyCode by remember { mutableStateOf("") }
     
+    // NEW: Sync status for user feedback
+    var showSyncStatus by remember { mutableStateOf(false) }
+    var syncStatusMessage by remember { mutableStateOf("") }
+    
     // Family sharing manager
     val firebaseService = remember { FirebaseService() }
     val familySharingManager = remember { 
         FamilySharingManager(firebaseService, scope).apply {
             onDataUpdate = { newGroceries, newCategories ->
                 onUpdateGroceries(newGroceries)
+            }
+            onSyncStatusChange = { isSyncing, error ->
+                showSyncStatus = isSyncing
+                syncStatusMessage = if (error != null) error else "Syncing..."
             }
         }
     }
@@ -1163,6 +1164,29 @@ fun HomeScreen(
     }
 
     Column(modifier = Modifier.fillMaxSize()) {
+        // NEW: Sync status indicator
+        if (showSyncStatus) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(Color(0xFFE3F2FD))
+                    .padding(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(16.dp),
+                    strokeWidth = 2.dp,
+                    color = Color(0xFF2196F3)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = syncStatusMessage,
+                    fontSize = 12.sp,
+                    color = Color(0xFF2196F3)
+                )
+            }
+        }
+        
         // Fixed top section with buttons and search bar
         Column(
             modifier = Modifier
@@ -2670,7 +2694,6 @@ fun ShoppingListScreen(
     }
 
     // Shopping workflow state
-    var boughtItems by remember { mutableStateOf<List<GroceryWithDate>>(emptyList()) }
     var showDoneShoppingConfirm by remember { mutableStateOf(false) }
     
     // Family sharing manager for Firebase sync
@@ -2680,9 +2703,6 @@ fun ShoppingListScreen(
         FamilySharingManager(firebaseService, scope).apply {
             onDataUpdate = { newGroceries, newCategories ->
                 onUpdateGroceries(newGroceries)
-            }
-            onBoughtItemsUpdate = { newBoughtItems ->
-                boughtItems = newBoughtItems
             }
         }
     }
@@ -2704,21 +2724,14 @@ fun ShoppingListScreen(
     // Sync groceries to Firebase when they change (if family sharing is enabled)
     LaunchedEffect(groceries) {
         if (familySharingManager.isSharingEnabled) {
-            familySharingManager.updateFamilyData(groceries, customCategories, boughtItems)
+            familySharingManager.updateFamilyData(groceries, customCategories)
         }
     }
     
     // Sync categories to Firebase when they change (if family sharing is enabled)
     LaunchedEffect(customCategories) {
         if (familySharingManager.isSharingEnabled) {
-            familySharingManager.updateFamilyData(groceries, customCategories, boughtItems)
-        }
-    }
-    
-    // Sync bought items to Firebase when they change (if family sharing is enabled)
-    LaunchedEffect(boughtItems) {
-        if (familySharingManager.isSharingEnabled) {
-            familySharingManager.updateFamilyData(groceries, customCategories, boughtItems)
+            familySharingManager.updateFamilyData(groceries, customCategories)
         }
     }
 
@@ -2734,16 +2747,7 @@ fun ShoppingListScreen(
     var showDatePicker by remember { mutableStateOf(false) }
     var expanded by remember { mutableStateOf(false) } // For category dropdown
     
-    // Load bought items from DataStore on first composition
-    LaunchedEffect(Unit) {
-        val loaded = context.boughtItemsDataStore.data.first().map { it.withLocalDate() }
-        boughtItems = loaded
-    }
-    
-    // Save bought items to DataStore whenever they change
-    LaunchedEffect(boughtItems) {
-        context.boughtItemsDataStore.updateData { boughtItems.map { it.toSerializable() } }
-    }
+
 
     fun openEditDialog(grocery: GroceryWithDate) {
         name = grocery.name
@@ -2755,7 +2759,7 @@ fun ShoppingListScreen(
 
     LazyColumn(modifier = Modifier.fillMaxSize().padding(16.dp)) {
         orderedCategories.forEach { category ->
-            val itemsInCategory = shoppingList.filter { it.customCategoryId == category.id }
+            val itemsInCategory = shoppingList.filter { it.customCategoryId == category.id && !it.isBought }
             if (itemsInCategory.isNotEmpty()) {
                 item(key = category.id) {
                     Card(
@@ -2828,9 +2832,15 @@ fun ShoppingListScreen(
                                         }
                                         IconButton(
                                             onClick = { 
-                                                // Move item to bought list instead of buying immediately
-                                                boughtItems = boughtItems + grocery
-                                                onRemove(grocery) // Remove from shopping list
+                                                // Mark item as bought
+                                                val updatedGroceries = groceries.map {
+                                                    if (it.name == grocery.name && it.customCategoryId == grocery.customCategoryId) {
+                                                        it.copy(isBought = true)
+                                                    } else {
+                                                        it
+                                                    }
+                                                }
+                                                onUpdateGroceries(updatedGroceries)
                                             },
                                             modifier = Modifier.padding(start = 4.dp)
                                         ) {
@@ -2849,6 +2859,7 @@ fun ShoppingListScreen(
         }
         
         // Separator line
+        val boughtItems = groceries.filter { it.isBought }
         if (shoppingList.isNotEmpty() || boughtItems.isNotEmpty()) {
             item {
                 Divider(
@@ -2905,11 +2916,9 @@ fun ShoppingListScreen(
                         IconButton(
                             onClick = { 
                                 // Return item to shopping list
-                                boughtItems = boughtItems.filter { it != boughtItem }
-                                // Add back to shopping list
                                 val updatedGroceries = groceries.map {
                                     if (it.name == boughtItem.name && it.customCategoryId == boughtItem.customCategoryId) {
-                                        it.copy(inShoppingList = true)
+                                        it.copy(isBought = false, inShoppingList = true)
                                     } else {
                                         it
                                     }
@@ -2946,7 +2955,7 @@ fun ShoppingListScreen(
                         modifier = Modifier.padding(end = 8.dp)
                     )
                     Text(
-                        text = localizedString("finish_shopping_with_count", selectedLanguage, boughtItems.size),
+                        text = localizedString("finish_shopping_with_count", selectedLanguage, groceries.count { it.isBought }),
                         color = Color.White,
                         fontWeight = FontWeight.Bold
                     )
@@ -3073,16 +3082,21 @@ fun ShoppingListScreen(
                     ) {
                         Text(localizedString("cancel", selectedLanguage))
                     }
-                    Button(
-                        onClick = { 
-                            // Execute buy process for all bought items
-                            boughtItems.forEach { boughtItem ->
-                                onBuy(boughtItem)
-                            }
-                            // Clear bought items list (DataStore will be updated automatically via LaunchedEffect)
-                            boughtItems = emptyList()
-                            showDoneShoppingConfirm = false
-                        },
+                                            Button(
+                            onClick = { 
+                                // Execute buy process for all bought items and clear bought status
+                                val boughtItems = groceries.filter { it.isBought }
+                                val updatedGroceries = groceries.map { grocery ->
+                                    if (boughtItems.any { it.name == grocery.name && it.customCategoryId == grocery.customCategoryId }) {
+                                        // This item was bought, so update it and clear bought status
+                                        grocery.addPurchaseEvent().copy(isBought = false)
+                                    } else {
+                                        grocery
+                                    }
+                                }
+                                onUpdateGroceries(updatedGroceries)
+                                showDoneShoppingConfirm = false
+                            },
                         colors = androidx.compose.material3.ButtonDefaults.buttonColors(
                             containerColor = Color(0xFF4CAF50)
                         )
@@ -3093,7 +3107,7 @@ fun ShoppingListScreen(
             },
                             title = { Text(localizedString("confirm_finish_shopping", selectedLanguage)) },
             text = { 
-                Text(localizedString("confirm_finish_shopping_message", selectedLanguage, boughtItems.size))
+                Text(localizedString("confirm_finish_shopping_message", selectedLanguage, groceries.count { it.isBought }))
             }
         )
     }
@@ -3126,11 +3140,7 @@ object GroceryListSerializer : Serializer<List<Grocery>> {
 val Context.categoryOrderDataStore by preferencesDataStore(name = "category_order_prefs")
 val CATEGORY_ORDER_KEY = stringPreferencesKey("category_order")
 
-// Bought items DataStore
-val Context.boughtItemsDataStore: DataStore<List<Grocery>> by dataStore(
-    fileName = "bought_items.json",
-    serializer = GroceryListSerializer
-)
+
 
 // Language selection DataStore
 val Context.languageDataStore by preferencesDataStore(name = "language_prefs")

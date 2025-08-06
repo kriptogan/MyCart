@@ -29,7 +29,8 @@ data class Grocery(
     val lastTimeBoughtDays: Int? = null, // מספר ימים מאז הקנייה האחרונה (אופציונלי)
     val averageBuyingDays: Int? = null, // ממוצע ימים בין קניות (אופציונלי)
     val buyEvents: List<String> = emptyList(), // רשימת תאריכי קנייה (ISO)
-    val inShoppingList: Boolean = false // האם המצרך נמצא ברשימת הקניות
+    val inShoppingList: Boolean = false, // האם המצרך נמצא ברשימת הקניות
+    val isBought: Boolean = false // האם המצרך נרכש
 ) {
     // Validation
     fun isValid(): Boolean = name.isNotBlank() && customCategoryId > 0
@@ -105,7 +106,8 @@ fun Grocery.withLocalDate(): GroceryWithDate = GroceryWithDate(
     lastTimeBoughtDays = lastTimeBoughtDays,
     averageBuyingDays = averageBuyingDays,
     buyEvents = buyEvents.map { java.time.LocalDate.parse(it) },
-    inShoppingList = inShoppingList
+    inShoppingList = inShoppingList,
+    isBought = isBought
 )
 
 data class GroceryWithDate(
@@ -115,7 +117,8 @@ data class GroceryWithDate(
     val lastTimeBoughtDays: Int? = null,
     val averageBuyingDays: Int? = null,
     val buyEvents: List<java.time.LocalDate> = emptyList(),
-    val inShoppingList: Boolean = false
+    val inShoppingList: Boolean = false,
+    val isBought: Boolean = false
 ) {
     // Validation
     fun isValid(): Boolean = name.isNotBlank() && customCategoryId > 0
@@ -189,7 +192,8 @@ data class GroceryWithDate(
             lastTimeBoughtDays = 0,
             averageBuyingDays = avg,
             buyEvents = newBuyEvents,
-            inShoppingList = false
+            inShoppingList = false,
+            isBought = true
         )
     }
     
@@ -221,7 +225,8 @@ fun GroceryWithDate.toSerializable(): Grocery = Grocery(
     lastTimeBoughtDays = lastTimeBoughtDays,
     averageBuyingDays = averageBuyingDays,
     buyEvents = buyEvents.map { it.toString() },
-    inShoppingList = inShoppingList
+    inShoppingList = inShoppingList,
+    isBought = isBought
 )
 
 fun List<java.time.LocalDate>.averageDaysBetween(): Int? {
@@ -248,6 +253,11 @@ object GroceryUtils {
     // Filter groceries by shopping list status
     fun filterByShoppingList(groceries: List<GroceryWithDate>, inShoppingList: Boolean): List<GroceryWithDate> {
         return groceries.filter { it.inShoppingList == inShoppingList }
+    }
+    
+    // Filter groceries by bought status
+    fun filterByBoughtStatus(groceries: List<GroceryWithDate>, isBought: Boolean): List<GroceryWithDate> {
+        return groceries.filter { it.isBought == isBought }
     }
     
     // Search groceries by name

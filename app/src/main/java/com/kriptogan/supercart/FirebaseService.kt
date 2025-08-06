@@ -43,12 +43,11 @@ class FirebaseService {
     }
     
     // Add update to offline queue with enhanced error handling
-    private suspend fun addToOfflineQueue(projectId: String, groceries: List<GroceryWithDate>, categories: List<CustomCategory>, boughtItems: List<GroceryWithDate> = emptyList()) {
+    private suspend fun addToOfflineQueue(projectId: String, groceries: List<GroceryWithDate>, categories: List<CustomCategory>) {
         val update = OfflineUpdate(
             projectId = projectId,
             groceries = groceries.map { it.toSerializable() },
             categories = categories,
-            boughtItems = boughtItems.map { it.toSerializable() },
             timestamp = System.currentTimeMillis(),
             retryCount = 0
         )
@@ -75,8 +74,7 @@ class FirebaseService {
                     val success = updateFamilyProject(
                         update.projectId, 
                         update.groceries.map { it.withLocalDate() }, 
-                        update.categories,
-                        update.boughtItems.map { it.withLocalDate() }
+                        update.categories
                     )
                     
                     if (!success) {
@@ -163,7 +161,6 @@ class FirebaseService {
                 members = listOf(deviceId),
                 groceries = groceries.map { it.toSerializable() },
                 categories = categories,
-                boughtItems = emptyList(),
                 lastUpdated = System.currentTimeMillis()
             )
             
@@ -259,12 +256,11 @@ class FirebaseService {
     suspend fun updateFamilyProject(
         projectId: String,
         groceries: List<GroceryWithDate>,
-        categories: List<CustomCategory>,
-        boughtItems: List<GroceryWithDate> = emptyList()
+        categories: List<CustomCategory>
     ): Boolean {
         // If offline, add to queue and return true (pretend success)
         if (!isOnline()) {
-            addToOfflineQueue(projectId, groceries, categories, boughtItems)
+            addToOfflineQueue(projectId, groceries, categories)
             return true
         }
         
@@ -292,20 +288,16 @@ class FirebaseService {
                 return false
             }
             
-            // Check if our data is newer than what's on Firebase
-            val currentLastUpdated = currentProject.lastUpdated
+            // IMPROVED CONFLICT RESOLUTION: Merge changes instead of simple timestamp comparison
+            val currentGroceries = currentProject.groceries.map { it.withLocalDate() }
+            val mergedGroceries = mergeGroceryLists(currentGroceries, groceries)
+            val mergedCategories = mergeCategories(currentProject.categories, categories)
+            
             val ourLastUpdated = System.currentTimeMillis()
             
-            // If Firebase data is newer, don't overwrite it
-            if (currentLastUpdated > ourLastUpdated) {
-                println("Firebase data is newer, skipping update to avoid conflicts")
-                return false
-            }
-            
             val updates = mapOf(
-                "groceries" to groceries.map { it.toSerializable() },
-                "categories" to categories,
-                "boughtItems" to boughtItems.map { it.toSerializable() },
+                "groceries" to mergedGroceries.map { it.toSerializable() },
+                "categories" to mergedCategories,
                 "lastUpdated" to ourLastUpdated
             )
             
@@ -318,16 +310,6 @@ class FirebaseService {
                     throw Exception("Project no longer exists")
                 }
                 
-                val project = doc.toObject(FamilyProject::class.java)
-                if (project == null) {
-                    throw Exception("Invalid project data")
-                }
-                
-                // Double-check timestamp to prevent conflicts
-                if (project.lastUpdated > ourLastUpdated) {
-                    throw Exception("Data conflict detected")
-                }
-                
                 transaction.update(docRef, updates)
             }.await()
             
@@ -336,14 +318,138 @@ class FirebaseService {
         } catch (e: FirebaseFirestoreException) {
             println("Firestore error updating family project: ${e.message}")
             // If update fails, add to offline queue
-            addToOfflineQueue(projectId, groceries, categories, boughtItems)
+            addToOfflineQueue(projectId, groceries, categories)
             false
         } catch (e: Exception) {
             println("Error updating family project: ${e.message}")
             // If update fails, add to offline queue
-            addToOfflineQueue(projectId, groceries, categories, boughtItems)
+            addToOfflineQueue(projectId, groceries, categories)
             false
         }
+    }
+    
+    // NEW: Smart merge function for groceries that preserves user changes
+    private fun mergeGroceryLists(firebaseGroceries: List<GroceryWithDate>, localGroceries: List<GroceryWithDate>): List<GroceryWithDate> {
+        val merged = mutableListOf<GroceryWithDate>()
+        val processedNames = mutableSetOf<String>()
+        
+        // Create maps for efficient lookup
+        val localMap = localGroceries.associateBy { "${it.name}_${it.customCategoryId}" }
+        val firebaseMap = firebaseGroceries.associateBy { "${it.name}_${it.customCategoryId}" }
+        
+        // Process all items (both local and Firebase)
+        val allKeys = (localMap.keys + firebaseMap.keys).distinct()
+        
+        allKeys.forEach { key ->
+            val localItem = localMap[key]
+            val firebaseItem = firebaseMap[key]
+            
+            when {
+                // Local item exists but not in Firebase - keep local
+                localItem != null && firebaseItem == null -> {
+                    merged.add(localItem)
+                }
+                // Firebase item exists but not in local - keep Firebase
+                firebaseItem != null && localItem == null -> {
+                    merged.add(firebaseItem)
+                }
+                // Both exist - merge intelligently
+                localItem != null && firebaseItem != null -> {
+                    val mergedItem = mergeGroceryItems(localItem, firebaseItem)
+                    merged.add(mergedItem)
+                }
+            }
+        }
+        
+        return merged
+    }
+    
+    // NEW: Intelligent merge of individual grocery items
+    private fun mergeGroceryItems(local: GroceryWithDate, firebase: GroceryWithDate): GroceryWithDate {
+        // For shopping list status, ALWAYS prefer local changes (user actions)
+        val finalInShoppingList = if (local.inShoppingList != firebase.inShoppingList) {
+            // If there's a conflict in shopping list status, prefer local (user action)
+            println("DEBUG: Shopping list conflict resolved - preferring local (${local.inShoppingList}) over Firebase (${firebase.inShoppingList})")
+            local.inShoppingList
+        } else {
+            local.inShoppingList
+        }
+        
+        // For bought status, ALWAYS prefer local changes (user actions)
+        val finalIsBought = if (local.isBought != firebase.isBought) {
+            // If there's a conflict in bought status, prefer local (user action)
+            println("DEBUG: Bought status conflict resolved - preferring local (${local.isBought}) over Firebase (${firebase.isBought})")
+            local.isBought
+        } else {
+            local.isBought
+        }
+        
+        // For other properties, prefer the most recent change
+        val finalExpirationDate = when {
+            local.expirationDate != firebase.expirationDate -> {
+                // If local has a more recent expiration date or firebase has none, prefer local
+                if (local.expirationDate != null && (firebase.expirationDate == null || 
+                    local.expirationDate.isAfter(firebase.expirationDate))) {
+                    println("DEBUG: Expiration date conflict resolved - preferring local date")
+                    local.expirationDate
+                } else {
+                    println("DEBUG: Expiration date conflict resolved - preferring Firebase date")
+                    firebase.expirationDate
+                }
+            }
+            else -> local.expirationDate
+        }
+        
+        // For buy events, merge and sort
+        val mergedBuyEvents = (local.buyEvents + firebase.buyEvents).distinct().sorted()
+        
+        // For average buying days, prefer the more recent calculation
+        val finalAverageBuyingDays = when {
+            local.averageBuyingDays != firebase.averageBuyingDays -> {
+                // Prefer the one with more buy events (more recent data)
+                if (local.buyEvents.size >= firebase.buyEvents.size) {
+                    println("DEBUG: Average buying days conflict resolved - preferring local (more buy events)")
+                    local.averageBuyingDays
+                } else {
+                    println("DEBUG: Average buying days conflict resolved - preferring Firebase (more buy events)")
+                    firebase.averageBuyingDays
+                }
+            }
+            else -> local.averageBuyingDays
+        }
+        
+        return GroceryWithDate(
+            name = local.name,
+            customCategoryId = local.customCategoryId,
+            expirationDate = finalExpirationDate,
+            lastTimeBoughtDays = local.lastTimeBoughtDays,
+            averageBuyingDays = finalAverageBuyingDays,
+            buyEvents = mergedBuyEvents,
+            inShoppingList = finalInShoppingList,
+            isBought = finalIsBought
+        )
+    }
+    
+    // NEW: Smart merge function for categories
+    private fun mergeCategories(firebaseCategories: List<CustomCategory>, localCategories: List<CustomCategory>): List<CustomCategory> {
+        // Categories are more complex - prefer local order but preserve Firebase customizations
+        val merged = mutableListOf<CustomCategory>()
+        val processedIds = mutableSetOf<Int>()
+        
+        // Add local categories first (user's order takes priority)
+        localCategories.forEach { localCategory ->
+            processedIds.add(localCategory.id)
+            merged.add(localCategory)
+        }
+        
+        // Add Firebase categories that don't exist locally
+        firebaseCategories.forEach { firebaseCategory ->
+            if (!processedIds.contains(firebaseCategory.id)) {
+                merged.add(firebaseCategory)
+            }
+        }
+        
+        return merged
     }
     
     // Enhanced listen for real-time updates with error handling
@@ -395,11 +501,10 @@ data class FamilyProject(
     val members: List<String> = emptyList(),
     val groceries: List<Grocery> = emptyList(),
     val categories: List<CustomCategory> = emptyList(),
-    val boughtItems: List<Grocery> = emptyList(),
     val lastUpdated: Long = 0L
 ) {
     // No-argument constructor for Firestore
-    constructor() : this("", "", 0L, emptyList(), emptyList(), emptyList(), emptyList(), 0L)
+    constructor() : this("", "", 0L, emptyList(), emptyList(), emptyList(), 0L)
 }
 
 data class DeviceRegistration(
@@ -417,10 +522,9 @@ data class OfflineUpdate(
     val projectId: String = "",
     val groceries: List<Grocery> = emptyList(),
     val categories: List<CustomCategory> = emptyList(),
-    val boughtItems: List<Grocery> = emptyList(),
     val timestamp: Long = 0L,
     var retryCount: Int = 0
 ) {
     // No-argument constructor for Firestore
-    constructor() : this("", emptyList(), emptyList(), emptyList(), 0L, 0)
+    constructor() : this("", emptyList(), emptyList(), 0L, 0)
 } 
