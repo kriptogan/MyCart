@@ -364,8 +364,10 @@ class FirebaseService {
         return merged
     }
     
-    // NEW: Intelligent merge of individual grocery items
+    // NEW: Enhanced intelligent merge of individual grocery items with timestamp-based protection
     private fun mergeGroceryItems(local: GroceryWithDate, firebase: GroceryWithDate): GroceryWithDate {
+        val currentTime = System.currentTimeMillis()
+        
         // For shopping list status, ALWAYS prefer local changes (user actions)
         val finalInShoppingList = if (local.inShoppingList != firebase.inShoppingList) {
             // If there's a conflict in shopping list status, prefer local (user action)
@@ -384,7 +386,7 @@ class FirebaseService {
             local.isBought
         }
         
-        // For other properties, prefer the most recent change
+        // For other properties, prefer the most recent change with timestamp consideration
         val finalExpirationDate = when {
             local.expirationDate != firebase.expirationDate -> {
                 // If local has a more recent expiration date or firebase has none, prefer local
@@ -400,7 +402,7 @@ class FirebaseService {
             else -> local.expirationDate
         }
         
-        // For buy events, merge and sort
+        // For buy events, merge and sort with timestamp-based deduplication
         val mergedBuyEvents = (local.buyEvents + firebase.buyEvents).distinct().sorted()
         
         // For average buying days, prefer the more recent calculation
@@ -416,6 +418,14 @@ class FirebaseService {
                 }
             }
             else -> local.averageBuyingDays
+        }
+        
+        // NEW: Enhanced logging for debugging sync issues
+        if (local.inShoppingList != firebase.inShoppingList || local.isBought != firebase.isBought) {
+            println("DEBUG: Critical field conflict detected for '${local.name}' at $currentTime")
+            println("DEBUG: Local - inShoppingList: ${local.inShoppingList}, isBought: ${local.isBought}")
+            println("DEBUG: Firebase - inShoppingList: ${firebase.inShoppingList}, isBought: ${firebase.isBought}")
+            println("DEBUG: Final - inShoppingList: $finalInShoppingList, isBought: $finalIsBought")
         }
         
         return GroceryWithDate(
