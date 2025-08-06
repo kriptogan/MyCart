@@ -51,8 +51,8 @@ class FamilySharingManager(
     private var lastLocalUpdateTimestamps: MutableMap<String, Long> = mutableMapOf()
     private var pendingLocalChanges: MutableSet<String> = mutableSetOf()
     
-    // NEW: Minimum time window to protect local changes (increased from 10s to 30s)
-    private val localActionProtectionWindowMs = 30000L // 30 seconds
+    // NEW: Minimum time window to protect local changes (reduced to 15s for better propagation)
+    private val localActionProtectionWindowMs = 15000L // 15 seconds
     
     // NEW: Track the last Firebase update timestamp to detect stale updates
     private var lastFirebaseUpdateTime = 0L
@@ -166,8 +166,11 @@ class FamilySharingManager(
             pendingLocalChanges.add(itemKey)
         }
         
-        println("DEBUG: Local update triggered at $currentTime - groceries: ${groceries.size}, categories: ${categories.size}")
-        println("DEBUG: Protected items: ${pendingLocalChanges.size}")
+        println("DEBUG: FamilySharingManager.updateFamilyData called at $currentTime")
+        println("DEBUG: - groceries: ${groceries.size}, categories: ${categories.size}")
+        println("DEBUG: - protected items: ${pendingLocalChanges.size}")
+        println("DEBUG: - bought items count: ${groceries.count { it.isBought }}")
+        println("DEBUG: - time since last local update: ${if (lastLocalUpdateTime > 0) currentTime - lastLocalUpdateTime else "N/A"}ms")
         
         scope.launch {
             isSyncing = true
@@ -277,6 +280,9 @@ class FamilySharingManager(
                     val firebaseGroceries = project.groceries.map { it.withLocalDate() }
                     val firebaseCategories = project.categories
                     
+                    // NEW: Clear protections for items that have been successfully synced
+                    clearProtectionsForSyncedItems(firebaseGroceries)
+                    
                     // NEW: Enhanced prioritization with stale update detection
                     val prioritizedGroceries = prioritizeLocalActions(firebaseGroceries)
                     val prioritizedCategories = firebaseCategories // Categories don't have per-item conflicts
@@ -301,7 +307,7 @@ class FamilySharingManager(
         }
     }
     
-    // NEW: Prioritize local actions over Firebase updates based on timestamps
+    // NEW: Enhanced prioritize local actions with smarter protection logic
     private fun prioritizeLocalActions(firebaseGroceries: List<GroceryWithDate>): List<GroceryWithDate> {
         // Clean up old timestamps first
         cleanupOldTimestamps()
@@ -309,14 +315,15 @@ class FamilySharingManager(
         val currentTime = System.currentTimeMillis()
         val prioritizedGroceries = mutableListOf<GroceryWithDate>()
         
-        // NEW: Check if this Firebase update is stale (older than our last local update)
-        val isStaleFirebaseUpdate = lastLocalUpdateTime > 0 && 
-            (currentTime - lastLocalUpdateTime) < localActionProtectionWindowMs
+        // NEW: More intelligent stale update detection - only protect if we have recent local changes
+        val hasRecentLocalChanges = lastLocalUpdateTime > 0 && 
+            (currentTime - lastLocalUpdateTime) < localActionProtectionWindowMs &&
+            pendingLocalChanges.isNotEmpty()
         
-        if (isStaleFirebaseUpdate) {
-            println("DEBUG: Detected stale Firebase update - protecting local changes")
-            // If Firebase update is stale, prioritize all local changes
-            return lastLocalGroceries
+        if (hasRecentLocalChanges) {
+            println("DEBUG: Detected recent local changes - applying selective protection")
+        } else {
+            println("DEBUG: No recent local changes - allowing Firebase updates to propagate")
         }
         
         firebaseGroceries.forEach { firebaseGrocery ->
@@ -325,14 +332,14 @@ class FamilySharingManager(
             val localUpdateTime = lastLocalUpdateTimestamps[itemKey] ?: 0L
             val isPendingLocalChange = pendingLocalChanges.contains(itemKey)
             
-            // NEW: Enhanced protection logic - check multiple conditions
+            // NEW: Enhanced protection logic - only protect if we have recent local changes
             val hasRecentLocalAction = localActionTime > 0 && 
                 (currentTime - localActionTime) < localActionProtectionWindowMs
             
             val hasRecentLocalUpdate = localUpdateTime > 0 && 
                 (currentTime - localUpdateTime) < localActionProtectionWindowMs
             
-            val shouldProtectLocal = hasRecentLocalAction || hasRecentLocalUpdate || isPendingLocalChange
+            val shouldProtectLocal = hasRecentLocalChanges && (hasRecentLocalAction || hasRecentLocalUpdate || isPendingLocalChange)
             
             if (shouldProtectLocal) {
                 // Find the corresponding local item
@@ -350,7 +357,7 @@ class FamilySharingManager(
                     prioritizedGroceries.add(firebaseGrocery)
                 }
             } else {
-                // No recent local action, use Firebase item
+                // No recent local action or no recent local changes, use Firebase item
                 prioritizedGroceries.add(firebaseGrocery)
             }
         }
@@ -368,7 +375,7 @@ class FamilySharingManager(
             val hasRecentLocalUpdate = localUpdateTime > 0 && 
                 (currentTime - localUpdateTime) < localActionProtectionWindowMs
             
-            val shouldProtectLocal = hasRecentLocalAction || hasRecentLocalUpdate || isPendingLocalChange
+            val shouldProtectLocal = hasRecentLocalChanges && (hasRecentLocalAction || hasRecentLocalUpdate || isPendingLocalChange)
             
             val existsInFirebase = firebaseGroceries.any { firebaseGrocery ->
                 firebaseGrocery.name == localGrocery.name && 
@@ -490,10 +497,47 @@ class FamilySharingManager(
     
     // NEW: Clear pending local changes after successful sync
     private fun clearPendingLocalChanges() {
-        val clearedCount = pendingLocalChanges.size
-        pendingLocalChanges.clear()
-        if (clearedCount > 0) {
-            println("DEBUG: Cleared $clearedCount pending local changes after successful sync")
+        // Don't clear protections immediately - let them expire naturally
+        // This prevents Firebase from immediately overwriting our changes
+        println("DEBUG: Keeping protections active to prevent immediate overwrites")
+    }
+    
+    // NEW: Enhanced clear pending local changes after successful sync
+    private fun clearProtectionsForSyncedItems(firebaseGroceries: List<GroceryWithDate>) {
+        val currentTime = System.currentTimeMillis()
+        val keysToRemove = mutableListOf<String>()
+        
+        pendingLocalChanges.forEach { itemKey ->
+            // Check if this item exists in Firebase and has been synced
+            val firebaseItem = firebaseGroceries.find { firebaseGrocery ->
+                "${firebaseGrocery.name}_${firebaseGrocery.customCategoryId}" == itemKey
+            }
+            
+            if (firebaseItem != null) {
+                // Item exists in Firebase, check if our local changes have been applied
+                val localItem = lastLocalGroceries.find { localGrocery ->
+                    "${localGrocery.name}_${localGrocery.customCategoryId}" == itemKey
+                }
+                
+                if (localItem != null) {
+                    // If Firebase item matches our local item, clear protection
+                    if (localItem.inShoppingList == firebaseItem.inShoppingList && 
+                        localItem.isBought == firebaseItem.isBought) {
+                        keysToRemove.add(itemKey)
+                        println("DEBUG: Clearing protection for '${localItem.name}' - changes synced to Firebase")
+                    }
+                }
+            }
+        }
+        
+        keysToRemove.forEach { key ->
+            pendingLocalChanges.remove(key)
+            lastLocalActionTimestamps.remove(key)
+            lastLocalUpdateTimestamps.remove(key)
+        }
+        
+        if (keysToRemove.isNotEmpty()) {
+            println("DEBUG: Cleared protections for ${keysToRemove.size} synced items")
         }
     }
     
@@ -530,12 +574,16 @@ class FamilySharingManager(
         }
     }
     
-    // NEW: Debug function to help track sync issues
+    // NEW: Enhanced debug function to help track sync issues
     fun getSyncDebugInfo(): String {
         val currentTime = System.currentTimeMillis()
         val protectedItemsCount = pendingLocalChanges.size
         val actionTimestampsCount = lastLocalActionTimestamps.size
         val updateTimestampsCount = lastLocalUpdateTimestamps.size
+        
+        val hasRecentLocalChanges = lastLocalUpdateTime > 0 && 
+            (currentTime - lastLocalUpdateTime) < localActionProtectionWindowMs &&
+            pendingLocalChanges.isNotEmpty()
         
         return """
             Sync Debug Info:
@@ -548,7 +596,28 @@ class FamilySharingManager(
             - Update timestamps: $updateTimestampsCount
             - Protection window: ${localActionProtectionWindowMs}ms
             - Pending updates: $pendingUpdatesCount
+            - Has recent local changes: $hasRecentLocalChanges
+            - Protection active: ${if (hasRecentLocalChanges) "YES" else "NO"}
         """.trimIndent()
+    }
+    
+    // NEW: Public method to check if there are recent local changes
+    fun hasRecentLocalChanges(): Boolean {
+        val currentTime = System.currentTimeMillis()
+        val timeSinceLastUpdate = currentTime - lastLocalUpdateTime
+        
+        // Only consider changes "recent" if they're very recent (within 5 seconds)
+        // and we have pending changes that need protection
+        val isVeryRecent = timeSinceLastUpdate < 5000 // 5 seconds instead of 15
+        val hasPendingChanges = pendingLocalChanges.isNotEmpty()
+        
+        val result = lastLocalUpdateTime > 0 && isVeryRecent && hasPendingChanges
+        
+        if (result) {
+            println("DEBUG: Has recent local changes - time since last update: ${timeSinceLastUpdate}ms, pending changes: ${pendingLocalChanges.size}")
+        }
+        
+        return result
     }
     
     private fun formatLastSyncTime(timestamp: Long): String {

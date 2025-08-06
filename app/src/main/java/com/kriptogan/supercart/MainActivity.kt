@@ -760,6 +760,27 @@ fun SuperCartApp() {
 
     // Custom categories state
     var customCategories by remember { mutableStateOf<List<CustomCategory>>(emptyList()) }
+
+    // Family sharing manager
+    val firebaseService = remember { FirebaseService() }
+    val familySharingManager = remember { 
+        FamilySharingManager(firebaseService, scope)
+    }
+    
+    // Set up the callback after familySharingManager is created
+    LaunchedEffect(familySharingManager) {
+        familySharingManager.onDataUpdate = { newGroceries, newCategories ->
+            // Only update if we don't have recent local changes
+            // This prevents Firebase from overwriting recent user actions
+            if (!familySharingManager.hasRecentLocalChanges()) {
+                println("DEBUG: Main app - applying Firebase update (no recent local changes)")
+                groceries = newGroceries
+                customCategories = newCategories
+            } else {
+                println("DEBUG: Main app - ignoring Firebase update (recent local changes detected)")
+            }
+        }
+    }
     var categoryOrder by remember { mutableStateOf<List<Int>?>(null) }
 
     // Load custom categories and order on first composition
@@ -900,8 +921,19 @@ fun SuperCartApp() {
                             println("DEBUG: After updating customCategories: ${customCategories.map { "${it.name} (viewOrder: ${it.viewOrder})" }}")
                             categoryReorderTrigger++ // Trigger reorder update
                             println("DEBUG: categoryReorderTrigger incremented to: $categoryReorderTrigger")
+                            
+                            // Immediately notify FamilySharingManager to protect the changes
+                            if (familySharingManager.isSharingEnabled) {
+                                familySharingManager.updateFamilyData(groceries, categories)
+                            }
                         },
-                        onCategoryReorder = { categoryReorderTrigger++ },
+                        onCategoryReorder = { 
+                            categoryReorderTrigger++ 
+                            // Immediately notify FamilySharingManager when category order changes
+                            if (familySharingManager.isSharingEnabled) {
+                                familySharingManager.updateFamilyData(groceries, customCategories)
+                            }
+                        },
                         scope = scope,
                         selectedLanguage = selectedLanguage,
                         onLanguageChange = { newLanguage ->
@@ -910,33 +942,51 @@ fun SuperCartApp() {
                             languageChangeKey++
                         },
                         isAppFirstStart = isAppFirstStart,
-                        onAppFirstStartComplete = { isAppFirstStart = false }
+                        onAppFirstStartComplete = { isAppFirstStart = false },
+                        familySharingManager = familySharingManager
                     )
                     1 -> ShoppingListScreen(
                         shoppingList = shoppingListItems,
                         groceries = groceries,
-                        onUpdateGroceries = { groceries = it },
+                        onUpdateGroceries = { newGroceries ->
+                            groceries = newGroceries
+                            // Immediately notify FamilySharingManager to protect the changes
+                            if (familySharingManager.isSharingEnabled) {
+                                familySharingManager.updateFamilyData(newGroceries, customCategories)
+                            }
+                        },
                         onRemove = { grocery ->
-                            groceries = groceries.map {
+                            val updatedGroceries = groceries.map {
                                 if (it.name == grocery.name && it.customCategoryId == grocery.customCategoryId) {
                                     it.copy(inShoppingList = false)
                                 } else {
                                     it
                                 }
                             }
+                            groceries = updatedGroceries
+                            // Immediately notify FamilySharingManager
+                            if (familySharingManager.isSharingEnabled) {
+                                familySharingManager.updateFamilyData(updatedGroceries, customCategories)
+                            }
                         },
                         onBuy = { grocery ->
-                            groceries = groceries.map {
+                            val updatedGroceries = groceries.map {
                                 if (it.name == grocery.name && it.customCategoryId == grocery.customCategoryId) {
                                     it.addPurchaseEvent()
                                 } else {
                                     it
                                 }
                             }
+                            groceries = updatedGroceries
+                            // Immediately notify FamilySharingManager
+                            if (familySharingManager.isSharingEnabled) {
+                                familySharingManager.updateFamilyData(updatedGroceries, customCategories)
+                            }
                         },
                         orderedCategories = orderedCategories,
                         customCategories = customCategories,
-                        selectedLanguage = selectedLanguage
+                        selectedLanguage = selectedLanguage,
+                        familySharingManager = familySharingManager
                     )
                 }
             }
@@ -959,7 +1009,8 @@ fun HomeScreen(
     selectedLanguage: String,
     onLanguageChange: (String) -> Unit,
     isAppFirstStart: Boolean,
-    onAppFirstStartComplete: () -> Unit
+    onAppFirstStartComplete: () -> Unit,
+    familySharingManager: FamilySharingManager
 ) {
     // Use orderedCategories directly to ensure recomposition
     val currentOrderedCategories = orderedCategories
@@ -999,19 +1050,7 @@ fun HomeScreen(
     var showSyncStatus by remember { mutableStateOf(false) }
     var syncStatusMessage by remember { mutableStateOf("") }
     
-    // Family sharing manager
-    val firebaseService = remember { FirebaseService() }
-    val familySharingManager = remember { 
-        FamilySharingManager(firebaseService, scope).apply {
-            onDataUpdate = { newGroceries, newCategories ->
-                onUpdateGroceries(newGroceries)
-            }
-            onSyncStatusChange = { isSyncing, error ->
-                showSyncStatus = isSyncing
-                syncStatusMessage = if (error != null) error else "Syncing..."
-            }
-        }
-    }
+    // Family sharing manager is now passed as parameter
     
     // Load family sharing state from DataStore
     LaunchedEffect(Unit) {
@@ -2694,7 +2733,8 @@ fun ShoppingListScreen(
     onBuy: (GroceryWithDate) -> Unit,
     orderedCategories: List<CustomCategory>,
     customCategories: List<CustomCategory>,
-    selectedLanguage: String
+    selectedLanguage: String,
+    familySharingManager: FamilySharingManager
 ) {
     val context = LocalContext.current
     val layoutDirection = if (selectedLanguage == "iw") LayoutDirection.Rtl else LayoutDirection.Ltr
@@ -2706,16 +2746,7 @@ fun ShoppingListScreen(
     // Shopping workflow state
     var showDoneShoppingConfirm by remember { mutableStateOf(false) }
     
-    // Family sharing manager for Firebase sync
-    val scope = rememberCoroutineScope()
-    val firebaseService = remember { FirebaseService() }
-    val familySharingManager = remember { 
-        FamilySharingManager(firebaseService, scope).apply {
-            onDataUpdate = { newGroceries, newCategories ->
-                onUpdateGroceries(newGroceries)
-            }
-        }
-    }
+    // Family sharing manager is now passed as parameter
     
     // Load family sharing state from DataStore
     LaunchedEffect(Unit) {
@@ -2843,6 +2874,7 @@ fun ShoppingListScreen(
                                         IconButton(
                                             onClick = { 
                                                 // Mark item as bought
+                                                println("DEBUG: Shopping list - marking '${grocery.name}' as bought")
                                                 val updatedGroceries = groceries.map {
                                                     if (it.name == grocery.name && it.customCategoryId == grocery.customCategoryId) {
                                                         it.copy(isBought = true)
@@ -2850,6 +2882,7 @@ fun ShoppingListScreen(
                                                         it
                                                     }
                                                 }
+                                                println("DEBUG: Shopping list - calling onUpdateGroceries with ${updatedGroceries.size} items")
                                                 onUpdateGroceries(updatedGroceries)
                                             },
                                             modifier = Modifier.padding(start = 4.dp)
