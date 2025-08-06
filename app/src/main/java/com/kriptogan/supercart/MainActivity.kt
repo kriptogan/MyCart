@@ -1199,6 +1199,7 @@ fun HomeScreen(
                 modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                // Add Item button (left, fixed)
                 IconButton(
                     onClick = {
                         name = if (searchQuery.isNotBlank()) searchQuery else ""
@@ -1221,7 +1222,33 @@ fun HomeScreen(
                         tint = Color.White
                     )
                 }
+                
+                // Left spacer
                 Spacer(modifier = Modifier.weight(1f))
+                
+                // Alert button (center, only when there are alerts)
+                if (hasExpiring) {
+                    IconButton(
+                        onClick = { showExpiringOnly = !showExpiringOnly },
+                        modifier = Modifier
+                            .background(
+                                color = Color(0xFFFF9800),
+                                shape = androidx.compose.foundation.shape.CircleShape
+                            )
+                            .size(48.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Warning,
+                            contentDescription = localizedString("show_expiring_items", selectedLanguage),
+                            tint = Color.White
+                        )
+                    }
+                }
+                
+                // Right spacer
+                Spacer(modifier = Modifier.weight(1f))
+                
+                // Settings button (right, fixed)
                 IconButton(
                     onClick = { showMenu = true },
                     modifier = Modifier
@@ -1234,23 +1261,6 @@ fun HomeScreen(
                     Icon(
                         imageVector = Icons.Default.Menu,
                         contentDescription = localizedString("menu", selectedLanguage),
-                        tint = Color.White
-                    )
-                }
-                Spacer(modifier = Modifier.weight(1f))
-                IconButton(
-                    onClick = { if (hasExpiring) showExpiringOnly = !showExpiringOnly },
-                    enabled = hasExpiring,
-                    modifier = Modifier
-                        .background(
-                            color = if (hasExpiring) Color(0xFFFF9800) else Color(0xFFBDBDBD),
-                            shape = androidx.compose.foundation.shape.CircleShape
-                        )
-                        .size(48.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Warning,
-                        contentDescription = localizedString("show_expiring_items", selectedLanguage),
                         tint = Color.White
                     )
                 }
