@@ -1063,6 +1063,8 @@ fun HomeScreen(
     var selectedGroceryForHistory by remember { mutableStateOf<GroceryWithDate?>(null) } // Grocery to show history for
     var showAddToShoppingListConfirm by remember { mutableStateOf(false) } // For confirmation dialog when adding new item
     var showDuplicateItemDialog by remember { mutableStateOf(false) }
+    var showCategorySelector by remember { mutableStateOf(false) }
+    var createCategoryFromSelector by remember { mutableStateOf(false) }
     var showAlertNotification by remember { mutableStateOf(false) } // For alert notification popup
     var showLanguageSelection by remember { mutableStateOf(false) } // For language selection dialog
     
@@ -1615,26 +1617,13 @@ fun HomeScreen(
                             label = { Text(localizedString("item_name", selectedLanguage)) }
                         )
                         Spacer(modifier = Modifier.height(8.dp))
-                        // Category dropdown
-                        Box {
-                            val selectedCategory = customCategories.find { it.id == selectedCustomCategoryId }
-                            Button(
-                                onClick = { expanded = true },
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Text(selectedCategory?.let { localizedCategoryName(it.name, selectedLanguage) } ?: localizedString("choose_category", selectedLanguage))
-                            }
-                            DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-                                customCategories.sortedBy { it.viewOrder }.forEach { cat ->
-                                    DropdownMenuItem(
-                                        text = { Text(localizedCategoryName(cat.name, selectedLanguage)) },
-                                        onClick = {
-                                            selectedCustomCategoryId = cat.id
-                                            expanded = false
-                                        }
-                                    )
-                                }
-                            }
+                        // Category selector - full screen sheet
+                        val selectedCategory = customCategories.find { it.id == selectedCustomCategoryId }
+                        Button(
+                            onClick = { showCategorySelector = true },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(selectedCategory?.let { localizedCategoryName(it.name, selectedLanguage) } ?: localizedString("choose_category", selectedLanguage))
                         }
                         Spacer(modifier = Modifier.height(8.dp))
                         // Expiration date picker
@@ -2185,6 +2174,7 @@ fun HomeScreen(
                 onDismissRequest = { 
                     showCreateCategoryDialog = false
                     newCategoryName = ""
+                    createCategoryFromSelector = false
                 },
                 confirmButton = {
                     Row(
@@ -2219,7 +2209,12 @@ fun HomeScreen(
                                     
                                     val updatedCategories = customCategories + newCategory
                                     onUpdateCategories(updatedCategories)
-                                    
+                                    // If creation came from selector, auto-select and close selector
+                                    if (createCategoryFromSelector) {
+                                        selectedCustomCategoryId = newCategory.id
+                                        showCategorySelector = false
+                                        createCategoryFromSelector = false
+                                    }
                                     showCreateCategoryDialog = false
                                     newCategoryName = ""
                                 }
@@ -2357,6 +2352,103 @@ fun HomeScreen(
                 title = { Text(localizedString("add_to_shopping_list", selectedLanguage)) },
                 text = { Text(localizedString("add_to_shopping_list_message", selectedLanguage, name)) }
             )
+        }
+
+        // Full-screen category selector (Dialog to appear above the add/edit dialog)
+        if (showCategorySelector) {
+            androidx.compose.ui.window.Dialog(
+                onDismissRequest = { showCategorySelector = false },
+                properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false)
+            ) {
+                androidx.compose.material3.Surface(modifier = Modifier.fillMaxSize()) {
+                    Scaffold(
+                        topBar = {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(16.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                IconButton(onClick = { showCategorySelector = false }) {
+                                    Icon(imageVector = Icons.Default.Close, contentDescription = localizedString("close", selectedLanguage))
+                                }
+                                Text(
+                                    text = localizedString("choose_category", selectedLanguage),
+                                    modifier = Modifier.padding(start = 8.dp),
+                                    fontSize = 20.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        },
+                        bottomBar = {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp)
+                                    .padding(bottom = 32.dp) // extra space from bottom edge
+                            ) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = androidx.compose.foundation.layout.Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Button(onClick = { showCategorySelector = false }) {
+                                        Text(localizedString("back", selectedLanguage))
+                                    }
+                                    Button(onClick = {
+                                        // Open create category dialog and mark the source
+                                        newCategoryName = ""
+                                        createCategoryFromSelector = true
+                                        showCreateCategoryDialog = true
+                                    }) {
+                                        Text(localizedString("create_new_category", selectedLanguage))
+                                    }
+                                }
+                            }
+                        }
+                    ) { innerPadding ->
+                        LazyColumn(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(innerPadding)
+                                .padding(16.dp)
+                        ) {
+                            items(customCategories.sortedBy { it.viewOrder }) { cat ->
+                                Card(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = 8.dp)
+                                        .clickable {
+                                            selectedCustomCategoryId = cat.id
+                                            showCategorySelector = false
+                                        },
+                                    elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+                                ) {
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(16.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(
+                                            text = localizedCategoryName(cat.name, selectedLanguage),
+                                            fontSize = 18.sp,
+                                            modifier = Modifier.weight(1f)
+                                        )
+                                        if (cat.id == selectedCustomCategoryId) {
+                                            Icon(
+                                                imageVector = Icons.Default.Check,
+                                                contentDescription = localizedString("save", selectedLanguage),
+                                                tint = Color(0xFF4CAF50)
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
         
         // Duplicate item dialog
