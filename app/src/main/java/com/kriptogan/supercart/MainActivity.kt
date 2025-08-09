@@ -1563,6 +1563,14 @@ fun HomeScreen(
                                         }
                                     }
                                     if (isEditMode && editIndex >= 0) {
+                                        // Prevent renaming to an existing name of another item
+                                        val duplicateExists = groceries.withIndex().any { (i, g) ->
+                                            i != editIndex && g.name.equals(name, ignoreCase = true)
+                                        }
+                                        if (duplicateExists) {
+                                            showDuplicateItemDialog = true
+                                            return@Button
+                                        }
                                         val updatedGroceries = groceries.toMutableList().also {
                                             it[editIndex] = it[editIndex].copy(
                                                 name = name,
