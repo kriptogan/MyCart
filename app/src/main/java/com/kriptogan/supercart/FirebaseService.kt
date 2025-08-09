@@ -353,11 +353,25 @@ class FirebaseService {
                 a.isBought == b.isBought
         }
 
+        // Detect potential category moves: same name, different category, otherwise identical
+        fun equalsExceptCategory(a: GroceryWithDate, b: GroceryWithDate): Boolean {
+            return a.name.equals(b.name, ignoreCase = true) &&
+                a.expirationDate == b.expirationDate &&
+                a.lastTimeBoughtDays == b.lastTimeBoughtDays &&
+                a.averageBuyingDays == b.averageBuyingDays &&
+                a.buyEvents == b.buyEvents &&
+                a.inShoppingList == b.inShoppingList &&
+                a.isBought == b.isBought &&
+                a.customCategoryId != b.customCategoryId
+        }
+
         val firebaseOnlyKeys = firebaseMap.keys - localMap.keys
         val localOnlyKeys = localMap.keys - firebaseMap.keys
 
         // Map from firebase-old-key -> local-renamed-item
         val renamePairs = mutableMapOf<String, GroceryWithDate>()
+        // Map from firebase-old-key -> local-moved-item (same name, different category)
+        val movePairs = mutableMapOf<String, GroceryWithDate>()
 
         for (localKey in localOnlyKeys) {
             val localItem = localMap[localKey] ?: continue
@@ -372,6 +386,20 @@ class FirebaseService {
                 // Treat as rename: prefer local (new name), drop the old firebase one
                 val (oldKey, _) = candidates.first()
                 renamePairs[oldKey] = localItem
+            }
+
+            // If not a rename, check for category move (same name, different category)
+            if (candidates.isEmpty()) {
+                val moveCandidates = firebaseOnlyKeys.mapNotNull { fKey ->
+                    val fItem = firebaseMap[fKey]
+                    if (fItem != null && equalsExceptCategory(localItem, fItem)) {
+                        fKey to fItem
+                    } else null
+                }
+                if (moveCandidates.size == 1) {
+                    val (oldKey, _) = moveCandidates.first()
+                    movePairs[oldKey] = localItem
+                }
             }
         }
 
@@ -393,9 +421,10 @@ class FirebaseService {
             merged.add(localItem)
         }
 
-        // Add remaining firebase-only items EXCEPT those that were matched as renamed
+        // Add remaining firebase-only items EXCEPT those that were matched as renamed/moved
         for (key in firebaseOnlyKeys) {
             if (key in renamePairs.keys) continue // skip old name, replaced by local renamed item
+            if (key in movePairs.keys) continue   // skip old category, replaced by local moved item
             if (key in processedFirebaseKeys) continue
             firebaseMap[key]?.let { merged.add(it) }
         }

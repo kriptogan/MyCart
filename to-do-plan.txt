@@ -1,6 +1,6 @@
 V 1. handle sync properly
 2. push notifications
-3. better UI for "select category" + an option to create a new one on the fly
+V 3. better UI for "select category" + an option to create a new one on the fly
 V 4. hide alert icon if there are no alerts
 V 5. scroll bug in the shopping list page
 V 6. when an item moves to bought list, don't alter the cart icon
