@@ -329,38 +329,77 @@ class FirebaseService {
     }
     
     // NEW: Smart merge function for groceries that preserves user changes
-    private fun mergeGroceryLists(firebaseGroceries: List<GroceryWithDate>, localGroceries: List<GroceryWithDate>): List<GroceryWithDate> {
+    private fun mergeGroceryLists(
+        firebaseGroceries: List<GroceryWithDate>,
+        localGroceries: List<GroceryWithDate>
+    ): List<GroceryWithDate> {
         val merged = mutableListOf<GroceryWithDate>()
-        val processedNames = mutableSetOf<String>()
-        
-        // Create maps for efficient lookup
+
+        // Maps keyed by current identity (name + category)
         val localMap = localGroceries.associateBy { "${it.name}_${it.customCategoryId}" }
         val firebaseMap = firebaseGroceries.associateBy { "${it.name}_${it.customCategoryId}" }
-        
-        // Process all items (both local and Firebase)
-        val allKeys = (localMap.keys + firebaseMap.keys).distinct()
-        
-        allKeys.forEach { key ->
-            val localItem = localMap[key]
-            val firebaseItem = firebaseMap[key]
-            
-            when {
-                // Local item exists but not in Firebase - keep local
-                localItem != null && firebaseItem == null -> {
-                    merged.add(localItem)
-                }
-                // Firebase item exists but not in local - keep Firebase
-                firebaseItem != null && localItem == null -> {
-                    merged.add(firebaseItem)
-                }
-                // Both exist - merge intelligently
-                localItem != null && firebaseItem != null -> {
-                    val mergedItem = mergeGroceryItems(localItem, firebaseItem)
-                    merged.add(mergedItem)
-                }
+
+        // Detect potential renames: local item that doesn't exist in Firebase by key,
+        // but has a Firebase counterpart with the same category and identical attributes except name
+        data class Key(val name: String, val categoryId: Int)
+
+        fun equalsExceptName(a: GroceryWithDate, b: GroceryWithDate): Boolean {
+            return a.customCategoryId == b.customCategoryId &&
+                a.expirationDate == b.expirationDate &&
+                a.lastTimeBoughtDays == b.lastTimeBoughtDays &&
+                a.averageBuyingDays == b.averageBuyingDays &&
+                a.buyEvents == b.buyEvents &&
+                a.inShoppingList == b.inShoppingList &&
+                a.isBought == b.isBought
+        }
+
+        val firebaseOnlyKeys = firebaseMap.keys - localMap.keys
+        val localOnlyKeys = localMap.keys - firebaseMap.keys
+
+        // Map from firebase-old-key -> local-renamed-item
+        val renamePairs = mutableMapOf<String, GroceryWithDate>()
+
+        for (localKey in localOnlyKeys) {
+            val localItem = localMap[localKey] ?: continue
+            // find firebase candidate(s) in same category with same attributes except name
+            val candidates = firebaseOnlyKeys.mapNotNull { fKey ->
+                val fItem = firebaseMap[fKey]
+                if (fItem != null && fItem.customCategoryId == localItem.customCategoryId && equalsExceptName(localItem, fItem)) {
+                    fKey to fItem
+                } else null
+            }
+            if (candidates.size == 1) {
+                // Treat as rename: prefer local (new name), drop the old firebase one
+                val (oldKey, _) = candidates.first()
+                renamePairs[oldKey] = localItem
             }
         }
-        
+
+        // Now build the merged list
+        val processedFirebaseKeys = mutableSetOf<String>()
+
+        // Merge items present in both by exact key
+        for (key in localMap.keys.intersect(firebaseMap.keys)) {
+            val localItem = localMap[key]!!
+            val firebaseItem = firebaseMap[key]!!
+            merged.add(mergeGroceryItems(localItem, firebaseItem))
+            processedFirebaseKeys.add(key)
+        }
+
+        // Add local-only items (including renamed ones). If this local item is a rename target,
+        // it will be added here; the old firebase key will be skipped later.
+        for (key in localOnlyKeys) {
+            val localItem = localMap[key] ?: continue
+            merged.add(localItem)
+        }
+
+        // Add remaining firebase-only items EXCEPT those that were matched as renamed
+        for (key in firebaseOnlyKeys) {
+            if (key in renamePairs.keys) continue // skip old name, replaced by local renamed item
+            if (key in processedFirebaseKeys) continue
+            firebaseMap[key]?.let { merged.add(it) }
+        }
+
         return merged
     }
     
