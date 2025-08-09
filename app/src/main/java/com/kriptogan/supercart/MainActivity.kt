@@ -186,6 +186,7 @@ object StringResources {
                  "move_down" to "הורד",
                  "add_list" to "הוסף רשימה",
                  "add_items_instructions" to "הוסף פריטים. כל פריט בשורה נפרדת.",
+        "confirm_import_list_message" to "הפריטים הבאים (%d) יתווספו למערכת. האם להוסיף אותם גם לרשימת הקניות?",
                  "edit_category_name" to "ערוך שם קטגוריה",
                  "show_items" to "הצג פריטים",
                  "items_need_attention" to "פריטים שדורשים תשומת לב",
@@ -297,6 +298,7 @@ object StringResources {
                  "move_down" to "Move Down",
                  "add_list" to "Add List",
                  "add_items_instructions" to "Add items. Each item on a separate line.",
+        "confirm_import_list_message" to "The following %d items will be added. Do you also want to place them in the shopping list?",
                  "edit_category_name" to "Edit Category Name",
                  "show_items" to "Show Items",
                  "items_need_attention" to "Items Need Attention",
@@ -408,6 +410,7 @@ object StringResources {
                  "move_down" to "Опустить",
                  "add_list" to "Добавить список",
                  "add_items_instructions" to "Добавьте товары. Каждый товар с новой строки.",
+        "confirm_import_list_message" to "Следующие %d товаров будут добавлены. Добавить их также в список покупок?",
                  "edit_category_name" to "Редактировать название категории",
                  "show_items" to "Показать товары",
                  "items_need_attention" to "Товары требуют внимания",
@@ -525,6 +528,7 @@ object StringResources {
         "move_down" to "Премести надолу",
         "add_list" to "Добави списък",
         "add_items_instructions" to "Добави артикули. Всеки артикул на отделен ред.",
+        "confirm_import_list_message" to "Следните %d артикула ще бъдат добавени. Искате ли да ги добавите и в списъка за пазаруване?",
         "edit_category_name" to "Редактирай име на категория",
         "show_items" to "Покажи артикули",
         "items_need_attention" to "Артикули, които се нуждаят от внимание",
@@ -1042,6 +1046,8 @@ fun HomeScreen(
     var searchQuery by remember { mutableStateOf("") }
     var showExpiringOnly by remember { mutableStateOf(false) }
     var showNotesDialog by remember { mutableStateOf(false) }
+    var showImportConfirmDialog by remember { mutableStateOf(false) }
+    var pendingImportNames by remember { mutableStateOf(listOf<String>()) }
     var notesText by remember { mutableStateOf("") }
     var showCategoriesList by remember { mutableStateOf(false) } // For categories list dialog
     var expanded by remember { mutableStateOf(false) } // For category dropdown
@@ -1741,39 +1747,14 @@ fun HomeScreen(
                             )
                         }
                         Button(onClick = {
-                            // Parse each line and add as new items or update existing ones
-                            val lines = notesText.split("\n").filter { it.trim().isNotEmpty() }
-                            if (lines.isNotEmpty()) {
-                                val updatedGroceries = groceries.toMutableList()
-                                
-                                lines.forEach { line ->
-                                    val itemName = line.trim()
-                                    val existingItemIndex = updatedGroceries.indexOfFirst { it.name == itemName }
-                                    
-                                    if (existingItemIndex != -1) {
-                                        // Item exists, just set inShoppingList to true
-                                        updatedGroceries[existingItemIndex] = updatedGroceries[existingItemIndex].copy(
-                                            inShoppingList = true
-                                        )
-                                    } else {
-                                        // Item doesn't exist, create new item
-                                        val newItem = GroceryWithDate(
-                                            name = itemName,
-                                            customCategoryId = 1, // Default to "אחר"
-                                            expirationDate = null,
-                                            lastTimeBoughtDays = null,
-                                            averageBuyingDays = null,
-                                            buyEvents = emptyList(),
-                                            inShoppingList = true
-                                        )
-                                        updatedGroceries.add(newItem)
-                                    }
-                                }
-                                
-                                onUpdateGroceries(updatedGroceries)
+                            // Prepare import list and show confirmation
+                            val lines = notesText.split("\n").map { it.trim() }.filter { it.isNotEmpty() }
+                            pendingImportNames = lines
+                            if (pendingImportNames.isNotEmpty()) {
+                                showImportConfirmDialog = true
+                            } else {
+                                showNotesDialog = false
                             }
-                            notesText = ""
-                            showNotesDialog = false
                         }) {
                             Icon(
                                 imageVector = Icons.Default.Done,
@@ -1794,6 +1775,92 @@ fun HomeScreen(
                             .height(200.dp),
                         maxLines = 10
                     )
+                }
+            )
+        }
+
+        // Import confirm dialog (for Add List)
+        if (showImportConfirmDialog) {
+            val count = pendingImportNames.size
+            AlertDialog(
+                onDismissRequest = { showImportConfirmDialog = false },
+                confirmButton = {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = androidx.compose.foundation.layout.Arrangement.SpaceBetween
+                    ) {
+                        // No: create items with inShoppingList = false
+                        Button(onClick = {
+                            if (pendingImportNames.isNotEmpty()) {
+                                val updatedGroceries = groceries.toMutableList()
+                                pendingImportNames.forEach { itemName ->
+                                    val existingIndex = updatedGroceries.indexOfFirst { it.name.equals(itemName, ignoreCase = true) }
+                                    if (existingIndex != -1) {
+                                        // keep existing state; do not force into shopping list
+                                        // no-op or ensure inShoppingList remains as-is
+                                    } else {
+                                        updatedGroceries.add(
+                                            GroceryWithDate(
+                                                name = itemName,
+                                                customCategoryId = 1,
+                                                expirationDate = null,
+                                                lastTimeBoughtDays = null,
+                                                averageBuyingDays = null,
+                                                buyEvents = emptyList(),
+                                                inShoppingList = false
+                                            )
+                                        )
+                                    }
+                                }
+                                onUpdateGroceries(updatedGroceries)
+                            }
+                            // cleanup
+                            showImportConfirmDialog = false
+                            showNotesDialog = false
+                            notesText = ""
+                            pendingImportNames = emptyList()
+                        }) {
+                            Text(localizedString("no", selectedLanguage))
+                        }
+                        // Yes: create items with inShoppingList = true (existing ones set to true)
+                        Button(onClick = {
+                            if (pendingImportNames.isNotEmpty()) {
+                                val updatedGroceries = groceries.toMutableList()
+                                pendingImportNames.forEach { itemName ->
+                                    val existingIndex = updatedGroceries.indexOfFirst { it.name.equals(itemName, ignoreCase = true) }
+                                    if (existingIndex != -1) {
+                                        updatedGroceries[existingIndex] = updatedGroceries[existingIndex].copy(
+                                            inShoppingList = true
+                                        )
+                                    } else {
+                                        updatedGroceries.add(
+                                            GroceryWithDate(
+                                                name = itemName,
+                                                customCategoryId = 1,
+                                                expirationDate = null,
+                                                lastTimeBoughtDays = null,
+                                                averageBuyingDays = null,
+                                                buyEvents = emptyList(),
+                                                inShoppingList = true
+                                            )
+                                        )
+                                    }
+                                }
+                                onUpdateGroceries(updatedGroceries)
+                            }
+                            // cleanup
+                            showImportConfirmDialog = false
+                            showNotesDialog = false
+                            notesText = ""
+                            pendingImportNames = emptyList()
+                        }) {
+                            Text(localizedString("yes", selectedLanguage))
+                        }
+                    }
+                },
+                title = { Text(localizedString("add_list", selectedLanguage)) },
+                text = {
+                    Text(localizedString("confirm_import_list_message", selectedLanguage, count))
                 }
             )
         }
