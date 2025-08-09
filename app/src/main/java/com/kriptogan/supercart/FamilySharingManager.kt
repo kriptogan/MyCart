@@ -191,6 +191,7 @@ class FamilySharingManager(
                 pendingUpdatesCount = pendingUpdates.size
                 
                 println("DEBUG: Sending update to Firebase - projectId: $currentProjectId")
+                println("DEBUG: - bought items being sent: ${groceries.count { it.isBought }}")
                 val success = firebaseService.updateFamilyProject(currentProjectId!!, groceries, categories)
                 
                 if (success) {
@@ -200,7 +201,7 @@ class FamilySharingManager(
                     pendingUpdatesCount = pendingUpdates.size
                     syncProgress = 1f
                     onSyncStatusChange?.invoke(false, null)
-                    println("DEBUG: Firebase update successful")
+                    println("DEBUG: Firebase update successful - sent ${groceries.count { it.isBought }} bought items")
                     clearPendingLocalChanges() // Clear pending changes after successful sync
                 } else {
                     syncError = "Failed to sync changes"
@@ -289,6 +290,8 @@ class FamilySharingManager(
                     
                     println("DEBUG: Applying Firebase update at $currentTime with enhanced local action protection")
                     println("DEBUG: Local update time: $lastLocalUpdateTime, Protection window: ${localActionProtectionWindowMs}ms")
+                    println("DEBUG: - received ${firebaseGroceries.count { it.isBought }} bought items from Firebase")
+                    println("DEBUG: - applying ${prioritizedGroceries.count { it.isBought }} bought items after prioritization")
                     
                     onDataUpdate?.invoke(prioritizedGroceries, prioritizedCategories)
                     
@@ -495,11 +498,35 @@ class FamilySharingManager(
         }
     }
     
-    // NEW: Clear pending local changes after successful sync
+    // NEW: Enhanced clear pending local changes after successful sync
     private fun clearPendingLocalChanges() {
-        // Don't clear protections immediately - let them expire naturally
-        // This prevents Firebase from immediately overwriting our changes
-        println("DEBUG: Keeping protections active to prevent immediate overwrites")
+        // Only clear protections for items that have been successfully synced
+        // This allows new changes to be sent while protecting recent ones
+        val currentTime = System.currentTimeMillis()
+        val keysToRemove = mutableListOf<String>()
+        
+        pendingLocalChanges.forEach { itemKey ->
+            // Check if this item has been synced (older than 2 seconds)
+            val itemUpdateTime = lastLocalUpdateTimestamps[itemKey] ?: 0L
+            if (itemUpdateTime > 0 && (currentTime - itemUpdateTime) > 2000) {
+                keysToRemove.add(itemKey)
+                println("DEBUG: Clearing protection for synced item: $itemKey")
+            }
+        }
+        
+        keysToRemove.forEach { key ->
+            pendingLocalChanges.remove(key)
+            lastLocalActionTimestamps.remove(key)
+            lastLocalUpdateTimestamps.remove(key)
+        }
+        
+        if (keysToRemove.isNotEmpty()) {
+            println("DEBUG: Cleared protections for ${keysToRemove.size} synced items")
+            // Force sync to other devices after clearing protections
+            forceSyncToOtherDevices()
+        } else {
+            println("DEBUG: Keeping protections active for recent changes")
+        }
     }
     
     // NEW: Enhanced clear pending local changes after successful sync
@@ -558,6 +585,21 @@ class FamilySharingManager(
         }
     }
     
+    // NEW: Force sync changes to other devices
+    fun forceSyncToOtherDevices() {
+        if (isSharingEnabled && currentProjectId != null) {
+            scope.launch {
+                try {
+                    println("DEBUG: Force syncing changes to other devices")
+                    // Send current local data to Firebase to ensure other devices receive it
+                    firebaseService.updateFamilyProject(currentProjectId!!, lastLocalGroceries, lastLocalCategories)
+                } catch (e: Exception) {
+                    println("Error in force sync to other devices: ${e.message}")
+                }
+            }
+        }
+    }
+    
     // Enhanced join code validation
     fun validateJoinCode(code: String): Boolean {
         return code.length == 8 && code.all { it.isDigit() } && code != "00000000"
@@ -606,9 +648,9 @@ class FamilySharingManager(
         val currentTime = System.currentTimeMillis()
         val timeSinceLastUpdate = currentTime - lastLocalUpdateTime
         
-        // Only consider changes "recent" if they're very recent (within 5 seconds)
+        // Only consider changes "recent" if they're very recent (within 10 seconds)
         // and we have pending changes that need protection
-        val isVeryRecent = timeSinceLastUpdate < 5000 // 5 seconds instead of 15
+        val isVeryRecent = timeSinceLastUpdate < 10000 // 10 seconds to give more time for propagation
         val hasPendingChanges = pendingLocalChanges.isNotEmpty()
         
         val result = lastLocalUpdateTime > 0 && isVeryRecent && hasPendingChanges

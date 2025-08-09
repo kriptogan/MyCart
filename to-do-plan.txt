@@ -5,3 +5,7 @@ V 4. hide alert icon if there are no alerts
 ? 5. scroll bug in the shopping list page
 V 6. when an item moves to bought list, don't alter the cart icon
 7. when user adds an item with an existing name, alert about it, close the window, and filter by that name to show the item.
+
+
+bugs:
+editing an item;s name results in a new item
