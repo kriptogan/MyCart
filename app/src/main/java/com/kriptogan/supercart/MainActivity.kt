@@ -226,6 +226,11 @@ object StringResources {
         "duplicate_item_message" to "קיים פריט בשם '%s'. מה ברצונך לעשות?",
         "back" to "חזרה",
         "show" to "הצג",
+        // Notification settings
+        "notification_settings" to "הגדרות התראות",
+        "notify_items_added" to "התראה כאשר פריטים נוספים לרשימת הקניות",
+        "notify_expiration" to "התראה כאשר פריטים פוגים",
+        "notify_average_due" to "התראה כאשר פריטים מגיעים לתקופת הקנייה הממוצעת",
                  // Category translations
                  "אחר" to "אחר",
                  "פירות" to "פירות",
@@ -338,6 +343,11 @@ object StringResources {
         "duplicate_item_message" to "An item named '%s' already exists. What would you like to do?",
         "back" to "Back",
         "show" to "Show",
+        // Notification settings
+        "notification_settings" to "Notification Settings",
+        "notify_items_added" to "Notify when items are added to shopping list",
+        "notify_expiration" to "Notify when items expire",
+        "notify_average_due" to "Notify when items are due for average buying period",
                  // Category translations
                  "אחר" to "Other",
                  "פירות" to "Fruits",
@@ -450,6 +460,11 @@ object StringResources {
         "duplicate_item_message" to "Товар с названием '%s' уже существует. Что вы хотите сделать?",
         "back" to "Назад",
         "show" to "Показать",
+        // Notification settings
+        "notification_settings" to "Настройки уведомлений",
+        "notify_items_added" to "Уведомлять при добавлении товаров в список покупок",
+        "notify_expiration" to "Уведомлять при истечении срока товаров",
+        "notify_average_due" to "Уведомлять при наступлении среднего периода покупки товаров",
                  // Category translations
                  "אחר" to "Другое",
                  "פירות" to "Фрукты",
@@ -522,6 +537,11 @@ object StringResources {
         "duplicate_item_message" to "Артикул с име '%s' вече съществува. Какво искате да направите?",
         "back" to "Назад",
         "show" to "Покажи",
+        // Notification settings
+        "notification_settings" to "Настройки за известия",
+        "notify_items_added" to "Известяване при добавяне на артикули в списъка за пазаруване",
+        "notify_expiration" to "Известяване при изтичане на артикули",
+        "notify_average_due" to "Известяване при настъпване на средния период на покупка на артикули",
         "yes" to "Да",
         "no" to "Не",
         "return_to_shopping_list" to "Върни в списъка за пазаруване",
@@ -1394,7 +1414,7 @@ fun HomeScreen(
                         DropdownMenuItem(
                             text = {
                                 Text(
-                                    "Notification Settings",
+                                    localizedString("notification_settings", selectedLanguage),
                                     modifier = Modifier.fillMaxWidth(),
                                     textAlign = TextAlign.Center
                                 )
@@ -2993,7 +3013,7 @@ fun HomeScreen(
         if (showNotificationSettings) {
             AlertDialog(
                 onDismissRequest = { showNotificationSettings = false },
-                title = { Text("Notification Settings") },
+                title = { Text(localizedString("notification_settings", selectedLanguage)) },
                 text = {
                     Column(
                         modifier = Modifier.fillMaxWidth(),
@@ -3004,7 +3024,7 @@ fun HomeScreen(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
-                                text = "Notify when items are added to shopping list",
+                                text = localizedString("notify_items_added", selectedLanguage),
                                 modifier = Modifier.weight(1f)
                             )
                             Switch(
@@ -3018,7 +3038,7 @@ fun HomeScreen(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
-                                text = "Notify when items expire",
+                                text = localizedString("notify_expiration", selectedLanguage),
                                 modifier = Modifier.weight(1f)
                             )
                             Switch(
@@ -3032,7 +3052,7 @@ fun HomeScreen(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
-                                text = "Notify when items are due for average buying period",
+                                text = localizedString("notify_average_due", selectedLanguage),
                                 modifier = Modifier.weight(1f)
                             )
                             Switch(
@@ -3063,14 +3083,14 @@ fun HomeScreen(
                             showNotificationSettings = false
                         }
                     ) {
-                        Text("Save")
+                        Text(localizedString("save", selectedLanguage))
                     }
                 },
                 dismissButton = {
                     Button(
                         onClick = { showNotificationSettings = false }
                     ) {
-                        Text("Cancel")
+                        Text(localizedString("cancel", selectedLanguage))
                     }
                 }
             )
