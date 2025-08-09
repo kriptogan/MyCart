@@ -730,6 +730,17 @@ class MainActivity : ComponentActivity() {
         }
         
         enableEdgeToEdge()
+        // Initialize stable device id
+        val prefs = getSharedPreferences("supercart_prefs", MODE_PRIVATE)
+        val existingId = prefs.getString("device_id", null)
+        if (existingId == null) {
+            val newId = java.util.UUID.randomUUID().toString()
+            prefs.edit().putString("device_id", newId).apply()
+            DeviceIdProvider.deviceId = newId
+        } else {
+            DeviceIdProvider.deviceId = existingId
+        }
+
         setContent {
             SuperCartTheme {
                 SuperCartApp()
@@ -1078,6 +1089,7 @@ fun HomeScreen(
     var createCategoryFromSelector by remember { mutableStateOf(false) }
     var showAlertNotification by remember { mutableStateOf(false) } // For alert notification popup
     var showLanguageSelection by remember { mutableStateOf(false) } // For language selection dialog
+    var showNotificationSettings by remember { mutableStateOf(false) }
     
     // Family sharing state
     var showFamilySharingDialog by remember { mutableStateOf(false) }
@@ -1370,6 +1382,34 @@ fun HomeScreen(
                             onClick = {
                                 showCategoriesList = true
                                 showMenu = false
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = {
+                                Text(
+                                    "Notification Settings",
+                                    modifier = Modifier.fillMaxWidth(),
+                                    textAlign = TextAlign.Center
+                                )
+                            },
+                            onClick = {
+                                showMenu = false
+                                // Lift state: delegate to parent via a callback if needed
+                                // For now, toggle a local flag in HomeScreen to avoid unresolved reference here
+                                showNotificationSettings = true
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = {
+                                Text(
+                                    "Notification Settings",
+                                    modifier = Modifier.fillMaxWidth(),
+                                    textAlign = TextAlign.Center
+                                )
+                            },
+                            onClick = {
+                                showMenu = false
+                                showNotificationSettings = true
                             }
                         )
                         DropdownMenuItem(
@@ -2981,6 +3021,9 @@ fun ShoppingListScreen(
 
     // Shopping workflow state
     var showDoneShoppingConfirm by remember { mutableStateOf(false) }
+    var notifyItemsAdded by remember { mutableStateOf(true) }
+    var notifyExpiration by remember { mutableStateOf(true) }
+    var notifyAverageDue by remember { mutableStateOf(true) }
     
     // Family sharing manager is now passed as parameter
     
@@ -3151,6 +3194,8 @@ fun ShoppingListScreen(
             }
         }
         
+        // Notification Settings dialog is managed at the SuperCartApp level now
+
         // Bought items section
         if (boughtItems.isNotEmpty()) {
             item {

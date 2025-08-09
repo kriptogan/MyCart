@@ -626,9 +626,9 @@ class FirebaseService {
     
     // Get device ID (unique identifier for this device)
     fun getDeviceId(): String {
-        // For now, generate a simple device ID
-        // In production, you might want to use a more sophisticated approach
-        return UUID.randomUUID().toString()
+        // Use a stable device id when available (set at app start)
+        val cached = DeviceIdProvider.deviceId
+        return cached ?: UUID.randomUUID().toString()
     }
     
     // Get offline queue size for status reporting

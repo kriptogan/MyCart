@@ -8,7 +8,8 @@ class MessagingService : FirebaseMessagingService() {
         super.onNewToken(token)
         // Update token in backend
         val service = FirebaseService()
-        service.updateFcmToken(service.getDeviceId(), token)
+        val deviceId = DeviceIdProvider.deviceId ?: service.getDeviceId()
+        service.updateFcmToken(deviceId, token)
     }
 
     override fun onMessageReceived(message: RemoteMessage) {

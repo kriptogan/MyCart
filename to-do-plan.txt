@@ -7,4 +7,31 @@ V 6. when an item moves to bought list, don't alter the cart icon
 V 7. when user adds an item with an existing name, alert about it, close the window, and filter by that name to show the item.
 V 8. In the "import shopping list" process, after user clicks the checkmark, prompt a confirm message: "the following X items will be added to the system, do you want them to be placed in the shopping list as well?" with a yes/no options.
 
-changing the expiration date also results in duplication
+
+notification related:
+
+What remains to finish
+Stable device identity:
+Persist a stable deviceId (DataStore/SharedPreferences) and reuse it in FirebaseService.getDeviceId() and MessagingService.onNewToken. Avoid generating a new UUID each time.
+Settings UI (in-app):
+Add toggles for:
+Items added (notifyItemsAdded)
+Expiration due (notifyExpiration)
+Average buying due (notifyAverageDue)
+Save via firebaseService.updateNotificationSettings(deviceId, settings).
+Shopping list bell action:
+Add a bell icon on the shopping list screen.
+On click, gather the relevant item names (newly added or currently selected to notify) and call:
+FirebaseFunctionsHelper.triggerShoppingListNotification(projectId, itemNames).
+Cloud Functions (server):
+Callable: notifyShoppingListItemsAdded
+Input: projectId, items, senderDeviceId (optional).
+Fetch project members’ DeviceRegistration, filter by notificationSettings.notifyItemsAdded, exclude sender, send FCM to their fcmTokens.
+Scheduled (daily 05:30 UTC):
+For each project, compute:
+Items where expiration reached (reuse same rules as the local alert).
+Items where average buying due reached (same rules).
+For each member, respect notificationSettings.notifyExpiration and notifyAverageDue; send one consolidated notification per type.
+Use Cloud Scheduler or Pub/Sub to run at 05:30 UTC.
+Runtime permission request (optional polish):
+Prompt for POST_NOTIFICATIONS on Android 13+ using the Activity Result API (current code just checks, doesn’t prompt).
