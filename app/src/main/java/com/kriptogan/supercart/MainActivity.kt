@@ -217,7 +217,12 @@ object StringResources {
                  "synced" to "מסונכרן",
                  "sync_error" to "שגיאת סנכרון",
                  "offline_mode" to "מצב לא מקוון",
-                 "pending_updates" to "עדכונים ממתינים",
+        "pending_updates" to "עדכונים ממתינים",
+        // Duplicate item prompt
+        "duplicate_item_title" to "הפריט כבר קיים",
+        "duplicate_item_message" to "קיים פריט בשם '%s'. מה ברצונך לעשות?",
+        "back" to "חזרה",
+        "show" to "הצג",
                  // Category translations
                  "אחר" to "אחר",
                  "פירות" to "פירות",
@@ -323,7 +328,12 @@ object StringResources {
                  "synced" to "Synced",
                  "sync_error" to "Sync Error",
                  "offline_mode" to "Offline Mode",
-                 "pending_updates" to "Pending Updates",
+        "pending_updates" to "Pending Updates",
+        // Duplicate item prompt
+        "duplicate_item_title" to "Item Already Exists",
+        "duplicate_item_message" to "An item named '%s' already exists. What would you like to do?",
+        "back" to "Back",
+        "show" to "Show",
                  // Category translations
                  "אחר" to "Other",
                  "פירות" to "Fruits",
@@ -429,7 +439,12 @@ object StringResources {
                  "synced" to "Синхронизировано",
                  "sync_error" to "Ошибка синхронизации",
                  "offline_mode" to "Режим офлайн",
-                 "pending_updates" to "Обновления ожидаются",
+        "pending_updates" to "Обновления ожидаются",
+        // Duplicate item prompt
+        "duplicate_item_title" to "Товар уже существует",
+        "duplicate_item_message" to "Товар с названием '%s' уже существует. Что вы хотите сделать?",
+        "back" to "Назад",
+        "show" to "Показать",
                  // Category translations
                  "אחר" to "Другое",
                  "פירות" to "Фрукты",
@@ -497,6 +512,11 @@ object StringResources {
         "days_ago" to "%d дни",
         "add_to_shopping_list" to "Добави в списъка за пазаруване",
         "add_to_shopping_list_message" to "Искате ли да добавите '%s' в списъка за пазаруване?",
+        // Duplicate item prompt
+        "duplicate_item_title" to "Артикулът вече съществува",
+        "duplicate_item_message" to "Артикул с име '%s' вече съществува. Какво искате да направите?",
+        "back" to "Назад",
+        "show" to "Покажи",
         "yes" to "Да",
         "no" to "Не",
         "return_to_shopping_list" to "Върни в списъка за пазаруване",
@@ -1036,6 +1056,7 @@ fun HomeScreen(
     var showBuyHistoryDialog by remember { mutableStateOf(false) } // For showing buy history
     var selectedGroceryForHistory by remember { mutableStateOf<GroceryWithDate?>(null) } // Grocery to show history for
     var showAddToShoppingListConfirm by remember { mutableStateOf(false) } // For confirmation dialog when adding new item
+    var showDuplicateItemDialog by remember { mutableStateOf(false) }
     var showAlertNotification by remember { mutableStateOf(false) } // For alert notification popup
     var showLanguageSelection by remember { mutableStateOf(false) } // For language selection dialog
     
@@ -1533,6 +1554,14 @@ fun HomeScreen(
                             }
                             Button(onClick = {
                                 if (name.isNotBlank()) {
+                                    // Duplicate name check when adding a new item
+                                    if (!isEditMode) {
+                                        val exists = groceries.any { it.name.equals(name, ignoreCase = true) }
+                                        if (exists) {
+                                            showDuplicateItemDialog = true
+                                            return@Button
+                                        }
+                                    }
                                     if (isEditMode && editIndex >= 0) {
                                         val updatedGroceries = groceries.toMutableList().also {
                                             it[editIndex] = it[editIndex].copy(
@@ -2252,6 +2281,35 @@ fun HomeScreen(
                 },
                 title = { Text(localizedString("add_to_shopping_list", selectedLanguage)) },
                 text = { Text(localizedString("add_to_shopping_list_message", selectedLanguage, name)) }
+            )
+        }
+        
+        // Duplicate item dialog
+        if (showDuplicateItemDialog) {
+            AlertDialog(
+                onDismissRequest = { showDuplicateItemDialog = false },
+                confirmButton = {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = androidx.compose.foundation.layout.Arrangement.SpaceBetween
+                    ) {
+                        // Option 1: Back to Add item (just close this prompt)
+                        Button(onClick = { showDuplicateItemDialog = false }) {
+                            Text(localizedString("back", selectedLanguage))
+                        }
+                        // Option 2: Show existing item (close prompts and search)
+                        Button(onClick = {
+                            showDuplicateItemDialog = false
+                            showDialog = false
+                            // Close add dialog and focus search to existing item
+                            searchQuery = name
+                        }) {
+                            Text(localizedString("show", selectedLanguage))
+                        }
+                    }
+                },
+                title = { Text(localizedString("duplicate_item_title", selectedLanguage)) },
+                text = { Text(localizedString("duplicate_item_message", selectedLanguage, name)) }
             )
         }
         
