@@ -98,6 +98,8 @@ import androidx.compose.material.icons.filled.Warning
 import java.time.temporal.ChronoUnit
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.material3.Switch
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.CircularProgressIndicator
@@ -1091,6 +1093,11 @@ fun HomeScreen(
     var showLanguageSelection by remember { mutableStateOf(false) } // For language selection dialog
     var showNotificationSettings by remember { mutableStateOf(false) }
     
+    // Notification settings state
+    var notifyItemsAdded by remember { mutableStateOf(true) }
+    var notifyExpiration by remember { mutableStateOf(true) }
+    var notifyAverageDue by remember { mutableStateOf(true) }
+    
     // Family sharing state
     var showFamilySharingDialog by remember { mutableStateOf(false) }
     var showCreateFamilyDialog by remember { mutableStateOf(false) }
@@ -1382,21 +1389,6 @@ fun HomeScreen(
                             onClick = {
                                 showCategoriesList = true
                                 showMenu = false
-                            }
-                        )
-                        DropdownMenuItem(
-                            text = {
-                                Text(
-                                    "Notification Settings",
-                                    modifier = Modifier.fillMaxWidth(),
-                                    textAlign = TextAlign.Center
-                                )
-                            },
-                            onClick = {
-                                showMenu = false
-                                // Lift state: delegate to parent via a callback if needed
-                                // For now, toggle a local flag in HomeScreen to avoid unresolved reference here
-                                showNotificationSettings = true
                             }
                         )
                         DropdownMenuItem(
@@ -2993,6 +2985,93 @@ fun HomeScreen(
                 title = { Text(localizedString("confirm_leave_family", selectedLanguage)) },
                 text = {
                     Text(localizedString("confirm_leave_family_message", selectedLanguage))
+                }
+            )
+        }
+        
+        // Notification Settings dialog
+        if (showNotificationSettings) {
+            AlertDialog(
+                onDismissRequest = { showNotificationSettings = false },
+                title = { Text("Notification Settings") },
+                text = {
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "Notify when items are added to shopping list",
+                                modifier = Modifier.weight(1f)
+                            )
+                            Switch(
+                                checked = notifyItemsAdded,
+                                onCheckedChange = { notifyItemsAdded = it }
+                            )
+                        }
+                        
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "Notify when items expire",
+                                modifier = Modifier.weight(1f)
+                            )
+                            Switch(
+                                checked = notifyExpiration,
+                                onCheckedChange = { notifyExpiration = it }
+                            )
+                        }
+                        
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "Notify when items are due for average buying period",
+                                modifier = Modifier.weight(1f)
+                            )
+                            Switch(
+                                checked = notifyAverageDue,
+                                onCheckedChange = { notifyAverageDue = it }
+                            )
+                        }
+                    }
+                },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            // Save notification settings to Firebase
+                            if (familySharingManager.isSharingEnabled) {
+                                val deviceId = DeviceIdProvider.deviceId
+                                if (deviceId != null) {
+                                    val firebaseService = FirebaseService()
+                                    firebaseService.updateNotificationSettings(
+                                        deviceId,
+                                        NotificationSettings(
+                                            notifyItemsAdded = notifyItemsAdded,
+                                            notifyExpiration = notifyExpiration,
+                                            notifyAverageDue = notifyAverageDue
+                                        )
+                                    )
+                                }
+                            }
+                            showNotificationSettings = false
+                        }
+                    ) {
+                        Text("Save")
+                    }
+                },
+                dismissButton = {
+                    Button(
+                        onClick = { showNotificationSettings = false }
+                    ) {
+                        Text("Cancel")
+                    }
                 }
             )
         }
