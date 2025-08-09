@@ -251,6 +251,34 @@ class FirebaseService {
             println("Error registering device: ${e.message}")
         }
     }
+
+    // Update FCM token for this device
+    fun updateFcmToken(deviceId: String, token: String) {
+        try {
+            db.collection(DEVICE_REGISTRATIONS_COLLECTION)
+                .document(deviceId)
+                .update(mapOf("fcmToken" to token))
+                .addOnSuccessListener { println("FCM token updated for device: $deviceId") }
+                .addOnFailureListener { e -> println("Failed to update FCM token: ${e.message}") }
+        } catch (e: Exception) {
+            println("Error updating FCM token: ${e.message}")
+        }
+    }
+
+    // Update per-device notification settings
+    fun updateNotificationSettings(deviceId: String, settings: NotificationSettings) {
+        try {
+            db.collection(DEVICE_REGISTRATIONS_COLLECTION)
+                .document(deviceId)
+                .update(mapOf(
+                    "notificationSettings" to settings
+                ))
+                .addOnSuccessListener { println("Notification settings updated for device: $deviceId") }
+                .addOnFailureListener { e -> println("Failed to update notification settings: ${e.message}") }
+        } catch (e: Exception) {
+            println("Error updating notification settings: ${e.message}")
+        }
+    }
     
     // Enhanced update family project with better conflict resolution and offline support
     suspend fun updateFamilyProject(
@@ -353,12 +381,30 @@ class FirebaseService {
                 a.isBought == b.isBought
         }
 
+        // More lenient rename detection: allow differences in expiration/avg/lastTime; require same category,
+        // same buyEvents, and same boolean flags to reduce false positives
+        fun isPotentialRenameRelaxed(a: GroceryWithDate, b: GroceryWithDate): Boolean {
+            return a.customCategoryId == b.customCategoryId &&
+                a.buyEvents == b.buyEvents &&
+                a.inShoppingList == b.inShoppingList &&
+                a.isBought == b.isBought
+        }
+
         // Detect potential category moves: same name, different category, otherwise identical
         fun equalsExceptCategory(a: GroceryWithDate, b: GroceryWithDate): Boolean {
             return a.name.equals(b.name, ignoreCase = true) &&
                 a.expirationDate == b.expirationDate &&
                 a.lastTimeBoughtDays == b.lastTimeBoughtDays &&
                 a.averageBuyingDays == b.averageBuyingDays &&
+                a.buyEvents == b.buyEvents &&
+                a.inShoppingList == b.inShoppingList &&
+                a.isBought == b.isBought &&
+                a.customCategoryId != b.customCategoryId
+        }
+
+        // More lenient move detection: same name, different category; allow differences in expiration/avg/lastTime
+        fun isPotentialMoveRelaxed(a: GroceryWithDate, b: GroceryWithDate): Boolean {
+            return a.name.equals(b.name, ignoreCase = true) &&
                 a.buyEvents == b.buyEvents &&
                 a.inShoppingList == b.inShoppingList &&
                 a.isBought == b.isBought &&
@@ -376,6 +422,7 @@ class FirebaseService {
         for (localKey in localOnlyKeys) {
             val localItem = localMap[localKey] ?: continue
             // find firebase candidate(s) in same category with same attributes except name
+            // Strict rename candidates (all equal except name)
             val candidates = firebaseOnlyKeys.mapNotNull { fKey ->
                 val fItem = firebaseMap[fKey]
                 if (fItem != null && fItem.customCategoryId == localItem.customCategoryId && equalsExceptName(localItem, fItem)) {
@@ -386,6 +433,18 @@ class FirebaseService {
                 // Treat as rename: prefer local (new name), drop the old firebase one
                 val (oldKey, _) = candidates.first()
                 renamePairs[oldKey] = localItem
+            } else if (candidates.isEmpty()) {
+                // Relaxed rename candidates (allow date/avg/lastTime changes)
+                val relaxed = firebaseOnlyKeys.mapNotNull { fKey ->
+                    val fItem = firebaseMap[fKey]
+                    if (fItem != null && fItem.customCategoryId == localItem.customCategoryId && isPotentialRenameRelaxed(localItem, fItem)) {
+                        fKey to fItem
+                    } else null
+                }
+                if (relaxed.size == 1) {
+                    val (oldKey, _) = relaxed.first()
+                    renamePairs[oldKey] = localItem
+                }
             }
 
             // If not a rename, check for category move (same name, different category)
@@ -399,6 +458,17 @@ class FirebaseService {
                 if (moveCandidates.size == 1) {
                     val (oldKey, _) = moveCandidates.first()
                     movePairs[oldKey] = localItem
+                } else if (moveCandidates.isEmpty()) {
+                    val relaxedMoves = firebaseOnlyKeys.mapNotNull { fKey ->
+                        val fItem = firebaseMap[fKey]
+                        if (fItem != null && isPotentialMoveRelaxed(localItem, fItem)) {
+                            fKey to fItem
+                        } else null
+                    }
+                    if (relaxedMoves.size == 1) {
+                        val (oldKey, _) = relaxedMoves.first()
+                        movePairs[oldKey] = localItem
+                    }
                 }
             }
         }
@@ -589,11 +659,20 @@ data class DeviceRegistration(
     val deviceId: String = "",
     val projectId: String = "",
     val joinedAt: Long = 0L,
-    val lastSync: Long = 0L
+    val lastSync: Long = 0L,
+    val fcmToken: String = "",
+    val notificationSettings: NotificationSettings = NotificationSettings()
 ) {
     // No-argument constructor for Firestore
-    constructor() : this("", "", 0L, 0L)
+    constructor() : this("", "", 0L, 0L, "", NotificationSettings())
 }
+
+// Notification settings per device
+data class NotificationSettings(
+    val notifyItemsAdded: Boolean = true,
+    val notifyExpiration: Boolean = true,
+    val notifyAverageDue: Boolean = true
+)
 
 // Enhanced data class for offline queue
 data class OfflineUpdate(

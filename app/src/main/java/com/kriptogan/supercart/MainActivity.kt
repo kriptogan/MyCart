@@ -787,6 +787,17 @@ fun SuperCartApp() {
 
     // Family sharing manager
     val firebaseService = remember { FirebaseService() }
+    // Request notification permission on Android 13+
+    LaunchedEffect(Unit) {
+        if (android.os.Build.VERSION.SDK_INT >= 33) {
+            val permission = android.Manifest.permission.POST_NOTIFICATIONS
+            val pm = androidx.core.content.ContextCompat.checkSelfPermission(context, permission)
+            if (pm != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                // Best effort; actual runtime request should be handled via Activity Result API if desired
+                // Keeping minimal here to avoid heavy scaffolding
+            }
+        }
+    }
     val familySharingManager = remember { 
         FamilySharingManager(firebaseService, scope)
     }

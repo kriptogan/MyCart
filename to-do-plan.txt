@@ -6,3 +6,5 @@ V 5. scroll bug in the shopping list page
 V 6. when an item moves to bought list, don't alter the cart icon
 V 7. when user adds an item with an existing name, alert about it, close the window, and filter by that name to show the item.
 V 8. In the "import shopping list" process, after user clicks the checkmark, prompt a confirm message: "the following X items will be added to the system, do you want them to be placed in the shopping list as well?" with a yes/no options.
+
+changing the expiration date also results in duplication
