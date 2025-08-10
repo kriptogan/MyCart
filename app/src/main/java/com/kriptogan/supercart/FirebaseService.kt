@@ -7,6 +7,7 @@ import kotlinx.coroutines.tasks.await
 import java.util.UUID
 import kotlin.random.Random
 import kotlinx.coroutines.delay
+import android.content.Context
 
 class FirebaseService {
     private val db = FirebaseFirestore.getInstance()
@@ -277,6 +278,26 @@ class FirebaseService {
                 .addOnFailureListener { e -> println("Failed to update notification settings: ${e.message}") }
         } catch (e: Exception) {
             println("Error updating notification settings: ${e.message}")
+        }
+    }
+    
+    // Load notification settings for a device
+    suspend fun loadNotificationSettings(deviceId: String): NotificationSettings? {
+        return try {
+            val snapshot = db.collection(DEVICE_REGISTRATIONS_COLLECTION)
+                .document(deviceId)
+                .get()
+                .await()
+            
+            if (snapshot.exists()) {
+                val registration = snapshot.toObject(DeviceRegistration::class.java)
+                registration?.notificationSettings ?: NotificationSettings()
+            } else {
+                NotificationSettings()
+            }
+        } catch (e: Exception) {
+            println("Error loading notification settings: ${e.message}")
+            NotificationSettings()
         }
     }
     
@@ -625,6 +646,11 @@ class FirebaseService {
     }
     
     // Get device ID (unique identifier for this device)
+    suspend fun getDeviceId(context: Context): String {
+        return DeviceIdProvider.getOrCreateDeviceId(context)
+    }
+    
+    // Get device ID without context (for backward compatibility)
     fun getDeviceId(): String {
         // Use a stable device id when available (set at app start)
         val cached = DeviceIdProvider.deviceId

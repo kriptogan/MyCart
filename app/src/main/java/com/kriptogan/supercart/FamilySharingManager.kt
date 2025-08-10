@@ -8,6 +8,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
 import com.google.firebase.firestore.ListenerRegistration
 import java.util.concurrent.atomic.AtomicInteger
+import com.kriptogan.supercart.FirebaseFunctionsHelper
 
 class FamilySharingManager(
     private val firebaseService: FirebaseService,
@@ -578,9 +579,36 @@ class FamilySharingManager(
                 try {
                     // This will trigger the real-time listener immediately
                     firebaseService.updateFamilyProject(currentProjectId!!, emptyList(), emptyList())
+                    
+                    // Check for expired items after successful sync
+                    checkExpiredItemsAfterSync()
                 } catch (e: Exception) {
                     println("Error in force sync update: ${e.message}")
                 }
+            }
+        }
+    }
+    
+    // Check for expired items after sync operations
+    private suspend fun checkExpiredItemsAfterSync() {
+        if (isSharingEnabled && currentProjectId != null) {
+            try {
+                FirebaseFunctionsHelper.checkExpiredItems(
+                    currentProjectId!!,
+                    onSuccess = { result ->
+                        val expiredCount = result["expiredItems"] ?: 0
+                        val expiringCount = result["expiringItems"] ?: 0
+                        val dueCount = result["dueItems"] ?: 0
+                        val notificationsSent = result["notificationsSent"] ?: 0
+                        
+                        println("After sync - Expired items: $expiredCount, Expiring soon: $expiringCount, Due for purchase: $dueCount, Notifications sent: $notificationsSent")
+                    },
+                    onFailure = { error ->
+                        println("Failed to check expired items after sync: $error")
+                    }
+                )
+            } catch (e: Exception) {
+                println("Error checking expired items after sync: ${e.message}")
             }
         }
     }

@@ -41,6 +41,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.Switch
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -78,6 +79,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.filled.Add
 import androidx.datastore.core.DataStore
 import androidx.datastore.core.Serializer
@@ -97,6 +99,11 @@ import androidx.compose.material3.BadgedBox
 import androidx.compose.material.icons.filled.Warning
 import java.time.temporal.ChronoUnit
 import androidx.compose.material.icons.filled.Edit
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
+import android.Manifest
+import android.content.pm.PackageManager
+import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.material3.Switch
@@ -132,6 +139,8 @@ import androidx.room.util.copy
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.runtime.key
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Notifications
+import com.kriptogan.supercart.FirebaseFunctionsHelper
 
 // Custom string resource system
 object StringResources {
@@ -210,6 +219,10 @@ object StringResources {
                  "confirm_leave_family_message" to "הנתונים המקומיים יישארו, אך לא יהיו מקושרים יותר למשפחה זו.",
                  "create_family_confirm" to "האם ברצונך ליצור משפחה חדשה עם הנתונים הנוכחיים?",
                  "create_family_confirm_message" to "הנתונים המקומיים יועלו לענן לשיתוף.",
+        "notification_settings" to "הגדרות התראות",
+        "notify_items_added" to "התראות על פריטים שנוספו",
+        "notify_expiration" to "התראות על תפוגה",
+        "notify_average_due" to "התראות על ממוצע קנייה",
                  "creating" to "יוצר...",
                  "joining" to "מצטרף...",
                  "uploading_data" to "מעלה נתונים לענן",
@@ -443,6 +456,10 @@ object StringResources {
                  "confirm_leave_family_message" to "Локальные данные останутся, но больше не будут связаны с этой семьей.",
                  "create_family_confirm" to "Хотите создать новую семью с текущими данными?",
                  "create_family_confirm_message" to "Локальные данные будут загружены в облако для совместного использования.",
+        "notification_settings" to "Настройки уведомлений",
+        "notify_items_added" to "Уведомления о добавленных товарах",
+        "notify_expiration" to "Уведомления об истечении срока",
+        "notify_average_due" to "Уведомления о среднем периоде покупки",
                  "creating" to "Создание...",
                  "joining" to "Присоединение...",
                  "uploading_data" to "Загрузка данных в облако",
@@ -738,6 +755,43 @@ data class TabItem(
 
 
 class MainActivity : ComponentActivity() {
+    private val requestPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted: Boolean ->
+        if (isGranted) {
+            // Permission granted, notifications can be shown
+            println("Notification permission granted")
+        } else {
+            // Permission denied, show explanation or handle gracefully
+            println("Notification permission denied")
+        }
+    }
+    
+    private fun requestNotificationPermission() {
+        if (android.os.Build.VERSION.SDK_INT >= 33) {
+            val permission = Manifest.permission.POST_NOTIFICATIONS
+            when {
+                ContextCompat.checkSelfPermission(this, permission) == PackageManager.PERMISSION_GRANTED -> {
+                    // Permission already granted
+                    println("Notification permission already granted")
+                }
+                shouldShowRequestPermissionRationale(permission) -> {
+                    // Show rationale dialog
+                    showPermissionRationaleDialog()
+                }
+                else -> {
+                    // Request permission
+                    requestPermissionLauncher.launch(permission)
+                }
+            }
+        }
+    }
+    
+    private fun showPermissionRationaleDialog() {
+        // Show a dialog explaining why notifications are needed
+        // This is a simple implementation - you might want to make this more sophisticated
+        println("Showing permission rationale")
+    }
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
@@ -752,16 +806,11 @@ class MainActivity : ComponentActivity() {
         }
         
         enableEdgeToEdge()
-        // Initialize stable device id
-        val prefs = getSharedPreferences("supercart_prefs", MODE_PRIVATE)
-        val existingId = prefs.getString("device_id", null)
-        if (existingId == null) {
-            val newId = java.util.UUID.randomUUID().toString()
-            prefs.edit().putString("device_id", newId).apply()
-            DeviceIdProvider.deviceId = newId
-        } else {
-            DeviceIdProvider.deviceId = existingId
-        }
+        
+        // Request notification permission on Android 13+
+        requestNotificationPermission()
+        
+        // Initialize stable device id using DeviceIdProvider (will be done in LaunchedEffect)
 
         setContent {
             SuperCartTheme {
@@ -820,19 +869,57 @@ fun SuperCartApp() {
 
     // Family sharing manager
     val firebaseService = remember { FirebaseService() }
-    // Request notification permission on Android 13+
+    
+    // Notification settings state
+    var notifyItemsAdded by remember { mutableStateOf(true) }
+    var notifyExpiration by remember { mutableStateOf(true) }
+    var notifyAverageDue by remember { mutableStateOf(true) }
+    
+    // Initialize stable device ID using DeviceIdProvider
     LaunchedEffect(Unit) {
-        if (android.os.Build.VERSION.SDK_INT >= 33) {
-            val permission = android.Manifest.permission.POST_NOTIFICATIONS
-            val pm = androidx.core.content.ContextCompat.checkSelfPermission(context, permission)
-            if (pm != android.content.pm.PackageManager.PERMISSION_GRANTED) {
-                // Best effort; actual runtime request should be handled via Activity Result API if desired
-                // Keeping minimal here to avoid heavy scaffolding
-            }
-        }
+        DeviceIdProvider.getOrCreateDeviceId(context)
     }
+    
     val familySharingManager = remember { 
         FamilySharingManager(firebaseService, scope)
+    }
+    
+
+    
+    // Load notification settings from Firebase when family sharing is enabled
+    LaunchedEffect(familySharingManager.isSharingEnabled) {
+        if (familySharingManager.isSharingEnabled) {
+            val deviceId = DeviceIdProvider.deviceId
+            if (deviceId != null) {
+                // Load notification settings from Firebase
+                scope.launch {
+                    val settings = firebaseService.loadNotificationSettings(deviceId)
+                    settings?.let {
+                        notifyItemsAdded = it.notifyItemsAdded
+                        notifyExpiration = it.notifyExpiration
+                        notifyAverageDue = it.notifyAverageDue
+                    }
+                }
+                
+                // Check for expired items when app opens (manual trigger)
+                if (familySharingManager.currentProjectId?.isNotEmpty() == true) {
+                    FirebaseFunctionsHelper.checkExpiredItems(
+                        familySharingManager.currentProjectId!!,
+                        onSuccess = { result ->
+                            val expiredCount = result["expiredItems"] ?: 0
+                            val expiringCount = result["expiringItems"] ?: 0
+                            val dueCount = result["dueItems"] ?: 0
+                            val notificationsSent = result["notificationsSent"] ?: 0
+                            
+                            println("App opened - Expired items: $expiredCount, Expiring soon: $expiringCount, Due for purchase: $dueCount, Notifications sent: $notificationsSent")
+                        },
+                        onFailure = { error ->
+                            println("Failed to check expired items on app open: $error")
+                        }
+                    )
+                }
+            }
+        }
     }
     
     // Set up the callback after familySharingManager is created
@@ -1899,6 +1986,19 @@ fun HomeScreen(
                                     }
                                 }
                                 onUpdateGroceries(updatedGroceries)
+                                
+                                // Trigger notification for newly added items
+                                val newItems = pendingImportNames.filter { itemName ->
+                                    groceries.none { it.name.equals(itemName, ignoreCase = true) }
+                                }
+                                if (familySharingManager.isSharingEnabled && newItems.isNotEmpty()) {
+                                    familySharingManager.currentProjectId?.let { projectId ->
+                                        FirebaseFunctionsHelper.triggerShoppingListNotification(
+                                            projectId,
+                                            newItems
+                                        )
+                                    }
+                                }
                             }
                             // cleanup
                             showImportConfirmDialog = false
@@ -2400,6 +2500,17 @@ fun HomeScreen(
                                     inShoppingList = true
                                 )
                                 onUpdateGroceries(updatedGroceries)
+                                
+                                // Trigger notification for newly added item
+                                if (familySharingManager.isSharingEnabled) {
+                                    familySharingManager.currentProjectId?.let { projectId ->
+                                        FirebaseFunctionsHelper.triggerShoppingListNotification(
+                                            projectId,
+                                            listOf(name)
+                                        )
+                                    }
+                                }
+                                
                                 showAddToShoppingListConfirm = false
                                 showDialog = false
                                 name = ""
@@ -3177,6 +3288,86 @@ fun ShoppingListScreen(
     }
 
     LazyColumn(modifier = Modifier.fillMaxSize().padding(16.dp)) {
+        // Bell icon for manual notifications and refresh button
+        if (familySharingManager.isSharingEnabled && shoppingList.isNotEmpty()) {
+            item {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 16.dp),
+                    horizontalArrangement = Arrangement.End
+                ) {
+                    // Refresh button to check for expired items
+                    IconButton(
+                        onClick = {
+                            // Check for expired items and send notifications
+                            if (familySharingManager.isSharingEnabled) {
+                                familySharingManager.currentProjectId?.let { projectId ->
+                                    FirebaseFunctionsHelper.checkExpiredItems(
+                                        projectId,
+                                        onSuccess = { result ->
+                                            val expiredCount = result["expiredItems"] ?: 0
+                                            val expiringCount = result["expiringItems"] ?: 0
+                                            val dueCount = result["dueItems"] ?: 0
+                                            val notificationsSent = result["notificationsSent"] ?: 0
+                                            
+                                            println("Expired items: $expiredCount, Expiring soon: $expiringCount, Due for purchase: $dueCount, Notifications sent: $notificationsSent")
+                                        },
+                                        onFailure = { error ->
+                                            println("Failed to check expired items: $error")
+                                        }
+                                    )
+                                }
+                            }
+                        },
+                        modifier = Modifier
+                            .size(48.dp)
+                            .background(
+                                Color(0xFF2196F3),
+                                shape = CircleShape
+                            )
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Refresh,
+                            contentDescription = "Check for expired items",
+                            tint = Color.White,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                    
+                    Spacer(modifier = Modifier.width(8.dp))
+                    
+                    // Bell icon for shopping list notifications
+                    IconButton(
+                        onClick = {
+                            // Trigger notification to family members about new shopping list items
+                            if (familySharingManager.isSharingEnabled) {
+                                familySharingManager.currentProjectId?.let { projectId ->
+                                    FirebaseFunctionsHelper.triggerShoppingListNotification(
+                                        projectId,
+                                        shoppingList.map { it.name }
+                                    )
+                                }
+                            }
+                        },
+                        modifier = Modifier
+                            .size(48.dp)
+                            .background(
+                                Color(0xFF4CAF50),
+                                shape = CircleShape
+                            )
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Notifications,
+                            contentDescription = "Notify family about shopping list",
+                            tint = Color.White,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                }
+            }
+        }
+        
         orderedCategories.forEach { category ->
             val itemsInCategory = shoppingList.filter { it.customCategoryId == category.id && !it.isBought }
             if (itemsInCategory.isNotEmpty()) {
@@ -3347,6 +3538,16 @@ fun ShoppingListScreen(
                                     }
                                 }
                                 onUpdateGroceries(updatedGroceries)
+                                
+                                // Trigger notification for item returned to shopping list
+                                if (familySharingManager.isSharingEnabled) {
+                                    familySharingManager.currentProjectId?.let { projectId ->
+                                        FirebaseFunctionsHelper.triggerShoppingListNotification(
+                                            projectId,
+                                            listOf(boughtItem.name)
+                                        )
+                                    }
+                                }
                             },
                             modifier = Modifier.padding(start = 4.dp)
                         ) {
