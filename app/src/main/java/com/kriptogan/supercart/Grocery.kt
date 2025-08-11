@@ -2,6 +2,11 @@ package com.kriptogan.supercart
 
 import java.time.LocalDate
 import kotlinx.serialization.Serializable
+import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.edit
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.runBlocking
+import androidx.datastore.preferences.preferencesDataStore
 
 // Custom category data class
 @Serializable
@@ -272,8 +277,52 @@ fun List<Grocery>.assignMissingIds(startingId: Int = 1): List<Grocery> {
 // Check if any groceries in the list are missing IDs
 fun List<Grocery>.hasMissingIds(): Boolean = any { it.id == 0 }
 
-// Get the next available ID for new groceries
-fun List<GroceryWithDate>.getNextId(): Int = (maxOfOrNull { it.id } ?: 0) + 1
+// Object to track and persist the last used ID
+private object GroceryIdTracker {
+    private var lastUsedId: Int = 0
+    private val LAST_USED_ID_KEY = intPreferencesKey("last_used_grocery_id")
+    
+    fun getAndIncrementId(currentItems: List<GroceryWithDate>, context: android.content.Context): Int {
+        // First time: try to get from DataStore, fallback to max ID from items
+        if (lastUsedId == 0) {
+            lastUsedId = runBlocking {
+                try {
+                    // Try to get from DataStore
+                    val dataStore = context.groceryIdDataStore
+                    val storedId = dataStore.data.first()[LAST_USED_ID_KEY] ?: 0
+                    maxOf(storedId, currentItems.maxOfOrNull { it.id } ?: 0)
+                } catch (e: Exception) {
+                    // Fallback to max ID from items if DataStore fails
+                    currentItems.maxOfOrNull { it.id } ?: 0
+                }
+            }
+        }
+        
+        val nextId = ++lastUsedId
+        
+        // Persist the new ID
+        runBlocking {
+            try {
+                context.groceryIdDataStore.edit { preferences ->
+                    preferences[LAST_USED_ID_KEY] = nextId
+                }
+            } catch (e: Exception) {
+                println("Failed to persist last used ID: ${e.message}")
+            }
+        }
+        
+        return nextId
+    }
+}
+
+// Extension property for easy DataStore access
+private val android.content.Context.groceryIdDataStore by androidx.datastore.preferences.preferencesDataStore(
+    name = "grocery_id_prefs"
+)
+
+// Get the next available ID for new groceries (auto-increment)
+fun List<GroceryWithDate>.getNextId(context: android.content.Context): Int = 
+    GroceryIdTracker.getAndIncrementId(this, context)
 
 fun List<java.time.LocalDate>.averageDaysBetween(): Int? {
     if (size < 2) return null

@@ -1835,7 +1835,7 @@ fun HomeScreen(
                                         // keep existing state; do not force into shopping list
                                         // no-op or ensure inShoppingList remains as-is
                                     } else {
-                                        val newId = updatedGroceries.getNextId()
+                                        val newId = updatedGroceries.getNextId(context)
                                         updatedGroceries.add(
                                             GroceryWithDate(
                                                 id = newId,
@@ -1872,7 +1872,7 @@ fun HomeScreen(
                                             lastUpdate = System.currentTimeMillis()
                                         )
                                     } else {
-                                        val newId = updatedGroceries.getNextId()
+                                        val newId = updatedGroceries.getNextId(context)
                                         updatedGroceries.add(
                                             GroceryWithDate(
                                                 id = newId,
@@ -2346,6 +2346,7 @@ fun HomeScreen(
         
         // Add to shopping list confirmation dialog
         if (showAddToShoppingListConfirm) {
+            val context = LocalContext.current
             AlertDialog(
                 onDismissRequest = { 
                     showAddToShoppingListConfirm = false
@@ -2363,7 +2364,7 @@ fun HomeScreen(
                         Button(
                             onClick = { 
                                 // Add item without shopping list
-                                val newId = groceries.getNextId()
+                                val newId = groceries.getNextId(context)
                                 val updatedGroceries = groceries + GroceryWithDate(
                                     id = newId,
                                     name = name,
@@ -2385,7 +2386,7 @@ fun HomeScreen(
                         Button(
                             onClick = { 
                                 // Add item with shopping list
-                                val newId = groceries.getNextId()
+                                val newId = groceries.getNextId(context)
                                 val updatedGroceries = groceries + GroceryWithDate(
                                     id = newId,
                                     name = name,
