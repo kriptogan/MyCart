@@ -165,6 +165,7 @@ object StringResources {
                          "add_item_title" to "הוסף מצרך",
                  "edit_item_title" to "ערוך מצרך",
                  "item_name" to "שם המצרך",
+                 "last_update" to "עודכן לאחרונה",
                  "choose_category" to "בחר קטגוריה",
                  "expiration_date" to "בחר תאריך תפוגה (אופציונלי)",
                  "confirm_delete" to "אישור מחיקה",
@@ -278,6 +279,7 @@ object StringResources {
                          "add_item_title" to "Add Item",
                  "edit_item_title" to "Edit Item",
                  "item_name" to "Item Name",
+                 "last_update" to "Last Updated",
                  "choose_category" to "Choose Category",
                  "expiration_date" to "Choose expiration date (optional)",
                  "confirm_delete" to "Confirm Delete",
@@ -391,6 +393,7 @@ object StringResources {
                          "add_item_title" to "Добавить товар",
                  "edit_item_title" to "Редактировать товар",
                  "item_name" to "Название товара",
+                 "last_update" to "Последнее обновление",
                  "choose_category" to "Выберите категорию",
                  "expiration_date" to "Выберите дату истечения срока (необязательно)",
                  "confirm_delete" to "Подтвердить удаление",
@@ -505,6 +508,7 @@ object StringResources {
         "add_item_title" to "Добави артикул",
         "edit_item_title" to "Редактирай артикул",
         "item_name" to "Име на артикула",
+        "last_update" to "Последна актуализация",
         "choose_category" to "Избери категория",
         "expiration_date" to "Избери дата на изтичане (по желание)",
         "confirm_delete" to "Потвърди изтриване",
@@ -712,6 +716,59 @@ fun localizedCategoryName(categoryName: String, language: String): String {
 @Composable
 fun getOriginalCategoryName(translatedName: String, language: String): String {
     return StringResources.getOriginalCategoryName(translatedName, language)
+}
+
+// Helper function to format timestamps for display
+fun formatTimestamp(timestamp: Long, language: String): String {
+    if (timestamp == 0L) return when (language) {
+        "iw" -> "לא זמין"
+        "ru" -> "Не доступно"
+        else -> "Not available"
+    }
+    
+    val now = System.currentTimeMillis()
+    val diff = now - timestamp
+    
+    return when {
+        diff < 60000 -> when (language) { // Less than 1 minute
+            "iw" -> "עכשיו"
+            "ru" -> "Сейчас"
+            else -> "Just now"
+        }
+        diff < 3600000 -> { // Less than 1 hour
+            val minutes = diff / 60000
+            when (language) {
+                "iw" -> "לפני $minutes דקות"
+                "ru" -> "$minutes минут назад"
+                else -> "$minutes minutes ago"
+            }
+        }
+        diff < 86400000 -> { // Less than 1 day
+            val hours = diff / 3600000
+            when (language) {
+                "iw" -> "לפני $hours שעות"
+                "ru" -> "$hours часов назад"
+                else -> "$hours hours ago"
+            }
+        }
+        diff < 604800000 -> { // Less than 1 week
+            val days = diff / 86400000
+            when (language) {
+                "iw" -> "לפני $days ימים"
+                "ru" -> "$days дней назад"
+                else -> "$days days ago"
+            }
+        }
+        else -> {
+            // Format as actual date
+            val date = java.text.SimpleDateFormat("dd/MM/yyyy HH:mm", java.util.Locale.getDefault())
+            when (language) {
+                "iw" -> "ב-${date.format(java.util.Date(timestamp))}"
+                "ru" -> "в ${date.format(java.util.Date(timestamp))}"
+                else -> "on ${date.format(java.util.Date(timestamp))}"
+            }
+        }
+    }
 }
 
 data class TabItem(
@@ -944,7 +1001,7 @@ fun SuperCartApp() {
                         onAddToShoppingList = { grocery ->
                             groceries = groceries.map {
                                 if (it.name == grocery.name && it.customCategoryId == grocery.customCategoryId) {
-                                    it.copy(inShoppingList = !it.inShoppingList)
+                                    it.copy(inShoppingList = !it.inShoppingList, lastUpdate = System.currentTimeMillis())
                                 } else {
                                     it
                                 }
@@ -1558,7 +1615,8 @@ fun HomeScreen(
                                                 name = name,
                                                 customCategoryId = selectedCustomCategoryId,
                                                 expirationDate = expirationDate,
-                                                inShoppingList = inShoppingList
+                                                inShoppingList = inShoppingList,
+                                                lastUpdate = System.currentTimeMillis()
                                             )
                                         }
                                         onUpdateGroceries(updatedGroceries)
@@ -1646,6 +1704,14 @@ fun HomeScreen(
                                     Text(localizedString("buy_history_button", selectedLanguage, currentGrocery.buyEvents.size))
                                 }
                             }
+                            // Last update timestamp
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = "${localizedString("last_update", selectedLanguage)}: ${formatTimestamp(currentGrocery.lastUpdate, selectedLanguage)}",
+                                style = androidx.compose.material3.MaterialTheme.typography.bodySmall,
+                                color = Color.Gray,
+                                modifier = Modifier.fillMaxWidth()
+                            )
                         }
                     }
                 }
@@ -1793,7 +1859,8 @@ fun HomeScreen(
                                     val existingIndex = updatedGroceries.indexOfFirst { it.name.equals(itemName, ignoreCase = true) }
                                     if (existingIndex != -1) {
                                         updatedGroceries[existingIndex] = updatedGroceries[existingIndex].copy(
-                                            inShoppingList = true
+                                            inShoppingList = true,
+                                            lastUpdate = System.currentTimeMillis()
                                         )
                                     } else {
                                         updatedGroceries.add(
@@ -2178,7 +2245,8 @@ fun HomeScreen(
                                         id = newId,
                                         name = newCategoryName,
                                         default = false,
-                                        viewOrder = newViewOrder
+                                        viewOrder = newViewOrder,
+                                        lastUpdate = System.currentTimeMillis()
                                     )
                                     
                                     val updatedCategories = customCategories + newCategory
@@ -3036,7 +3104,7 @@ fun ShoppingListScreen(
                                                 println("DEBUG: Shopping list - marking '${grocery.name}' as bought")
                                                 val updatedGroceries = groceries.map {
                                                     if (it.name == grocery.name && it.customCategoryId == grocery.customCategoryId) {
-                                                        it.copy(isBought = true)
+                                                        it.copy(isBought = true, lastUpdate = System.currentTimeMillis())
                                                     } else {
                                                         it
                                                     }
@@ -3122,7 +3190,7 @@ fun ShoppingListScreen(
                                 // Return item to shopping list
                                 val updatedGroceries = groceries.map {
                                     if (it.name == boughtItem.name && it.customCategoryId == boughtItem.customCategoryId) {
-                                        it.copy(isBought = false, inShoppingList = true)
+                                        it.copy(isBought = false, inShoppingList = true, lastUpdate = System.currentTimeMillis())
                                     } else {
                                         it
                                     }
@@ -3266,6 +3334,16 @@ fun ShoppingListScreen(
                                 DatePicker(state = datePickerState)
                             }
                         }
+                    }
+                    // Last update timestamp
+                    if (editGrocery != null) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = "${localizedString("last_update", selectedLanguage)}: ${formatTimestamp(editGrocery!!.lastUpdate, selectedLanguage)}",
+                            style = androidx.compose.material3.MaterialTheme.typography.bodySmall,
+                            color = Color.Gray,
+                            modifier = Modifier.fillMaxWidth()
+                        )
                     }
                 }
             }
@@ -3445,7 +3523,9 @@ suspend fun Context.migrateGroceriesToCustomCategories() {
                 lastTimeBoughtDays = grocery.lastTimeBoughtDays,
                 averageBuyingDays = grocery.averageBuyingDays,
                 buyEvents = grocery.buyEvents,
-                inShoppingList = grocery.inShoppingList
+                inShoppingList = grocery.inShoppingList,
+                isBought = false, // Set default for old data
+                lastUpdate = System.currentTimeMillis() // Add timestamp for old data
             )
         }
         
