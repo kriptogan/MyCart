@@ -252,33 +252,7 @@ class FirebaseService {
         }
     }
 
-    // Update FCM token for this device
-    fun updateFcmToken(deviceId: String, token: String) {
-        try {
-            db.collection(DEVICE_REGISTRATIONS_COLLECTION)
-                .document(deviceId)
-                .update(mapOf("fcmToken" to token))
-                .addOnSuccessListener { println("FCM token updated for device: $deviceId") }
-                .addOnFailureListener { e -> println("Failed to update FCM token: ${e.message}") }
-        } catch (e: Exception) {
-            println("Error updating FCM token: ${e.message}")
-        }
-    }
 
-    // Update per-device notification settings
-    fun updateNotificationSettings(deviceId: String, settings: NotificationSettings) {
-        try {
-            db.collection(DEVICE_REGISTRATIONS_COLLECTION)
-                .document(deviceId)
-                .update(mapOf(
-                    "notificationSettings" to settings
-                ))
-                .addOnSuccessListener { println("Notification settings updated for device: $deviceId") }
-                .addOnFailureListener { e -> println("Failed to update notification settings: ${e.message}") }
-        } catch (e: Exception) {
-            println("Error updating notification settings: ${e.message}")
-        }
-    }
     
     // Enhanced update family project with better conflict resolution and offline support
     suspend fun updateFamilyProject(
@@ -659,20 +633,11 @@ data class DeviceRegistration(
     val deviceId: String = "",
     val projectId: String = "",
     val joinedAt: Long = 0L,
-    val lastSync: Long = 0L,
-    val fcmToken: String = "",
-    val notificationSettings: NotificationSettings = NotificationSettings()
+    val lastSync: Long = 0L
 ) {
     // No-argument constructor for Firestore
-    constructor() : this("", "", 0L, 0L, "", NotificationSettings())
+    constructor() : this("", "", 0L, 0L)
 }
-
-// Notification settings per device
-data class NotificationSettings(
-    val notifyItemsAdded: Boolean = true,
-    val notifyExpiration: Boolean = true,
-    val notifyAverageDue: Boolean = true
-)
 
 // Enhanced data class for offline queue
 data class OfflineUpdate(

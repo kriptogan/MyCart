@@ -99,7 +99,7 @@ import java.time.temporal.ChronoUnit
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.material3.Switch
+
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.CircularProgressIndicator
@@ -226,11 +226,7 @@ object StringResources {
         "duplicate_item_message" to "קיים פריט בשם '%s'. מה ברצונך לעשות?",
         "back" to "חזרה",
         "show" to "הצג",
-        // Notification settings
-        "notification_settings" to "הגדרות התראות",
-        "notify_items_added" to "התראה כאשר פריטים נוספים לרשימת הקניות",
-        "notify_expiration" to "התראה כאשר פריטים פוגים",
-        "notify_average_due" to "התראה כאשר פריטים מגיעים לתקופת הקנייה הממוצעת",
+
                  // Category translations
                  "אחר" to "אחר",
                  "פירות" to "פירות",
@@ -343,11 +339,7 @@ object StringResources {
         "duplicate_item_message" to "An item named '%s' already exists. What would you like to do?",
         "back" to "Back",
         "show" to "Show",
-        // Notification settings
-        "notification_settings" to "Notification Settings",
-        "notify_items_added" to "Notify when items are added to shopping list",
-        "notify_expiration" to "Notify when items expire",
-        "notify_average_due" to "Notify when items are due for average buying period",
+
                  // Category translations
                  "אחר" to "Other",
                  "פירות" to "Fruits",
@@ -460,11 +452,7 @@ object StringResources {
         "duplicate_item_message" to "Товар с названием '%s' уже существует. Что вы хотите сделать?",
         "back" to "Назад",
         "show" to "Показать",
-        // Notification settings
-        "notification_settings" to "Настройки уведомлений",
-        "notify_items_added" to "Уведомлять при добавлении товаров в список покупок",
-        "notify_expiration" to "Уведомлять при истечении срока товаров",
-        "notify_average_due" to "Уведомлять при наступлении среднего периода покупки товаров",
+
                  // Category translations
                  "אחר" to "Другое",
                  "פירות" to "Фрукты",
@@ -537,11 +525,7 @@ object StringResources {
         "duplicate_item_message" to "Артикул с име '%s' вече съществува. Какво искате да направите?",
         "back" to "Назад",
         "show" to "Покажи",
-        // Notification settings
-        "notification_settings" to "Настройки за известия",
-        "notify_items_added" to "Известяване при добавяне на артикули в списъка за пазаруване",
-        "notify_expiration" to "Известяване при изтичане на артикули",
-        "notify_average_due" to "Известяване при настъпване на средния период на покупка на артикули",
+
         "yes" to "Да",
         "no" to "Не",
         "return_to_shopping_list" to "Върни в списъка за пазаруване",
@@ -778,7 +762,7 @@ fun SuperCartApp() {
     var selectedLanguage by remember { mutableStateOf("iw") } // Current language (iw=Hebrew, en=English, ru=Russian)
     var currentLocale by remember { mutableStateOf(java.util.Locale("iw")) } // Current locale for RTL/LTR support
     var languageChangeKey by remember { mutableStateOf(0) } // Force recomposition when language changes
-    var isAppFirstStart by remember { mutableStateOf(true) } // Track if app just started for alert notification
+    var isAppFirstStart by remember { mutableStateOf(true) } // Track if app just started
     
     // Calculate layout direction based on selected language
     val layoutDirection = if (selectedLanguage == "iw") LayoutDirection.Rtl else LayoutDirection.Ltr
@@ -820,17 +804,7 @@ fun SuperCartApp() {
 
     // Family sharing manager
     val firebaseService = remember { FirebaseService() }
-    // Request notification permission on Android 13+
-    LaunchedEffect(Unit) {
-        if (android.os.Build.VERSION.SDK_INT >= 33) {
-            val permission = android.Manifest.permission.POST_NOTIFICATIONS
-            val pm = androidx.core.content.ContextCompat.checkSelfPermission(context, permission)
-            if (pm != android.content.pm.PackageManager.PERMISSION_GRANTED) {
-                // Best effort; actual runtime request should be handled via Activity Result API if desired
-                // Keeping minimal here to avoid heavy scaffolding
-            }
-        }
-    }
+
     val familySharingManager = remember { 
         FamilySharingManager(firebaseService, scope)
     }
@@ -1109,14 +1083,9 @@ fun HomeScreen(
     var showDuplicateItemDialog by remember { mutableStateOf(false) }
     var showCategorySelector by remember { mutableStateOf(false) }
     var createCategoryFromSelector by remember { mutableStateOf(false) }
-    var showAlertNotification by remember { mutableStateOf(false) } // For alert notification popup
+
     var showLanguageSelection by remember { mutableStateOf(false) } // For language selection dialog
-    var showNotificationSettings by remember { mutableStateOf(false) }
-    
-    // Notification settings state
-    var notifyItemsAdded by remember { mutableStateOf(true) }
-    var notifyExpiration by remember { mutableStateOf(true) }
-    var notifyAverageDue by remember { mutableStateOf(true) }
+
     
     // Family sharing state
     var showFamilySharingDialog by remember { mutableStateOf(false) }
@@ -1250,13 +1219,7 @@ fun HomeScreen(
         }
     }
     
-    // Show alert notification only when app first starts and there are items needing attention
-    LaunchedEffect(hasExpiring) {
-        if (hasExpiring && !showAlertNotification && isAppFirstStart) {
-            showAlertNotification = true
-            onAppFirstStartComplete() // Mark that we've shown the alert for this app session
-        }
-    }
+
     
 
 
@@ -1411,19 +1374,7 @@ fun HomeScreen(
                                 showMenu = false
                             }
                         )
-                        DropdownMenuItem(
-                            text = {
-                                Text(
-                                    localizedString("notification_settings", selectedLanguage),
-                                    modifier = Modifier.fillMaxWidth(),
-                                    textAlign = TextAlign.Center
-                                )
-                            },
-                            onClick = {
-                                showMenu = false
-                                showNotificationSettings = true
-                            }
-                        )
+                        
                         DropdownMenuItem(
                             text = { 
                                 Text(
@@ -2543,39 +2494,7 @@ fun HomeScreen(
             )
         }
         
-        // Alert notification dialog
-        if (showAlertNotification) {
-            AlertDialog(
-                onDismissRequest = { showAlertNotification = false },
-                confirmButton = {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = androidx.compose.foundation.layout.Arrangement.SpaceBetween
-                    ) {
-                        Button(
-                            onClick = { showAlertNotification = false }
-                        ) {
-                            Text(localizedString("close", selectedLanguage))
-                        }
-                        Button(
-                            onClick = { 
-                                showExpiringOnly = true
-                                showAlertNotification = false
-                            },
-                            colors = androidx.compose.material3.ButtonDefaults.buttonColors(
-                                containerColor = Color(0xFFFF9800)
-                            )
-                        ) {
-                            Text(localizedString("show_items", selectedLanguage), color = Color.White)
-                        }
-                    }
-                },
-                title = { Text(localizedString("items_need_attention", selectedLanguage)) },
-                text = { 
-                    Text(localizedString("items_need_attention_message", selectedLanguage))
-                }
-            )
-        }
+
         
         // Language selection dialog
         if (showLanguageSelection) {
@@ -3009,92 +2928,7 @@ fun HomeScreen(
             )
         }
         
-        // Notification Settings dialog
-        if (showNotificationSettings) {
-            AlertDialog(
-                onDismissRequest = { showNotificationSettings = false },
-                title = { Text(localizedString("notification_settings", selectedLanguage)) },
-                text = {
-                    Column(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalArrangement = Arrangement.spacedBy(16.dp)
-                    ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = localizedString("notify_items_added", selectedLanguage),
-                                modifier = Modifier.weight(1f)
-                            )
-                            Switch(
-                                checked = notifyItemsAdded,
-                                onCheckedChange = { notifyItemsAdded = it }
-                            )
-                        }
-                        
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = localizedString("notify_expiration", selectedLanguage),
-                                modifier = Modifier.weight(1f)
-                            )
-                            Switch(
-                                checked = notifyExpiration,
-                                onCheckedChange = { notifyExpiration = it }
-                            )
-                        }
-                        
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = localizedString("notify_average_due", selectedLanguage),
-                                modifier = Modifier.weight(1f)
-                            )
-                            Switch(
-                                checked = notifyAverageDue,
-                                onCheckedChange = { notifyAverageDue = it }
-                            )
-                        }
-                    }
-                },
-                confirmButton = {
-                    Button(
-                        onClick = {
-                            // Save notification settings to Firebase
-                            if (familySharingManager.isSharingEnabled) {
-                                val deviceId = DeviceIdProvider.deviceId
-                                if (deviceId != null) {
-                                    val firebaseService = FirebaseService()
-                                    firebaseService.updateNotificationSettings(
-                                        deviceId,
-                                        NotificationSettings(
-                                            notifyItemsAdded = notifyItemsAdded,
-                                            notifyExpiration = notifyExpiration,
-                                            notifyAverageDue = notifyAverageDue
-                                        )
-                                    )
-                                }
-                            }
-                            showNotificationSettings = false
-                        }
-                    ) {
-                        Text(localizedString("save", selectedLanguage))
-                    }
-                },
-                dismissButton = {
-                    Button(
-                        onClick = { showNotificationSettings = false }
-                    ) {
-                        Text(localizedString("cancel", selectedLanguage))
-                    }
-                }
-            )
-        }
+
     }
 }
 
@@ -3293,7 +3127,7 @@ fun ShoppingListScreen(
             }
         }
         
-        // Notification Settings dialog is managed at the SuperCartApp level now
+
 
         // Bought items section
         if (boughtItems.isNotEmpty()) {
