@@ -26,17 +26,39 @@ class MessagingService : FirebaseMessagingService() {
     override fun onMessageReceived(message: RemoteMessage) {
         super.onMessageReceived(message)
         
-        val title = message.notification?.title ?: message.data["title"] ?: "SuperCart"
-        val body = message.notification?.body ?: message.data["body"] ?: ""
-        val channelId = message.data["channelId"] ?: SuperCartApplication.CHANNEL_GENERAL
+        val messageType = message.data["type"]
         
-        NotificationHelper.showNotification(
-            applicationContext, 
-            title, 
-            body, 
-            System.currentTimeMillis().toInt(),
-            channelId
-        )
+        when (messageType) {
+            "update_acknowledgment" -> {
+                // Show sync success toast for acknowledgment messages
+                showSyncSuccessToast()
+            }
+            else -> {
+                // Handle other messages with notifications
+                val title = message.notification?.title ?: message.data["title"] ?: "SuperCart"
+                val body = message.notification?.body ?: message.data["body"] ?: ""
+                val channelId = message.data["channelId"] ?: SuperCartApplication.CHANNEL_GENERAL
+                
+                NotificationHelper.showNotification(
+                    applicationContext, 
+                    title, 
+                    body, 
+                    System.currentTimeMillis().toInt(),
+                    channelId
+                )
+            }
+        }
+    }
+    
+    private fun showSyncSuccessToast() {
+        // Use Handler to show toast on main thread
+        android.os.Handler(android.os.Looper.getMainLooper()).post {
+            android.widget.Toast.makeText(
+                applicationContext,
+                "Sync success.",
+                android.widget.Toast.LENGTH_SHORT
+            ).show()
+        }
     }
 }
 

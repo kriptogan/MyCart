@@ -935,6 +935,16 @@ fun SuperCartApp() {
                 println("DEBUG: Main app - ignoring Firebase update (recent local changes detected)")
             }
         }
+        
+        // Set up sync success callback to show toast
+        familySharingManager.onSyncSuccess = {
+            // Show sync success toast
+            android.widget.Toast.makeText(
+                context,
+                "Sync success.",
+                android.widget.Toast.LENGTH_SHORT
+            ).show()
+        }
     }
     var categoryOrder by remember { mutableStateOf<List<Int>?>(null) }
 
@@ -952,11 +962,8 @@ fun SuperCartApp() {
     
     // Update ordered categories when customCategories, categoryOrder, or reorder trigger changes
     LaunchedEffect(customCategories, categoryOrder, categoryReorderTrigger) {
-        println("DEBUG: LaunchedEffect triggered - categoryReorderTrigger: $categoryReorderTrigger")
-        println("DEBUG: customCategories: ${customCategories.map { "${it.name} (viewOrder: ${it.viewOrder})" }}")
         // Always sort by viewOrder to ensure correct order
         orderedCategories = customCategories.sortedBy { it.viewOrder }
-        println("DEBUG: orderedCategories updated: ${orderedCategories.map { "${it.name} (viewOrder: ${it.viewOrder})" }}")
     }
 
     // Load groceries from DataStore on first composition
@@ -1072,13 +1079,9 @@ fun SuperCartApp() {
                         orderedCategories = orderedCategories,
                         customCategories = customCategories,
                         onUpdateCategories = { categories -> 
-                            println("DEBUG: onUpdateCategories called with ${categories.size} categories")
-                            println("DEBUG: Categories: ${categories.map { "${it.name} (viewOrder: ${it.viewOrder})" }}")
-                            println("DEBUG: Before updating customCategories: ${customCategories.map { "${it.name} (viewOrder: ${it.viewOrder})" }}")
-                            customCategories = categories
-                            println("DEBUG: After updating customCategories: ${customCategories.map { "${it.name} (viewOrder: ${it.viewOrder})" }}")
+                                    customCategories = categories
                             categoryReorderTrigger++ // Trigger reorder update
-                            println("DEBUG: categoryReorderTrigger incremented to: $categoryReorderTrigger")
+                    
                             
                             // Immediately notify FamilySharingManager to protect the changes
                             if (familySharingManager.isSharingEnabled) {
@@ -1335,8 +1338,7 @@ fun HomeScreen(
     
     // Debug: Print current state
     LaunchedEffect(groceries, orderedCategories) {
-        println("DEBUG: Total groceries: ${groceries.size}")
-        println("DEBUG: Ordered categories: ${orderedCategories.map { "${it.name} (${it.id})" }}")
+
         groceries.forEach { grocery ->
             val category = customCategories.find { it.id == grocery.customCategoryId }
             println("DEBUG: Grocery '${grocery.name}' -> Category: ${category?.name ?: "UNKNOWN"} (ID: ${grocery.customCategoryId})")
@@ -1583,7 +1585,7 @@ fun HomeScreen(
                 .fillMaxSize()
                 .padding(horizontal = 16.dp)
         ) {
-            println("DEBUG: UI using orderedCategories: ${currentOrderedCategories.map { "${it.name} (${it.id})" }}")
+    
             currentOrderedCategories.forEach { category ->
                 val itemsInCategory = groceries.withIndex()
                     .filter { it.value.customCategoryId == category.id && it.value.name.contains(searchQuery, ignoreCase = true) }
@@ -1591,7 +1593,7 @@ fun HomeScreen(
                 
                 // Debug: Print category filtering results
                 if (itemsInCategory.isNotEmpty()) {
-                    println("DEBUG: Category '${category.name}' (${category.id}) has ${itemsInCategory.size} items")
+    
                 }
                 
                 if (itemsInCategory.isNotEmpty()) {
@@ -1745,6 +1747,14 @@ fun HomeScreen(
                                             )
                                         }
                                         onUpdateGroceries(updatedGroceries)
+                                        
+                                        // Show sync success toast for testing
+                                        android.widget.Toast.makeText(
+                                            context,
+                                            "Sync success.",
+                                            android.widget.Toast.LENGTH_SHORT
+                                        ).show()
+                                        
                                         name = ""
                                         selectedCustomCategoryId = 1 // Default to "אחר"
                                         expirationDate = null
@@ -2108,8 +2118,6 @@ fun HomeScreen(
                                         // Move category up
                                         val currentIndex = sortedCategories.indexOf(category)
                                         if (currentIndex > 0) {
-                                            println("DEBUG: Moving category UP - ${category.name}")
-                                            println("DEBUG: Before reorder - sortedCategories: ${sortedCategories.map { "${it.name} (viewOrder: ${it.viewOrder})" }}")
                                             val updatedCategories = sortedCategories.toMutableList()
                                             val temp = updatedCategories[currentIndex]
                                             updatedCategories[currentIndex] = updatedCategories[currentIndex - 1]
@@ -2121,10 +2129,8 @@ fun HomeScreen(
                                                     lastUpdate = System.currentTimeMillis()
                                                 )
                                             }
-                                            println("DEBUG: After reorder - updatedCategories: ${updatedCategories.map { "${it.name} (viewOrder: ${it.viewOrder})" }}")
                                             onUpdateCategories(updatedCategories)
                                             onCategoryReorder()
-                                            println("DEBUG: onCategoryReorder() called")
                                         }
                                     },
                                     enabled = sortedCategories.indexOf(category) > 0
@@ -2140,8 +2146,6 @@ fun HomeScreen(
                                         // Move category down
                                         val currentIndex = sortedCategories.indexOf(category)
                                         if (currentIndex < sortedCategories.size - 1) {
-                                            println("DEBUG: Moving category DOWN - ${category.name}")
-                                            println("DEBUG: Before reorder - sortedCategories: ${sortedCategories.map { "${it.name} (viewOrder: ${it.viewOrder})" }}")
                                             val updatedCategories = sortedCategories.toMutableList()
                                             val temp = updatedCategories[currentIndex]
                                             updatedCategories[currentIndex] = updatedCategories[currentIndex + 1]
@@ -2153,10 +2157,8 @@ fun HomeScreen(
                                                     lastUpdate = System.currentTimeMillis()
                                                 )
                                             }
-                                            println("DEBUG: After reorder - updatedCategories: ${updatedCategories.map { "${it.name} (viewOrder: ${it.viewOrder})" }}")
                                             onUpdateCategories(updatedCategories)
                                             onCategoryReorder()
-                                            println("DEBUG: onCategoryReorder() called")
                                         }
                                     },
                                     enabled = sortedCategories.indexOf(category) < sortedCategories.size - 1
@@ -3495,7 +3497,7 @@ fun ShoppingListScreen(
                                                         it
                                                     }
                                                 }
-                                                println("DEBUG: Shopping list - calling onUpdateGroceries with ${updatedGroceries.size} items")
+                                        
                                                 onUpdateGroceries(updatedGroceries)
                                             },
                                             modifier = Modifier.padding(start = 4.dp)

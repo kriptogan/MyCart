@@ -62,9 +62,17 @@ class FamilySharingManager(
     var onDataUpdate: ((List<GroceryWithDate>, List<CustomCategory>) -> Unit)? = null
     var onSyncStatusChange: ((Boolean, String?) -> Unit)? = null
     var onConnectionStatusChange: ((ConnectionStatus) -> Unit)? = null
+    var onSyncSuccess: (() -> Unit)? = null
     
     // Create new family sharing
     fun createFamily(groceries: List<GroceryWithDate>, categories: List<CustomCategory>) {
+        // Set up acknowledgment callback
+        firebaseService.onAcknowledgmentReceived = { projectId, success ->
+            if (success) {
+                // Notify UI of sync success
+                onSyncSuccess?.invoke()
+            }
+        }
         scope.launch {
             isLoading = true
             errorMessage = null
@@ -167,11 +175,7 @@ class FamilySharingManager(
             pendingLocalChanges.add(itemKey)
         }
         
-        println("DEBUG: FamilySharingManager.updateFamilyData called at $currentTime")
-        println("DEBUG: - groceries: ${groceries.size}, categories: ${categories.size}")
-        println("DEBUG: - protected items: ${pendingLocalChanges.size}")
-        println("DEBUG: - bought items count: ${groceries.count { it.isBought }}")
-        println("DEBUG: - time since last local update: ${if (lastLocalUpdateTime > 0) currentTime - lastLocalUpdateTime else "N/A"}ms")
+
         
         scope.launch {
             isSyncing = true
@@ -191,9 +195,7 @@ class FamilySharingManager(
                 pendingUpdates.add(update)
                 pendingUpdatesCount = pendingUpdates.size
                 
-                println("DEBUG: Sending update to Firebase - projectId: $currentProjectId")
-                println("DEBUG: - bought items being sent: ${groceries.count { it.isBought }}")
-                val success = firebaseService.updateFamilyProject(currentProjectId!!, groceries, categories)
+                val success = firebaseService.updateFamilyProject(currentProjectId!!, groceries, categories, firebaseService.getDeviceId())
                 
                 if (success) {
                     lastSyncTime = System.currentTimeMillis()
@@ -202,12 +204,10 @@ class FamilySharingManager(
                     pendingUpdatesCount = pendingUpdates.size
                     syncProgress = 1f
                     onSyncStatusChange?.invoke(false, null)
-                    println("DEBUG: Firebase update successful - sent ${groceries.count { it.isBought }} bought items")
                     clearPendingLocalChanges() // Clear pending changes after successful sync
                 } else {
                     syncError = "Failed to sync changes"
                     onSyncStatusChange?.invoke(false, syncError)
-                    println("DEBUG: Firebase update failed")
                     
                     // Enhanced retry logic
                     if (update.retryCount < maxRetries) {
@@ -240,7 +240,8 @@ class FamilySharingManager(
                                     val success = firebaseService.updateFamilyProject(
                         currentProjectId!!, 
                         update.groceries, 
-                        update.categories
+                        update.categories,
+                        firebaseService.getDeviceId()
                     )
                 
                 if (success) {
@@ -274,20 +275,21 @@ class FamilySharingManager(
     fun startRealTimeSync(projectId: String) {
         syncListener?.remove()
         syncListener = firebaseService.listenToFamilyProject(projectId) { familyProject ->
-            try {
-                familyProject?.let { project ->
-                    val currentTime = System.currentTimeMillis()
-                    lastFirebaseUpdateTime = currentTime
+                            try {
+                    familyProject?.let { project ->
+                        val currentTime = System.currentTimeMillis()
+                        lastFirebaseUpdateTime = currentTime
+                        
+                        // Convert Firebase data to regular data classes
+                        val (firebaseGroceries, firebaseCategories) = project.toRegularData()
+                        val firebaseGroceriesWithDate = firebaseGroceries.map { it.withLocalDate() }
                     
-                    val firebaseGroceries = project.groceries.map { it.withLocalDate() }
-                    val firebaseCategories = project.categories
-                    
-                    // NEW: Clear protections for items that have been successfully synced
-                    clearProtectionsForSyncedItems(firebaseGroceries)
-                    
-                    // NEW: Enhanced prioritization with stale update detection
-                    val prioritizedGroceries = prioritizeLocalActions(firebaseGroceries)
-                    val prioritizedCategories = firebaseCategories // Categories don't have per-item conflicts
+                                            // NEW: Clear protections for items that have been successfully synced
+                        clearProtectionsForSyncedItems(firebaseGroceriesWithDate)
+                        
+                        // NEW: Enhanced prioritization with stale update detection
+                        val prioritizedGroceries = prioritizeLocalActions(firebaseGroceriesWithDate)
+                        val prioritizedCategories = firebaseCategories // Categories don't have per-item conflicts
                     
                     println("DEBUG: Applying Firebase update at $currentTime with enhanced local action protection")
                     println("DEBUG: Local update time: $lastLocalUpdateTime, Protection window: ${localActionProtectionWindowMs}ms")
@@ -578,7 +580,7 @@ class FamilySharingManager(
             scope.launch {
                 try {
                     // This will trigger the real-time listener immediately
-                    firebaseService.updateFamilyProject(currentProjectId!!, emptyList(), emptyList())
+                    firebaseService.updateFamilyProject(currentProjectId!!, emptyList(), emptyList(), firebaseService.getDeviceId())
                     
                     // Check for expired items after successful sync
                     checkExpiredItemsAfterSync()
@@ -620,7 +622,7 @@ class FamilySharingManager(
                 try {
                     println("DEBUG: Force syncing changes to other devices")
                     // Send current local data to Firebase to ensure other devices receive it
-                    firebaseService.updateFamilyProject(currentProjectId!!, lastLocalGroceries, lastLocalCategories)
+                    firebaseService.updateFamilyProject(currentProjectId!!, lastLocalGroceries, lastLocalCategories, firebaseService.getDeviceId())
                 } catch (e: Exception) {
                     println("Error in force sync to other devices: ${e.message}")
                 }
@@ -700,6 +702,8 @@ class FamilySharingManager(
             else -> "${diff / 86400000}d ago"
         }
     }
+    
+
 }
 
 // Enhanced data classes

@@ -26,3 +26,5 @@ Please summarize all that and suggest implementation. do not execute the changes
 
 In case of a deleted item, keep a local list of deleted items with the timestamp.
 remove items from that list after 3 days.
+
+Use a pending list that sends the updates in a packet every 5 seconds.
