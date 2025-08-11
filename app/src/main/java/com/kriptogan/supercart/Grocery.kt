@@ -29,6 +29,7 @@ data class CustomCategory(
 // Enhanced grocery model
 @Serializable
 data class Grocery(
+    val id: Int = 0, // Unique identifier (0 = not assigned yet, for Firebase backward compatibility)
     val name: String = "", // שם המצרך
     val customCategoryId: Int = 0, // קישור לקטגוריה מותאמת (חובה)
     val expirationDate: String? = null, // תאריך תפוגה (אופציונלי, as ISO string)
@@ -39,8 +40,11 @@ data class Grocery(
     val isBought: Boolean = false, // האם המצרך נרכש
     val lastUpdate: Long = System.currentTimeMillis() // Last update timestamp
 ) {
-    // Validation
+    // Validation - allow id = 0 for Firebase backward compatibility
     fun isValid(): Boolean = name.isNotBlank() && customCategoryId > 0
+    
+    // Check if this grocery has an assigned ID
+    fun hasId(): Boolean = id > 0
     
     // Check if item is expired
     fun isExpired(): Boolean {
@@ -107,6 +111,7 @@ data class Grocery(
 }
 
 fun Grocery.withLocalDate(): GroceryWithDate = GroceryWithDate(
+    id = id,
     name = name,
     customCategoryId = customCategoryId,
     expirationDate = expirationDate?.let { java.time.LocalDate.parse(it) },
@@ -119,6 +124,7 @@ fun Grocery.withLocalDate(): GroceryWithDate = GroceryWithDate(
 )
 
 data class GroceryWithDate(
+    val id: Int = 0, // Unique identifier (0 = not assigned yet, for Firebase backward compatibility)
     val name: String,
     val customCategoryId: Int,
     val expirationDate: java.time.LocalDate?,
@@ -129,8 +135,11 @@ data class GroceryWithDate(
     val isBought: Boolean = false,
     val lastUpdate: Long = System.currentTimeMillis() // Last update timestamp
 ) {
-    // Validation
+    // Validation - allow id = 0 for Firebase backward compatibility
     fun isValid(): Boolean = name.isNotBlank() && customCategoryId > 0
+    
+    // Check if this grocery has an assigned ID
+    fun hasId(): Boolean = id > 0
     
     // Check if item is expired
     fun isExpired(): Boolean {
@@ -234,6 +243,7 @@ data class GroceryWithDate(
 }
 
 fun GroceryWithDate.toSerializable(): Grocery = Grocery(
+    id = id,
     name = name,
     customCategoryId = customCategoryId,
     expirationDate = expirationDate?.toString(),
@@ -244,6 +254,26 @@ fun GroceryWithDate.toSerializable(): Grocery = Grocery(
     isBought = isBought,
     lastUpdate = lastUpdate
 )
+
+// Helper functions for Firebase backward compatibility
+
+// Assign IDs to groceries that don't have them (for Firebase data migration)
+fun List<Grocery>.assignMissingIds(startingId: Int = 1): List<Grocery> {
+    var currentId = startingId
+    return map { grocery ->
+        if (grocery.id == 0) {
+            grocery.copy(id = currentId++)
+        } else {
+            grocery
+        }
+    }
+}
+
+// Check if any groceries in the list are missing IDs
+fun List<Grocery>.hasMissingIds(): Boolean = any { it.id == 0 }
+
+// Get the next available ID for new groceries
+fun List<GroceryWithDate>.getNextId(): Int = (maxOfOrNull { it.id } ?: 0) + 1
 
 fun List<java.time.LocalDate>.averageDaysBetween(): Int? {
     if (size < 2) return null

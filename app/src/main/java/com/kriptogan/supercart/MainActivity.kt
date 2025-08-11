@@ -1712,6 +1712,13 @@ fun HomeScreen(
                                 color = Color.Gray,
                                 modifier = Modifier.fillMaxWidth()
                             )
+                            // Item ID for testing
+                            Text(
+                                text = "ID: ${currentGrocery.id}",
+                                style = androidx.compose.material3.MaterialTheme.typography.bodySmall,
+                                color = Color.Blue,
+                                modifier = Modifier.fillMaxWidth()
+                            )
                         }
                     }
                 }
@@ -1828,8 +1835,10 @@ fun HomeScreen(
                                         // keep existing state; do not force into shopping list
                                         // no-op or ensure inShoppingList remains as-is
                                     } else {
+                                        val newId = updatedGroceries.getNextId()
                                         updatedGroceries.add(
                                             GroceryWithDate(
+                                                id = newId,
                                                 name = itemName,
                                                 customCategoryId = 1,
                                                 expirationDate = null,
@@ -1863,8 +1872,10 @@ fun HomeScreen(
                                             lastUpdate = System.currentTimeMillis()
                                         )
                                     } else {
+                                        val newId = updatedGroceries.getNextId()
                                         updatedGroceries.add(
                                             GroceryWithDate(
+                                                id = newId,
                                                 name = itemName,
                                                 customCategoryId = 1,
                                                 expirationDate = null,
@@ -2352,7 +2363,9 @@ fun HomeScreen(
                         Button(
                             onClick = { 
                                 // Add item without shopping list
+                                val newId = groceries.getNextId()
                                 val updatedGroceries = groceries + GroceryWithDate(
+                                    id = newId,
                                     name = name,
                                     customCategoryId = selectedCustomCategoryId,
                                     expirationDate = expirationDate,
@@ -2372,7 +2385,9 @@ fun HomeScreen(
                         Button(
                             onClick = { 
                                 // Add item with shopping list
+                                val newId = groceries.getNextId()
                                 val updatedGroceries = groceries + GroceryWithDate(
+                                    id = newId,
                                     name = name,
                                     customCategoryId = selectedCustomCategoryId,
                                     expirationDate = expirationDate,
@@ -3103,7 +3118,7 @@ fun ShoppingListScreen(
                                                 // Mark item as bought
                                                 println("DEBUG: Shopping list - marking '${grocery.name}' as bought")
                                                 val updatedGroceries = groceries.map {
-                                                    if (it.name == grocery.name && it.customCategoryId == grocery.customCategoryId) {
+                                                    if (it.id == grocery.id) {
                                                         it.copy(isBought = true, lastUpdate = System.currentTimeMillis())
                                                     } else {
                                                         it
@@ -3260,7 +3275,7 @@ fun ShoppingListScreen(
                             lastUpdate = System.currentTimeMillis()
                         )
                         val updatedGroceries = groceries.map {
-                            if (it.name == editGrocery!!.name && it.customCategoryId == editGrocery!!.customCategoryId) updated else it
+                            if (it.id == editGrocery!!.id) updated else it
                         }
                         onUpdateGroceries(updatedGroceries)
                         showEditDialog = false
@@ -3343,6 +3358,13 @@ fun ShoppingListScreen(
                             text = "${localizedString("last_update", selectedLanguage)}: ${formatTimestamp(editGrocery!!.lastUpdate, selectedLanguage)}",
                             style = androidx.compose.material3.MaterialTheme.typography.bodySmall,
                             color = Color.Gray,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        // Item ID for testing
+                        Text(
+                            text = "ID: ${editGrocery!!.id}",
+                            style = androidx.compose.material3.MaterialTheme.typography.bodySmall,
+                            color = Color.Blue,
                             modifier = Modifier.fillMaxWidth()
                         )
                     }
@@ -3509,15 +3531,18 @@ suspend fun Context.migrateGroceriesToCustomCategories() {
     val groceries = groceryDataStore.data.first()
     val customCategories = customCategoriesDataStore.data.first()
     
-    // Simple migration: ensure all groceries have a valid customCategoryId
-    // If any grocery has customCategoryId = null or 0, set it to 1 (אחר)
-    val needsMigration = groceries.any { it.customCategoryId == 0 }
+    // Enhanced migration: ensure all groceries have valid customCategoryId AND unique IDs
+    val needsMigration = groceries.any { it.customCategoryId == 0 || it.id == 0 }
     
     if (needsMigration) {
-        val migratedGroceries = groceries.map { grocery ->
+        val migratedGroceries = groceries.mapIndexed { index, grocery ->
             // Ensure customCategoryId is valid (default to 1 if invalid)
             val validCategoryId = if (grocery.customCategoryId <= 0) 1 else grocery.customCategoryId
+            // Generate unique ID for groceries without one (index + 1 to ensure positive IDs)
+            val uniqueId = if (grocery.id <= 0) index + 1 else grocery.id
+            
             Grocery(
+                id = uniqueId,
                 name = grocery.name,
                 customCategoryId = validCategoryId,
                 expirationDate = grocery.expirationDate,

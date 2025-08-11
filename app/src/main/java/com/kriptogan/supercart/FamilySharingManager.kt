@@ -124,7 +124,15 @@ class FamilySharingManager(
                     forceClearLocalTracking() // Force clear local tracking on join
                     
                     // Update local data with family data
-                    val groceries = familyProject.groceries.map { it.withLocalDate() }
+                    // Handle groceries without IDs from Firebase (backward compatibility)
+                    val groceriesWithIds = if (familyProject.groceries.hasMissingIds()) {
+                        println("DEBUG: Found groceries without IDs in Firebase, assigning IDs...")
+                        familyProject.groceries.assignMissingIds()
+                    } else {
+                        familyProject.groceries
+                    }
+                    
+                    val groceries = groceriesWithIds.map { it.withLocalDate() }
                     val categories = familyProject.categories
                     
                     onDataUpdate?.invoke(groceries, categories)

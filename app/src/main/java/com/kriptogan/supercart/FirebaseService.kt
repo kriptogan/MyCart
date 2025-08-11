@@ -291,7 +291,15 @@ class FirebaseService {
             }
             
             // IMPROVED CONFLICT RESOLUTION: Merge changes instead of simple timestamp comparison
-            val currentGroceries = currentProject.groceries.map { it.withLocalDate() }
+            // Handle groceries without IDs from Firebase (backward compatibility)
+            val groceriesWithIds = if (currentProject.groceries.hasMissingIds()) {
+                println("DEBUG: Found groceries without IDs in Firebase, assigning IDs...")
+                currentProject.groceries.assignMissingIds()
+            } else {
+                currentProject.groceries
+            }
+            
+            val currentGroceries = groceriesWithIds.map { it.withLocalDate() }
             val mergedGroceries = mergeGroceryLists(currentGroceries, groceries)
             val mergedCategories = mergeCategories(currentProject.categories, categories)
             
@@ -541,6 +549,7 @@ class FirebaseService {
         }
         
         return GroceryWithDate(
+            id = local.id, // Preserve the local ID
             name = local.name,
             customCategoryId = local.customCategoryId,
             expirationDate = finalExpirationDate,
@@ -548,7 +557,8 @@ class FirebaseService {
             averageBuyingDays = finalAverageBuyingDays,
             buyEvents = mergedBuyEvents,
             inShoppingList = finalInShoppingList,
-            isBought = finalIsBought
+            isBought = finalIsBought,
+            lastUpdate = System.currentTimeMillis()
         )
     }
     
