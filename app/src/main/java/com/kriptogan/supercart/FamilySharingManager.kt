@@ -89,8 +89,6 @@ class FamilySharingManager(
                     // Clear debounce to allow immediate initial sync
                     clearDebounce()
                     forceClearLocalTracking() // Force clear local tracking on create
-                    
-                    startRealTimeSync(projectId)
                 } else {
                     errorMessage = "Failed to create family sharing"
                     connectionStatus = ConnectionStatus.FAILED
@@ -130,8 +128,6 @@ class FamilySharingManager(
                     val categories = familyProject.categories
                     
                     onDataUpdate?.invoke(groceries, categories)
-                    
-                    startRealTimeSync(code)
                 } else {
                     errorMessage = "Invalid family code or already a member"
                     connectionStatus = ConnectionStatus.FAILED
@@ -145,86 +141,7 @@ class FamilySharingManager(
         }
     }
     
-    // Enhanced update family data with better retry mechanism and improved local change tracking
-    fun updateFamilyData(groceries: List<GroceryWithDate>, categories: List<CustomCategory>, boughtItems: List<GroceryWithDate> = emptyList()) {
-        if (!isSharingEnabled || currentProjectId == null) {
-            return
-        }
-        
-        val currentTime = System.currentTimeMillis()
-        
-        // Track when local update happens and what the data was
-        lastLocalUpdateTime = currentTime
-        lastLocalGroceries = groceries
-        lastLocalCategories = categories
-        
-        // NEW: Enhanced tracking of local changes with more granular control
-        groceries.forEach { grocery ->
-            val itemKey = "${grocery.name}_${grocery.customCategoryId}"
-            lastLocalActionTimestamps[itemKey] = currentTime
-            lastLocalUpdateTimestamps[itemKey] = currentTime
-            pendingLocalChanges.add(itemKey)
-        }
-        
-        println("DEBUG: FamilySharingManager.updateFamilyData called at $currentTime")
-        println("DEBUG: - groceries: ${groceries.size}, categories: ${categories.size}")
-        println("DEBUG: - protected items: ${pendingLocalChanges.size}")
-        println("DEBUG: - bought items count: ${groceries.count { it.isBought }}")
-        println("DEBUG: - time since last local update: ${if (lastLocalUpdateTime > 0) currentTime - lastLocalUpdateTime else "N/A"}ms")
-        
-        scope.launch {
-            isSyncing = true
-            syncError = null
-            syncProgress = 0f
-            onSyncStatusChange?.invoke(true, null)
-            
-            try {
-                // Add to pending updates for tracking
-                val update = PendingUpdate(
-                    id = System.currentTimeMillis(),
-                    groceries = groceries,
-                    categories = categories,
-                    timestamp = currentTime,
-                    retryCount = 0
-                )
-                pendingUpdates.add(update)
-                pendingUpdatesCount = pendingUpdates.size
-                
-                println("DEBUG: Sending update to Firebase - projectId: $currentProjectId")
-                println("DEBUG: - bought items being sent: ${groceries.count { it.isBought }}")
-                val success = firebaseService.updateFamilyProject(currentProjectId!!, groceries, categories)
-                
-                if (success) {
-                    lastSyncTime = System.currentTimeMillis()
-                    retryCount.set(0)
-                    pendingUpdates.removeAll { it.id == update.id }
-                    pendingUpdatesCount = pendingUpdates.size
-                    syncProgress = 1f
-                    onSyncStatusChange?.invoke(false, null)
-                    println("DEBUG: Firebase update successful - sent ${groceries.count { it.isBought }} bought items")
-                    clearPendingLocalChanges() // Clear pending changes after successful sync
-                } else {
-                    syncError = "Failed to sync changes"
-                    onSyncStatusChange?.invoke(false, syncError)
-                    println("DEBUG: Firebase update failed")
-                    
-                    // Enhanced retry logic
-                    if (update.retryCount < maxRetries) {
-                        update.retryCount++
-                        delay(retryDelayMs * update.retryCount) // Exponential backoff
-                        retryPendingUpdates()
-                    }
-                }
-            } catch (e: Exception) {
-                syncError = "Sync error: ${e.message}"
-                onSyncStatusChange?.invoke(false, syncError)
-                println("Error syncing family data: ${e.message}")
-            } finally {
-                isSyncing = false
-                syncProgress = 0f
-            }
-        }
-    }
+    // Note: updateFamilyData removed - only create/join operations sync to cloud
     
     // Enhanced retry pending updates
     private suspend fun retryPendingUpdates() {
@@ -269,137 +186,14 @@ class FamilySharingManager(
         }
     }
     
-    // Start real-time sync with enhanced error handling and stale update protection
-    fun startRealTimeSync(projectId: String) {
-        syncListener?.remove()
-        syncListener = firebaseService.listenToFamilyProject(projectId) { familyProject ->
-            try {
-                familyProject?.let { project ->
-                    val currentTime = System.currentTimeMillis()
-                    lastFirebaseUpdateTime = currentTime
-                    
-                    val firebaseGroceries = project.groceries.map { it.withLocalDate() }
-                    val firebaseCategories = project.categories
-                    
-                    // NEW: Clear protections for items that have been successfully synced
-                    clearProtectionsForSyncedItems(firebaseGroceries)
-                    
-                    // NEW: Enhanced prioritization with stale update detection
-                    val prioritizedGroceries = prioritizeLocalActions(firebaseGroceries)
-                    val prioritizedCategories = firebaseCategories // Categories don't have per-item conflicts
-                    
-                    println("DEBUG: Applying Firebase update at $currentTime with enhanced local action protection")
-                    println("DEBUG: Local update time: $lastLocalUpdateTime, Protection window: ${localActionProtectionWindowMs}ms")
-                    println("DEBUG: - received ${firebaseGroceries.count { it.isBought }} bought items from Firebase")
-                    println("DEBUG: - applying ${prioritizedGroceries.count { it.isBought }} bought items after prioritization")
-                    
-                    onDataUpdate?.invoke(prioritizedGroceries, prioritizedCategories)
-                    
-                    // Update connection status
-                    connectionStatus = ConnectionStatus.CONNECTED
-                    onConnectionStatusChange?.invoke(ConnectionStatus.CONNECTED)
-                } ?: run {
-                    connectionStatus = ConnectionStatus.DISCONNECTED
-                    onConnectionStatusChange?.invoke(ConnectionStatus.DISCONNECTED)
-                }
-            } catch (e: Exception) {
-                connectionStatus = ConnectionStatus.ERROR
-                onConnectionStatusChange?.invoke(ConnectionStatus.ERROR)
-                println("Error in real-time sync: ${e.message}")
-            }
-        }
-    }
+    // Note: Real-time sync removed - data only syncs during create/join operations
     
-    // NEW: Enhanced prioritize local actions with smarter protection logic
-    private fun prioritizeLocalActions(firebaseGroceries: List<GroceryWithDate>): List<GroceryWithDate> {
-        // Clean up old timestamps first
-        cleanupOldTimestamps()
-        
-        val currentTime = System.currentTimeMillis()
-        val prioritizedGroceries = mutableListOf<GroceryWithDate>()
-        
-        // NEW: More intelligent stale update detection - only protect if we have recent local changes
-        val hasRecentLocalChanges = lastLocalUpdateTime > 0 && 
-            (currentTime - lastLocalUpdateTime) < localActionProtectionWindowMs &&
-            pendingLocalChanges.isNotEmpty()
-        
-        if (hasRecentLocalChanges) {
-            println("DEBUG: Detected recent local changes - applying selective protection")
-        } else {
-            println("DEBUG: No recent local changes - allowing Firebase updates to propagate")
-        }
-        
-        firebaseGroceries.forEach { firebaseGrocery ->
-            val itemKey = "${firebaseGrocery.name}_${firebaseGrocery.customCategoryId}"
-            val localActionTime = lastLocalActionTimestamps[itemKey] ?: 0L
-            val localUpdateTime = lastLocalUpdateTimestamps[itemKey] ?: 0L
-            val isPendingLocalChange = pendingLocalChanges.contains(itemKey)
-            
-            // NEW: Enhanced protection logic - only protect if we have recent local changes
-            val hasRecentLocalAction = localActionTime > 0 && 
-                (currentTime - localActionTime) < localActionProtectionWindowMs
-            
-            val hasRecentLocalUpdate = localUpdateTime > 0 && 
-                (currentTime - localUpdateTime) < localActionProtectionWindowMs
-            
-            val shouldProtectLocal = hasRecentLocalChanges && (hasRecentLocalAction || hasRecentLocalUpdate || isPendingLocalChange)
-            
-            if (shouldProtectLocal) {
-                // Find the corresponding local item
-                val localItem = lastLocalGroceries.find { localGrocery ->
-                    localGrocery.name == firebaseGrocery.name && 
-                    localGrocery.customCategoryId == firebaseGrocery.customCategoryId
-                }
-                
-                if (localItem != null) {
-                    val timeSinceLocalAction = currentTime - localActionTime
-                    println("DEBUG: Protecting local action for '${firebaseGrocery.name}' (local action was ${timeSinceLocalAction}ms ago)")
-                    prioritizedGroceries.add(localItem)
-                } else {
-                    // Local item not found, use Firebase item
-                    prioritizedGroceries.add(firebaseGrocery)
-                }
-            } else {
-                // No recent local action or no recent local changes, use Firebase item
-                prioritizedGroceries.add(firebaseGrocery)
-            }
-        }
-        
-        // Add any local items that don't exist in Firebase and are still protected
-        lastLocalGroceries.forEach { localGrocery ->
-            val itemKey = "${localGrocery.name}_${localGrocery.customCategoryId}"
-            val localActionTime = lastLocalActionTimestamps[itemKey] ?: 0L
-            val localUpdateTime = lastLocalUpdateTimestamps[itemKey] ?: 0L
-            val isPendingLocalChange = pendingLocalChanges.contains(itemKey)
-            
-            val hasRecentLocalAction = localActionTime > 0 && 
-                (currentTime - localActionTime) < localActionProtectionWindowMs
-            
-            val hasRecentLocalUpdate = localUpdateTime > 0 && 
-                (currentTime - localUpdateTime) < localActionProtectionWindowMs
-            
-            val shouldProtectLocal = hasRecentLocalChanges && (hasRecentLocalAction || hasRecentLocalUpdate || isPendingLocalChange)
-            
-            val existsInFirebase = firebaseGroceries.any { firebaseGrocery ->
-                firebaseGrocery.name == localGrocery.name && 
-                firebaseGrocery.customCategoryId == localGrocery.customCategoryId
-            }
-            
-            if (!existsInFirebase && shouldProtectLocal) {
-                println("DEBUG: Adding protected local-only item '${localGrocery.name}' to prioritized list")
-                prioritizedGroceries.add(localGrocery)
-            }
-        }
-        
-        return prioritizedGroceries
-    }
+    // Note: Priority logic removed since real-time sync is disabled
     
 
     
-    // Stop real-time sync
+    // Stop sync (simplified since no real-time sync)
     fun stopSync() {
-        syncListener?.remove()
-        syncListener = null
         connectionStatus = ConnectionStatus.DISCONNECTED
         onConnectionStatusChange?.invoke(ConnectionStatus.DISCONNECTED)
     }
@@ -498,107 +292,9 @@ class FamilySharingManager(
         }
     }
     
-    // NEW: Enhanced clear pending local changes after successful sync
-    private fun clearPendingLocalChanges() {
-        // Only clear protections for items that have been successfully synced
-        // This allows new changes to be sent while protecting recent ones
-        val currentTime = System.currentTimeMillis()
-        val keysToRemove = mutableListOf<String>()
-        
-        pendingLocalChanges.forEach { itemKey ->
-            // Check if this item has been synced (older than 2 seconds)
-            val itemUpdateTime = lastLocalUpdateTimestamps[itemKey] ?: 0L
-            if (itemUpdateTime > 0 && (currentTime - itemUpdateTime) > 2000) {
-                keysToRemove.add(itemKey)
-                println("DEBUG: Clearing protection for synced item: $itemKey")
-            }
-        }
-        
-        keysToRemove.forEach { key ->
-            pendingLocalChanges.remove(key)
-            lastLocalActionTimestamps.remove(key)
-            lastLocalUpdateTimestamps.remove(key)
-        }
-        
-        if (keysToRemove.isNotEmpty()) {
-            println("DEBUG: Cleared protections for ${keysToRemove.size} synced items")
-            // Force sync to other devices after clearing protections
-            forceSyncToOtherDevices()
-        } else {
-            println("DEBUG: Keeping protections active for recent changes")
-        }
-    }
+    // Note: Complex sync protection logic removed since automatic sync is disabled
     
-    // NEW: Enhanced clear pending local changes after successful sync
-    private fun clearProtectionsForSyncedItems(firebaseGroceries: List<GroceryWithDate>) {
-        val currentTime = System.currentTimeMillis()
-        val keysToRemove = mutableListOf<String>()
-        
-        pendingLocalChanges.forEach { itemKey ->
-            // Check if this item exists in Firebase and has been synced
-            val firebaseItem = firebaseGroceries.find { firebaseGrocery ->
-                "${firebaseGrocery.name}_${firebaseGrocery.customCategoryId}" == itemKey
-            }
-            
-            if (firebaseItem != null) {
-                // Item exists in Firebase, check if our local changes have been applied
-                val localItem = lastLocalGroceries.find { localGrocery ->
-                    "${localGrocery.name}_${localGrocery.customCategoryId}" == itemKey
-                }
-                
-                if (localItem != null) {
-                    // If Firebase item matches our local item, clear protection
-                    if (localItem.inShoppingList == firebaseItem.inShoppingList && 
-                        localItem.isBought == firebaseItem.isBought) {
-                        keysToRemove.add(itemKey)
-                        println("DEBUG: Clearing protection for '${localItem.name}' - changes synced to Firebase")
-                    }
-                }
-            }
-        }
-        
-        keysToRemove.forEach { key ->
-            pendingLocalChanges.remove(key)
-            lastLocalActionTimestamps.remove(key)
-            lastLocalUpdateTimestamps.remove(key)
-        }
-        
-        if (keysToRemove.isNotEmpty()) {
-            println("DEBUG: Cleared protections for ${keysToRemove.size} synced items")
-        }
-    }
-    
-    // NEW: Force sync update (bypasses debounce)
-    fun forceSyncUpdate() {
-        clearDebounce()
-        // Trigger an immediate sync if we have pending data
-        if (isSharingEnabled && currentProjectId != null) {
-            // Launch a coroutine to handle the suspend function call
-            scope.launch {
-                try {
-                    // This will trigger the real-time listener immediately
-                    firebaseService.updateFamilyProject(currentProjectId!!, emptyList(), emptyList())
-                } catch (e: Exception) {
-                    println("Error in force sync update: ${e.message}")
-                }
-            }
-        }
-    }
-    
-    // NEW: Force sync changes to other devices
-    fun forceSyncToOtherDevices() {
-        if (isSharingEnabled && currentProjectId != null) {
-            scope.launch {
-                try {
-                    println("DEBUG: Force syncing changes to other devices")
-                    // Send current local data to Firebase to ensure other devices receive it
-                    firebaseService.updateFamilyProject(currentProjectId!!, lastLocalGroceries, lastLocalCategories)
-                } catch (e: Exception) {
-                    println("Error in force sync to other devices: ${e.message}")
-                }
-            }
-        }
-    }
+    // Note: Force sync functions removed since automatic sync is disabled
     
     // Enhanced join code validation
     fun validateJoinCode(code: String): Boolean {

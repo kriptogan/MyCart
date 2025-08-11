@@ -812,15 +812,12 @@ fun SuperCartApp() {
     // Set up the callback after familySharingManager is created
     LaunchedEffect(familySharingManager) {
         familySharingManager.onDataUpdate = { newGroceries, newCategories ->
-            // Only update if we don't have recent local changes
-            // This prevents Firebase from overwriting recent user actions
-            if (!familySharingManager.hasRecentLocalChanges()) {
-                println("DEBUG: Main app - applying Firebase update (no recent local changes)")
-                groceries = newGroceries
-                customCategories = newCategories
-            } else {
-                println("DEBUG: Main app - ignoring Firebase update (recent local changes detected)")
-            }
+            // Only used when joining a group to download shared data
+            println("DEBUG: Main app - applying data update from family sharing (join operation)")
+            groceries = newGroceries
+            customCategories = newCategories
+            println("DEBUG: Main app - updated groceries to ${newGroceries.size} items")
+            println("DEBUG: Main app - updated categories to ${newCategories.size} categories")
         }
     }
     var categoryOrder by remember { mutableStateOf<List<Int>?>(null) }
@@ -963,18 +960,11 @@ fun SuperCartApp() {
                             println("DEBUG: After updating customCategories: ${customCategories.map { "${it.name} (viewOrder: ${it.viewOrder})" }}")
                             categoryReorderTrigger++ // Trigger reorder update
                             println("DEBUG: categoryReorderTrigger incremented to: $categoryReorderTrigger")
-                            
-                            // Immediately notify FamilySharingManager to protect the changes
-                            if (familySharingManager.isSharingEnabled) {
-                                familySharingManager.updateFamilyData(groceries, categories)
-                            }
+
                         },
                         onCategoryReorder = { 
                             categoryReorderTrigger++ 
-                            // Immediately notify FamilySharingManager when category order changes
-                            if (familySharingManager.isSharingEnabled) {
-                                familySharingManager.updateFamilyData(groceries, customCategories)
-                            }
+
                         },
                         scope = scope,
                         selectedLanguage = selectedLanguage,
@@ -992,10 +982,6 @@ fun SuperCartApp() {
                         groceries = groceries,
                         onUpdateGroceries = { newGroceries ->
                             groceries = newGroceries
-                            // Immediately notify FamilySharingManager to protect the changes
-                            if (familySharingManager.isSharingEnabled) {
-                                familySharingManager.updateFamilyData(newGroceries, customCategories)
-                            }
                         },
                         onRemove = { grocery ->
                             val updatedGroceries = groceries.map {
@@ -1006,10 +992,6 @@ fun SuperCartApp() {
                                 }
                             }
                             groceries = updatedGroceries
-                            // Immediately notify FamilySharingManager
-                            if (familySharingManager.isSharingEnabled) {
-                                familySharingManager.updateFamilyData(updatedGroceries, customCategories)
-                            }
                         },
                         onBuy = { grocery ->
                             val updatedGroceries = groceries.map {
@@ -1020,10 +1002,6 @@ fun SuperCartApp() {
                                 }
                             }
                             groceries = updatedGroceries
-                            // Immediately notify FamilySharingManager
-                            if (familySharingManager.isSharingEnabled) {
-                                familySharingManager.updateFamilyData(updatedGroceries, customCategories)
-                            }
                         },
                         orderedCategories = orderedCategories,
                         customCategories = customCategories,
@@ -1107,20 +1085,14 @@ fun HomeScreen(
             familySharingManager.currentProjectId = familyData.projectId
             familySharingManager.familyCode = familyData.projectId
             familySharingManager.isSharingEnabled = true
-            // Restart real-time sync
-            familySharingManager.startRealTimeSync(familyData.projectId)
+            // Note: Real-time sync removed - only create/join operations sync data
             // Process any pending offline updates
             familySharingManager.processOfflineQueue()
         }
     }
     
     // Sync bought items when family data changes (for cross-device sync)
-    LaunchedEffect(familySharingManager.isSharingEnabled) {
-        if (familySharingManager.isSharingEnabled) {
-            // Sync current bought items state to Firebase
-            familySharingManager.updateFamilyData(groceries, customCategories)
-        }
-    }
+
     
     // Save family sharing state to DataStore
     LaunchedEffect(familySharingManager.isSharingEnabled, familySharingManager.currentProjectId) {
@@ -1133,19 +1105,7 @@ fun HomeScreen(
         }
     }
     
-    // Sync groceries to Firebase when they change (if family sharing is enabled)
-    LaunchedEffect(groceries) {
-        if (familySharingManager.isSharingEnabled) {
-            familySharingManager.updateFamilyData(groceries, customCategories)
-        }
-    }
-    
-    // Sync categories to Firebase when they change (if family sharing is enabled)
-    LaunchedEffect(customCategories) {
-        if (familySharingManager.isSharingEnabled) {
-            familySharingManager.updateFamilyData(groceries, customCategories)
-        }
-    }
+
     
     // Monitor family sharing operations and close dialogs when they succeed
     LaunchedEffect(familySharingManager.isSharingEnabled, familySharingManager.errorMessage) {
@@ -2967,26 +2927,13 @@ fun ShoppingListScreen(
             familySharingManager.currentProjectId = familyData.projectId
             familySharingManager.familyCode = familyData.projectId
             familySharingManager.isSharingEnabled = true
-            // Restart real-time sync
-            familySharingManager.startRealTimeSync(familyData.projectId)
+            // Note: Real-time sync removed - only create/join operations sync data
             // Process any pending offline updates
             familySharingManager.processOfflineQueue()
         }
     }
     
-    // Sync groceries to Firebase when they change (if family sharing is enabled)
-    LaunchedEffect(groceries) {
-        if (familySharingManager.isSharingEnabled) {
-            familySharingManager.updateFamilyData(groceries, customCategories)
-        }
-    }
-    
-    // Sync categories to Firebase when they change (if family sharing is enabled)
-    LaunchedEffect(customCategories) {
-        if (familySharingManager.isSharingEnabled) {
-            familySharingManager.updateFamilyData(groceries, customCategories)
-        }
-    }
+
 
     // Edit state variables
     var showEditDialog by remember { mutableStateOf(false) }
