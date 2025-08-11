@@ -1060,7 +1060,10 @@ fun SuperCartApp() {
                         onAddToShoppingList = { grocery ->
                             groceries = groceries.map {
                                 if (it.name == grocery.name && it.customCategoryId == grocery.customCategoryId) {
-                                    it.copy(inShoppingList = !it.inShoppingList)
+                                    it.copy(
+                                        inShoppingList = !it.inShoppingList,
+                                        lastUpdate = System.currentTimeMillis()
+                                    )
                                 } else {
                                     it
                                 }
@@ -1113,7 +1116,10 @@ fun SuperCartApp() {
                         onRemove = { grocery ->
                             val updatedGroceries = groceries.map {
                                 if (it.name == grocery.name && it.customCategoryId == grocery.customCategoryId) {
-                                    it.copy(inShoppingList = false)
+                                    it.copy(
+                                        inShoppingList = false,
+                                        lastUpdate = System.currentTimeMillis()
+                                    )
                                 } else {
                                     it
                                 }
@@ -1734,7 +1740,8 @@ fun HomeScreen(
                                                 name = name,
                                                 customCategoryId = selectedCustomCategoryId,
                                                 expirationDate = expirationDate,
-                                                inShoppingList = inShoppingList
+                                                inShoppingList = inShoppingList,
+                                                lastUpdate = System.currentTimeMillis()
                                             )
                                         }
                                         onUpdateGroceries(updatedGroceries)
@@ -1807,26 +1814,42 @@ fun HomeScreen(
                                     DatePicker(state = datePickerState)
                                 }
                             }
+                                            }
+                    Spacer(modifier = Modifier.height(8.dp))
+                    // Last update display (only show in edit mode)
+                    if (isEditMode && editIndex >= 0) {
+                        val currentGrocery = groceries[editIndex]
+                        val lastUpdateTime = currentGrocery.lastUpdate
+                        if (lastUpdateTime > 0) {
+                            val date = java.util.Date(lastUpdateTime)
+                            val formatter = java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale.getDefault())
+                            Text(
+                                text = "Last updated: ${formatter.format(date)}",
+                                fontSize = 12.sp,
+                                color = Color.Gray,
+                                modifier = Modifier.padding(top = 8.dp)
+                            )
                         }
-                        Spacer(modifier = Modifier.height(8.dp))
-                        // Buy history button (only show in edit mode)
-                        if (isEditMode && editIndex >= 0) {
-                            val currentGrocery = groceries[editIndex]
-                            if (currentGrocery.buyEvents.isNotEmpty()) {
-                                Button(
-                                    onClick = {
-                                        selectedGroceryForHistory = currentGrocery
-                                        showBuyHistoryDialog = true
-                                    }
-                                ) {
-                                    Text(localizedString("buy_history_button", selectedLanguage, currentGrocery.buyEvents.size))
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))
+                    // Buy history button (only show in edit mode)
+                    if (isEditMode && editIndex >= 0) {
+                        val currentGrocery = groceries[editIndex]
+                        if (currentGrocery.buyEvents.isNotEmpty()) {
+                            Button(
+                                onClick = {
+                                    selectedGroceryForHistory = currentGrocery
+                                    showBuyHistoryDialog = true
                                 }
+                            ) {
+                                Text(localizedString("buy_history_button", selectedLanguage, currentGrocery.buyEvents.size))
                             }
                         }
                     }
                 }
-            )
-        }
+            }
+        )
+    }
         if (showDeleteConfirm && isEditMode && editIndex >= 0) {
             AlertDialog(
                 onDismissRequest = { showDeleteConfirm = false },
@@ -1946,7 +1969,8 @@ fun HomeScreen(
                                                 lastTimeBoughtDays = null,
                                                 averageBuyingDays = null,
                                                 buyEvents = emptyList(),
-                                                inShoppingList = false
+                                                inShoppingList = false,
+                                                lastUpdate = System.currentTimeMillis()
                                             )
                                         )
                                     }
@@ -1969,7 +1993,8 @@ fun HomeScreen(
                                     val existingIndex = updatedGroceries.indexOfFirst { it.name.equals(itemName, ignoreCase = true) }
                                     if (existingIndex != -1) {
                                         updatedGroceries[existingIndex] = updatedGroceries[existingIndex].copy(
-                                            inShoppingList = true
+                                            inShoppingList = true,
+                                            lastUpdate = System.currentTimeMillis()
                                         )
                                     } else {
                                         updatedGroceries.add(
@@ -1980,7 +2005,8 @@ fun HomeScreen(
                                                 lastTimeBoughtDays = null,
                                                 averageBuyingDays = null,
                                                 buyEvents = emptyList(),
-                                                inShoppingList = true
+                                                inShoppingList = true,
+                                                lastUpdate = System.currentTimeMillis()
                                             )
                                         )
                                     }
@@ -2090,7 +2116,10 @@ fun HomeScreen(
                                             updatedCategories[currentIndex - 1] = temp
                                             // Update viewOrder values
                                             updatedCategories.forEachIndexed { index, cat ->
-                                                updatedCategories[index] = cat.copy(viewOrder = index + 1)
+                                                updatedCategories[index] = cat.copy(
+                                                    viewOrder = index + 1,
+                                                    lastUpdate = System.currentTimeMillis()
+                                                )
                                             }
                                             println("DEBUG: After reorder - updatedCategories: ${updatedCategories.map { "${it.name} (viewOrder: ${it.viewOrder})" }}")
                                             onUpdateCategories(updatedCategories)
@@ -2119,7 +2148,10 @@ fun HomeScreen(
                                             updatedCategories[currentIndex + 1] = temp
                                             // Update viewOrder values
                                             updatedCategories.forEachIndexed { index, cat ->
-                                                updatedCategories[index] = cat.copy(viewOrder = index + 1)
+                                                updatedCategories[index] = cat.copy(
+                                                    viewOrder = index + 1,
+                                                    lastUpdate = System.currentTimeMillis()
+                                                )
                                             }
                                             println("DEBUG: After reorder - updatedCategories: ${updatedCategories.map { "${it.name} (viewOrder: ${it.viewOrder})" }}")
                                             onUpdateCategories(updatedCategories)
@@ -2224,7 +2256,10 @@ fun HomeScreen(
                                         
                                         val updatedCategories = customCategories.map { cat ->
                                             if (cat.id == editingCategory!!.id) {
-                                                cat.copy(name = finalName)
+                                                cat.copy(
+                                                    name = finalName,
+                                                    lastUpdate = System.currentTimeMillis()
+                                                )
                                             } else {
                                                 cat
                                             }
@@ -2293,7 +2328,10 @@ fun HomeScreen(
                                 // Move all items to "אחר" category (ID 1)
                                 val updatedGroceries = groceries.map { grocery ->
                                     if (grocery.customCategoryId == categoryToDelete!!.id) {
-                                        grocery.copy(customCategoryId = 1) // Move to "אחר"
+                                        grocery.copy(
+                                            customCategoryId = 1, // Move to "אחר"
+                                            lastUpdate = System.currentTimeMillis()
+                                        )
                                     } else {
                                         grocery
                                     }
@@ -2367,7 +2405,8 @@ fun HomeScreen(
                                         id = newId,
                                         name = newCategoryName,
                                         default = false,
-                                        viewOrder = newViewOrder
+                                        viewOrder = newViewOrder,
+                                        lastUpdate = System.currentTimeMillis()
                                     )
                                     
                                     val updatedCategories = customCategories + newCategory
@@ -2477,7 +2516,8 @@ fun HomeScreen(
                                     name = name,
                                     customCategoryId = selectedCustomCategoryId,
                                     expirationDate = expirationDate,
-                                    inShoppingList = false
+                                    inShoppingList = false,
+                                    lastUpdate = System.currentTimeMillis()
                                 )
                                 onUpdateGroceries(updatedGroceries)
                                 showAddToShoppingListConfirm = false
@@ -2497,7 +2537,8 @@ fun HomeScreen(
                                     name = name,
                                     customCategoryId = selectedCustomCategoryId,
                                     expirationDate = expirationDate,
-                                    inShoppingList = true
+                                    inShoppingList = true,
+                                    lastUpdate = System.currentTimeMillis()
                                 )
                                 onUpdateGroceries(updatedGroceries)
                                 
@@ -3446,7 +3487,10 @@ fun ShoppingListScreen(
                                                 println("DEBUG: Shopping list - marking '${grocery.name}' as bought")
                                                 val updatedGroceries = groceries.map {
                                                     if (it.name == grocery.name && it.customCategoryId == grocery.customCategoryId) {
-                                                        it.copy(isBought = true)
+                                                        it.copy(
+                                                            isBought = true,
+                                                            lastUpdate = System.currentTimeMillis()
+                                                        )
                                                     } else {
                                                         it
                                                     }
@@ -3532,7 +3576,11 @@ fun ShoppingListScreen(
                                 // Return item to shopping list
                                 val updatedGroceries = groceries.map {
                                     if (it.name == boughtItem.name && it.customCategoryId == boughtItem.customCategoryId) {
-                                        it.copy(isBought = false, inShoppingList = true)
+                                        it.copy(
+                                            isBought = false, 
+                                            inShoppingList = true,
+                                            lastUpdate = System.currentTimeMillis()
+                                        )
                                     } else {
                                         it
                                     }
@@ -3608,7 +3656,8 @@ fun ShoppingListScreen(
                         val updated = editGrocery!!.copy(
                             name = name,
                             customCategoryId = selectedCustomCategoryId,
-                            expirationDate = expirationDate
+                            expirationDate = expirationDate,
+                            lastUpdate = System.currentTimeMillis()
                         )
                         val updatedGroceries = groceries.map {
                             if (it.name == editGrocery!!.name && it.customCategoryId == editGrocery!!.customCategoryId) updated else it
@@ -3687,6 +3736,21 @@ fun ShoppingListScreen(
                             }
                         }
                     }
+                    Spacer(modifier = Modifier.height(8.dp))
+                    // Last update display (only show in edit mode)
+                    if (editGrocery != null) {
+                        val lastUpdateTime = editGrocery!!.lastUpdate
+                        if (lastUpdateTime > 0) {
+                            val date = java.util.Date(lastUpdateTime)
+                            val formatter = java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale.getDefault())
+                            Text(
+                                text = "Last updated: ${formatter.format(date)}",
+                                fontSize = 12.sp,
+                                color = Color.Gray,
+                                modifier = Modifier.padding(top = 8.dp)
+                            )
+                        }
+                    }
                 }
             }
         )
@@ -3713,7 +3777,10 @@ fun ShoppingListScreen(
                                 val updatedGroceries = groceries.map { grocery ->
                                     if (boughtItems.any { it.name == grocery.name && it.customCategoryId == grocery.customCategoryId }) {
                                         // This item was bought, so update it and clear bought status
-                                        grocery.addPurchaseEvent().copy(isBought = false)
+                                        grocery.addPurchaseEvent().copy(
+                                            isBought = false,
+                                            lastUpdate = System.currentTimeMillis()
+                                        )
                                     } else {
                                         grocery
                                     }
@@ -3815,24 +3882,24 @@ object CustomCategoryListSerializer : Serializer<List<CustomCategory>> {
 // Function to initialize default custom categories
 suspend fun Context.initializeDefaultCustomCategories() {
     val defaultCategories = listOf(
-        CustomCategory(id = 1, name = "אחר", default = true, viewOrder = 1),
-        CustomCategory(id = 2, name = "פירות", default = true, viewOrder = 2),
-        CustomCategory(id = 3, name = "ירקות", default = true, viewOrder = 3),
-        CustomCategory(id = 4, name = "מאפים ולחמים", default = true, viewOrder = 4),
-        CustomCategory(id = 5, name = "חטיפים ומתוקים", default = true, viewOrder = 5),
-        CustomCategory(id = 6, name = "דגנים וקטניות", default = true, viewOrder = 6),
-        CustomCategory(id = 7, name = "שימורים", default = true, viewOrder = 7),
-        CustomCategory(id = 8, name = "חד פעמי", default = true, viewOrder = 8),
-        CustomCategory(id = 9, name = "מוצרי נקיון", default = true, viewOrder = 9),
-        CustomCategory(id = 10, name = "מוצרים לתינוקות", default = true, viewOrder = 10),
-        CustomCategory(id = 11, name = "מזון יבש", default = true, viewOrder = 11),
-        CustomCategory(id = 12, name = "תבלינים ורטבים", default = true, viewOrder = 12),
-        CustomCategory(id = 13, name = "מוצרי טואלטיקה", default = true, viewOrder = 13),
-        CustomCategory(id = 14, name = "משקאות", default = true, viewOrder = 14),
-        CustomCategory(id = 15, name = "קפואים", default = true, viewOrder = 15),
-        CustomCategory(id = 16, name = "מוצרי חלב", default = true, viewOrder = 16),
-        CustomCategory(id = 17, name = "בשר ודגים", default = true, viewOrder = 17),
-        CustomCategory(id = 18, name = "מוצרים לבית", default = true, viewOrder = 18)
+        CustomCategory(id = 1, name = "אחר", default = true, viewOrder = 1, lastUpdate = System.currentTimeMillis()),
+        CustomCategory(id = 2, name = "פירות", default = true, viewOrder = 2, lastUpdate = System.currentTimeMillis()),
+        CustomCategory(id = 3, name = "ירקות", default = true, viewOrder = 3, lastUpdate = System.currentTimeMillis()),
+        CustomCategory(id = 4, name = "מאפים ולחמים", default = true, viewOrder = 4, lastUpdate = System.currentTimeMillis()),
+        CustomCategory(id = 5, name = "חטיפים ומתוקים", default = true, viewOrder = 5, lastUpdate = System.currentTimeMillis()),
+        CustomCategory(id = 6, name = "דגנים וקטניות", default = true, viewOrder = 6, lastUpdate = System.currentTimeMillis()),
+        CustomCategory(id = 7, name = "שימורים", default = true, viewOrder = 7, lastUpdate = System.currentTimeMillis()),
+        CustomCategory(id = 8, name = "חד פעמי", default = true, viewOrder = 8, lastUpdate = System.currentTimeMillis()),
+        CustomCategory(id = 9, name = "מוצרי נקיון", default = true, viewOrder = 9, lastUpdate = System.currentTimeMillis()),
+        CustomCategory(id = 10, name = "מוצרים לתינוקות", default = true, viewOrder = 10, lastUpdate = System.currentTimeMillis()),
+        CustomCategory(id = 11, name = "מזון יבש", default = true, viewOrder = 11, lastUpdate = System.currentTimeMillis()),
+        CustomCategory(id = 12, name = "תבלינים ורטבים", default = true, viewOrder = 12, lastUpdate = System.currentTimeMillis()),
+        CustomCategory(id = 13, name = "מוצרי טואלטיקה", default = true, viewOrder = 13, lastUpdate = System.currentTimeMillis()),
+        CustomCategory(id = 14, name = "משקאות", default = true, viewOrder = 14, lastUpdate = System.currentTimeMillis()),
+        CustomCategory(id = 15, name = "קפואים", default = true, viewOrder = 15, lastUpdate = System.currentTimeMillis()),
+        CustomCategory(id = 16, name = "מוצרי חלב", default = true, viewOrder = 16, lastUpdate = System.currentTimeMillis()),
+        CustomCategory(id = 17, name = "בשר ודגים", default = true, viewOrder = 17, lastUpdate = System.currentTimeMillis()),
+        CustomCategory(id = 18, name = "מוצרים לבית", default = true, viewOrder = 18, lastUpdate = System.currentTimeMillis())
     )
     
     // Check if "אחר" category with id = 1 already exists

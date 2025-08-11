@@ -595,7 +595,8 @@ class FirebaseService {
             averageBuyingDays = finalAverageBuyingDays,
             buyEvents = mergedBuyEvents,
             inShoppingList = finalInShoppingList,
-            isBought = finalIsBought
+            isBought = finalIsBought,
+            lastUpdate = currentTime
         )
     }
     

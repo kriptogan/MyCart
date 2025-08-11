@@ -9,7 +9,8 @@ data class CustomCategory(
     val id: Int = 0,           // Unique identifier
     val name: String = "",       // Display name
     val default: Boolean = false,   // Whether this is a default category
-    val viewOrder: Int = 0      // Order for display
+    val viewOrder: Int = 0,      // Order for display
+    val lastUpdate: Long = 0L   // Timestamp of last update
 ) {
     // Validation
     fun isValid(): Boolean = id > 0 && name.isNotBlank()
@@ -30,7 +31,8 @@ data class Grocery(
     val averageBuyingDays: Int? = null, // ממוצע ימים בין קניות (אופציונלי)
     val buyEvents: List<String> = emptyList(), // רשימת תאריכי קנייה (ISO)
     val inShoppingList: Boolean = false, // האם המצרך נמצא ברשימת הקניות
-    val isBought: Boolean = false // האם המצרך נרכש
+    val isBought: Boolean = false, // האם המצרך נרכש
+    val lastUpdate: Long = 0L // Timestamp of last update
 ) {
     // Validation
     fun isValid(): Boolean = name.isNotBlank() && customCategoryId > 0
@@ -107,7 +109,8 @@ fun Grocery.withLocalDate(): GroceryWithDate = GroceryWithDate(
     averageBuyingDays = averageBuyingDays,
     buyEvents = buyEvents.map { java.time.LocalDate.parse(it) },
     inShoppingList = inShoppingList,
-    isBought = isBought
+    isBought = isBought,
+    lastUpdate = lastUpdate
 )
 
 data class GroceryWithDate(
@@ -118,7 +121,8 @@ data class GroceryWithDate(
     val averageBuyingDays: Int? = null,
     val buyEvents: List<java.time.LocalDate> = emptyList(),
     val inShoppingList: Boolean = false,
-    val isBought: Boolean = false
+    val isBought: Boolean = false,
+    val lastUpdate: Long = 0L
 ) {
     // Validation
     fun isValid(): Boolean = name.isNotBlank() && customCategoryId > 0
@@ -193,28 +197,57 @@ data class GroceryWithDate(
             averageBuyingDays = avg,
             buyEvents = newBuyEvents,
             inShoppingList = false,
-            isBought = true
+            isBought = true,
+            lastUpdate = System.currentTimeMillis()
         )
     }
     
     // Toggle shopping list status
     fun toggleShoppingList(): GroceryWithDate {
-        return copy(inShoppingList = !inShoppingList)
+        return copy(
+            inShoppingList = !inShoppingList,
+            lastUpdate = System.currentTimeMillis()
+        )
     }
     
     // Update expiration date
     fun updateExpirationDate(newDate: java.time.LocalDate?): GroceryWithDate {
-        return copy(expirationDate = newDate)
+        return copy(
+            expirationDate = newDate,
+            lastUpdate = System.currentTimeMillis()
+        )
     }
     
     // Update category
     fun updateCategory(newCategoryId: Int): GroceryWithDate {
-        return copy(customCategoryId = newCategoryId)
+        return copy(
+            customCategoryId = newCategoryId,
+            lastUpdate = System.currentTimeMillis()
+        )
     }
     
     // Update name
     fun updateName(newName: String): GroceryWithDate {
-        return copy(name = newName)
+        return copy(
+            name = newName,
+            lastUpdate = System.currentTimeMillis()
+        )
+    }
+    
+    // Update shopping list status
+    fun updateShoppingListStatus(inList: Boolean): GroceryWithDate {
+        return copy(
+            inShoppingList = inList,
+            lastUpdate = System.currentTimeMillis()
+        )
+    }
+    
+    // Update bought status
+    fun updateBoughtStatus(bought: Boolean): GroceryWithDate {
+        return copy(
+            isBought = bought,
+            lastUpdate = System.currentTimeMillis()
+        )
     }
 }
 
@@ -226,7 +259,8 @@ fun GroceryWithDate.toSerializable(): Grocery = Grocery(
     averageBuyingDays = averageBuyingDays,
     buyEvents = buyEvents.map { it.toString() },
     inShoppingList = inShoppingList,
-    isBought = isBought
+    isBought = isBought,
+    lastUpdate = lastUpdate
 )
 
 fun List<java.time.LocalDate>.averageDaysBetween(): Int? {
