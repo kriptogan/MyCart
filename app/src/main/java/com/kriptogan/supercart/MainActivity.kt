@@ -3256,7 +3256,8 @@ fun ShoppingListScreen(
                         val updated = editGrocery!!.copy(
                             name = name,
                             customCategoryId = selectedCustomCategoryId,
-                            expirationDate = expirationDate
+                            expirationDate = expirationDate,
+                            lastUpdate = System.currentTimeMillis()
                         )
                         val updatedGroceries = groceries.map {
                             if (it.name == editGrocery!!.name && it.customCategoryId == editGrocery!!.customCategoryId) updated else it
