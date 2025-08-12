@@ -1,6 +1,7 @@
 package com.kriptogan.supercart
 
 import java.time.LocalDate
+import java.time.LocalDateTime
 import java.util.UUID
 import kotlinx.serialization.Serializable
 
@@ -11,7 +12,8 @@ data class CustomCategory(
     val id: Int,           // Legacy integer identifier (for migration)
     val name: String,       // Display name
     val default: Boolean,   // Whether this is a default category
-    val viewOrder: Int      // Order for display
+    val viewOrder: Int,     // Order for display
+    val lastUpdate: String = LocalDateTime.now().toString() // Last update timestamp (ISO string)
 )
 
 // מודל נתונים עבור מצרך
@@ -25,7 +27,8 @@ data class Grocery(
     val lastTimeBoughtDays: Int? = null, // מספר ימים מאז הקנייה האחרונה (אופציונלי)
     val averageBuyingDays: Int? = null, // ממוצע ימים בין קניות (אופציונלי)
     val buyEvents: List<String> = emptyList(), // רשימת תאריכי קנייה (ISO)
-    val inShoppingList: Boolean = false // האם המצרך נמצא ברשימת הקניות
+    val inShoppingList: Boolean = false, // האם המצרך נמצא ברשימת הקניות
+    val lastUpdate: String = LocalDateTime.now().toString() // Last update timestamp (ISO string)
 )
 
 fun Grocery.withLocalDate(): GroceryWithDate = GroceryWithDate(
@@ -37,7 +40,8 @@ fun Grocery.withLocalDate(): GroceryWithDate = GroceryWithDate(
     lastTimeBoughtDays = lastTimeBoughtDays,
     averageBuyingDays = averageBuyingDays,
     buyEvents = buyEvents.map { java.time.LocalDate.parse(it) },
-    inShoppingList = inShoppingList
+    inShoppingList = inShoppingList,
+    lastUpdate = LocalDateTime.parse(lastUpdate)
 )
 
 data class GroceryWithDate(
@@ -49,7 +53,8 @@ data class GroceryWithDate(
     val lastTimeBoughtDays: Int? = null,
     val averageBuyingDays: Int? = null,
     val buyEvents: List<java.time.LocalDate> = emptyList(),
-    val inShoppingList: Boolean = false // האם המצרך נמצא ברשימת הקניות
+    val inShoppingList: Boolean = false, // האם המצרך נמצא ברשימת הקניות
+    val lastUpdate: LocalDateTime = LocalDateTime.now() // Last update timestamp
 )
 
 fun GroceryWithDate.toSerializable(): Grocery = Grocery(
@@ -61,7 +66,8 @@ fun GroceryWithDate.toSerializable(): Grocery = Grocery(
     lastTimeBoughtDays = lastTimeBoughtDays,
     averageBuyingDays = averageBuyingDays,
     buyEvents = buyEvents.map { it.toString() },
-    inShoppingList = inShoppingList
+    inShoppingList = inShoppingList,
+    lastUpdate = lastUpdate.toString()
 )
 
 fun List<java.time.LocalDate>.averageDaysBetween(): Int? {

@@ -13,6 +13,8 @@ SuperCart - Version 1.2.0 Changes Summary
 - Shopping list dialog: Displays item UUID when editing groceries
 - Category edit dialog: Shows "Category UUID: [uuid]" when editing categories
 - Visual debugging: UUIDs displayed in small gray text for easy identification
+- Added lastUpdate display: All dialogs now show both UUID and lastUpdate timestamp for testing
+- Timestamp tracking: "Last Update: [datetime]" visible in edit dialogs for audit purposes
 
 📁 Version Management Improvements
 - Fixed version dialog: Now properly reads from app/src/main/assets/version.txt file
@@ -27,6 +29,14 @@ SuperCart - Version 1.2.0 Changes Summary
 - Enhanced GroceryWithDate: Added uuid and customCategoryUuid fields
 - Updated conversion functions: All data transformation functions handle new UUID fields
 - Maintained data integrity: Legacy references preserved during transition
+
+📅 LastUpdate DateTime Tracking
+- Added lastUpdate field: Both CustomCategory and Grocery classes now track modification timestamps
+- Automatic timestamp generation: New items get lastUpdate set to current datetime on creation
+- Save operation updates: Every edit operation updates lastUpdate to current timestamp
+- Visual timestamp display: All edit dialogs show "Last Update: [datetime]" for audit tracking
+- Consistent datetime format: Uses ISO datetime strings for proper serialization and readability
+- Complete modification audit: Track exactly when each item and category was last changed
 
 🔧 Development Tools
 - UUID validation: Easy visual confirmation of unique identifier generation

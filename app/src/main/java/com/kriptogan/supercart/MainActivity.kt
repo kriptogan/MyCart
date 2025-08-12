@@ -67,7 +67,9 @@ import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import com.kriptogan.supercart.Grocery
 import java.time.LocalDate
+import java.time.LocalDateTime
 import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
@@ -1152,7 +1154,8 @@ fun HomeScreen(
                                                 name = name,
                                                 customCategoryId = selectedCustomCategoryId,
                                                 expirationDate = expirationDate,
-                                                inShoppingList = inShoppingList
+                                                inShoppingList = inShoppingList,
+                                                lastUpdate = LocalDateTime.now()
                                             )
                                         }
                                         onUpdateGroceries(updatedGroceries)
@@ -1179,19 +1182,32 @@ fun HomeScreen(
                 title = { Text(if (isEditMode) localizedString("edit_item_title", selectedLanguage) else localizedString("add_item_title", selectedLanguage)) },
                 text = {
                     Column {
-                        // Show UUID for testing
+                        // Show UUID and lastUpdate for testing
                         if (isEditMode && editIndex >= 0 && editIndex < groceries.size) {
                             Text(
                                 text = "UUID: ${groceries[editIndex].uuid}",
                                 style = androidx.compose.material3.MaterialTheme.typography.bodySmall,
-                                color = Color.Gray,
+                                color = Color.Red,
+                                modifier = Modifier.padding(bottom = 4.dp)
+                            )
+                            Text(
+                                text = "Last Update: ${
+                                    try {
+                                        groceries[editIndex].lastUpdate
+                                            .format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
+                                    } catch (e: Exception) {
+                                        groceries[editIndex].lastUpdate.toString()
+                                    }
+                                }",
+                                style = androidx.compose.material3.MaterialTheme.typography.bodySmall,
+                                color = Color.Red,
                                 modifier = Modifier.padding(bottom = 8.dp)
                             )
                         } else if (!isEditMode) {
                             Text(
-                                text = "New Item (UUID will be generated)",
+                                text = "New Item (UUID and lastUpdate will be generated)",
                                 style = androidx.compose.material3.MaterialTheme.typography.bodySmall,
-                                color = Color.Gray,
+                                color = Color.Red,
                                 modifier = Modifier.padding(bottom = 8.dp)
                             )
                         }
@@ -1356,7 +1372,8 @@ fun HomeScreen(
                                             lastTimeBoughtDays = null,
                                             averageBuyingDays = null,
                                             buyEvents = emptyList(),
-                                            inShoppingList = true
+                                            inShoppingList = true,
+                                            lastUpdate = LocalDateTime.now()
                                         )
                                         updatedGroceries.add(newItem)
                                     }
@@ -1576,7 +1593,7 @@ fun HomeScreen(
                                         
                                         val updatedCategories = customCategories.map { cat ->
                                             if (cat.id == editingCategory!!.id) {
-                                                cat.copy(name = finalName)
+                                                cat.copy(name = finalName, lastUpdate = LocalDateTime.now().toString())
                                             } else {
                                                 cat
                                             }
@@ -1601,12 +1618,25 @@ fun HomeScreen(
                 title = { Text(localizedString("edit_category_name", selectedLanguage)) },
                 text = {
                     Column {
-                        // Show UUID for testing
+                        // Show UUID and lastUpdate for testing
                         if (editingCategory != null) {
                             Text(
                                 text = "Category UUID: ${editingCategory!!.uuid}",
                                 style = androidx.compose.material3.MaterialTheme.typography.bodySmall,
-                                color = Color.Gray,
+                                color = Color.Red,
+                                modifier = Modifier.padding(bottom = 4.dp)
+                            )
+                            Text(
+                                text = "Last Update: ${
+                                    try {
+                                        LocalDateTime.parse(editingCategory!!.lastUpdate)
+                                            .format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
+                                    } catch (e: Exception) {
+                                        editingCategory!!.lastUpdate
+                                    }
+                                }",
+                                style = androidx.compose.material3.MaterialTheme.typography.bodySmall,
+                                color = Color.Red,
                                 modifier = Modifier.padding(bottom = 8.dp)
                             )
                         }
@@ -1729,7 +1759,8 @@ fun HomeScreen(
                                         id = newId,
                                         name = newCategoryName,
                                         default = false,
-                                        viewOrder = newViewOrder
+                                        viewOrder = newViewOrder,
+                                        lastUpdate = LocalDateTime.now().toString()
                                     )
                                     
                                     val updatedCategories = customCategories + newCategory
@@ -1834,7 +1865,8 @@ fun HomeScreen(
                                     name = name,
                                     customCategoryId = selectedCustomCategoryId,
                                     expirationDate = expirationDate,
-                                    inShoppingList = false
+                                    inShoppingList = false,
+                                    lastUpdate = LocalDateTime.now()
                                 )
                                 onUpdateGroceries(updatedGroceries)
                                 showAddToShoppingListConfirm = false
@@ -1854,7 +1886,8 @@ fun HomeScreen(
                                     name = name,
                                     customCategoryId = selectedCustomCategoryId,
                                     expirationDate = expirationDate,
-                                    inShoppingList = true
+                                    inShoppingList = true,
+                                    lastUpdate = LocalDateTime.now()
                                 )
                                 onUpdateGroceries(updatedGroceries)
                                 showAddToShoppingListConfirm = false
@@ -2276,7 +2309,8 @@ fun ShoppingListScreen(
                         val updated = editGrocery!!.copy(
                             name = name,
                             customCategoryId = selectedCustomCategoryId,
-                            expirationDate = expirationDate
+                            expirationDate = expirationDate,
+                            lastUpdate = LocalDateTime.now()
                         )
                         val updatedGroceries = groceries.map {
                             if (it.name == editGrocery!!.name && it.customCategoryId == editGrocery!!.customCategoryId) updated else it
@@ -2295,12 +2329,25 @@ fun ShoppingListScreen(
                             title = { Text(localizedString("edit_item_title", selectedLanguage)) },
             text = {
                 Column {
-                    // Show UUID for testing
+                    // Show UUID and lastUpdate for testing
                     if (editGrocery != null) {
                         Text(
                             text = "UUID: ${editGrocery!!.uuid}",
                             style = androidx.compose.material3.MaterialTheme.typography.bodySmall,
-                            color = Color.Gray,
+                            color = Color.Red,
+                            modifier = Modifier.padding(bottom = 4.dp)
+                        )
+                        Text(
+                            text = "Last Update: ${
+                                try {
+                                    editGrocery!!.lastUpdate
+                                        .format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
+                                } catch (e: Exception) {
+                                    editGrocery!!.lastUpdate.toString()
+                                }
+                            }",
+                            style = androidx.compose.material3.MaterialTheme.typography.bodySmall,
+                            color = Color.Red,
                             modifier = Modifier.padding(bottom = 8.dp)
                         )
                     }
