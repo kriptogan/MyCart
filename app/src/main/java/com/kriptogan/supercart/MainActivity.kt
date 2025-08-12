@@ -56,6 +56,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
+import java.io.File
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.kriptogan.supercart.ui.theme.SuperCartTheme
@@ -923,6 +924,7 @@ fun HomeScreen(
     var showAddToShoppingListConfirm by remember { mutableStateOf(false) } // For confirmation dialog when adding new item
     var showAlertNotification by remember { mutableStateOf(false) } // For alert notification popup
     var showLanguageSelection by remember { mutableStateOf(false) } // For language selection dialog
+    var showVersionDialog by remember { mutableStateOf(false) } // For version dialog
     
     // Update configuration when locale changes
     val configuration = LocalConfiguration.current
@@ -1124,6 +1126,19 @@ fun HomeScreen(
                                 },
                                 onClick = {
                                     showLanguageSelection = true
+                                    showMenu = false
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { 
+                                    Text(
+                                        localizedString("show_version", selectedLanguage),
+                                        modifier = Modifier.fillMaxWidth(),
+                                        textAlign = TextAlign.Center
+                                    ) 
+                                },
+                                onClick = {
+                                    showVersionDialog = true
                                     showMenu = false
                                 }
                             )
@@ -2075,6 +2090,38 @@ fun HomeScreen(
                             Text("Русский", color = Color.White, fontWeight = if (selectedLanguage == "ru") FontWeight.Bold else FontWeight.Normal)
                         }
                     }
+                }
+            )
+        }
+        
+        // Version dialog
+        if (showVersionDialog) {
+            val versionText = remember {
+                try {
+                    // Read version.txt from the project root
+                    val versionFile = File(context.filesDir.parent + "/../../version.txt")
+                    if (versionFile.exists()) {
+                        versionFile.readText().trim()
+                    } else {
+                        "1.0.0" // Fallback version
+                    }
+                } catch (e: Exception) {
+                    "1.0.0" // Fallback version if reading fails
+                }
+            }
+            
+            AlertDialog(
+                onDismissRequest = { showVersionDialog = false },
+                confirmButton = {
+                    Button(
+                        onClick = { showVersionDialog = false }
+                    ) {
+                        Text(localizedString("close", selectedLanguage))
+                    }
+                },
+                title = { Text(localizedString("show_version", selectedLanguage)) },
+                text = {
+                    Text(versionText)
                 }
             )
         }

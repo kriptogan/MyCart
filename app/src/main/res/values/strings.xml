@@ -15,6 +15,7 @@
     <string name="manage_categories">ניהול קטגוריות</string>
     <string name="import_shopping_list">ייבוא רשימת קניות</string>
     <string name="languages">שפות</string>
+    <string name="show_version">הצג גרסה</string>
     
     <!-- Dialogs -->
     <string name="add_item_title">הוסף מצרך</string>
