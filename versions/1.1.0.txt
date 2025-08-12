@@ -1,0 +1,18 @@
+SuperCart - Version 1.1.0 Changes Summary
+
+🔧 User Interface Improvements
+- Removed full-screen mode: App now shows the system status bar while keeping screen rotation locked
+- Removed custom status bar: Eliminated the custom green gradient status bar that showed battery level and clock
+- Reordered home page buttons: Changed from "Add -> Burger -> Alert" to "Add -> Alert -> Burger" for better user flow
+- Smart alert button: Alert button now hides completely when there are no pending alerts, creating a cleaner interface
+
+⚙️ Version Management System
+- Added version tracking: Created version.txt file to store current version number (1.0.0 format)
+- Added "Show Version" menu option: New menu item in hamburger menu to display current app version
+- Version dialog: Simple popup window showing the current version number read from version.txt file
+- Multi-language version support: Version option and dialog fully translated in Hebrew, English, and Russian
+
+🌍 Translation & Localization Fixes
+- Fixed version translation bug: Resolved issue where "Show Version" text wasn't affected by language selection
+- Added missing translations: Completed Russian translation for version-related strings
+- Improved translation system: Fixed custom StringResources maps to properly support all version features

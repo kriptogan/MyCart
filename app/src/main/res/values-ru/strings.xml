@@ -15,6 +15,7 @@
     <string name="manage_categories">Управление категориями</string>
     <string name="import_shopping_list">Импорт списка покупок</string>
     <string name="languages">Языки</string>
+    <string name="show_version">Показать версию</string>
     
     <!-- Dialogs -->
     <string name="add_item_title">Добавить товар</string>
