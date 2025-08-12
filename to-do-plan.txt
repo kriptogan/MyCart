@@ -1,92 +1,42 @@
-Priority 1: High Impact, Low Complexity
-_______________________________________________________________________________________________________________
-V 5. Cart Icon Toggle (Home Page)
-Why First: Simple UI enhancement that improves user experience immediately
-Implementation: Modify the existing cart icon to toggle between "add to list" and "remove from list" states
-Effort: 1-2 hours
-Impact: Immediate usability improvement
+ 1. handle sync properly
+ V 3. better UI for "select category" + an option to create a new one on the fly
+ V 4. hide alert icon if there are no alerts
+ V 5. scroll bug in the shopping list page
+ V 6. when an item moves to bought list, don't alter the cart icon
+ V 7. when user adds an item with an existing name, alert about it, close the window, and filter by that name to show the item.
+ V 8. In the "import shopping list" process, after user clicks the checkmark, prompt a confirm message: "the following X items will be added to the system, do you want them to be placed in the shopping list as well?" with a yes/no options.
 
-V 4. Add New Item Directly to Shopping List
-Why Second: Natural workflow enhancement that users expect
-Implementation: Add a "Add to Shopping List" option in the add item dialog
-Effort: 2-3 hours
-Impact: Streamlines the shopping list creation process
-_______________________________________________________________________________________________________________
 
-Priority 2: Medium Impact, Medium Complexity
-_______________________________________________________________________________________________________________
-V 3. Shopping List Completion Confirmation
-Why Third: Important user feedback and data management
-Implementation:
-Add completion dialog/confirmation
-Mark all items as purchased
-Clear shopping list
-Update purchase history
-Effort: 4-6 hours
-Impact: Better user experience and data accuracy
+timestamp-based sync method:
+I want to fix the sync with server problems I have.
+to do so, I need that each object in the app will have a timestamp property called `lastUpdate`
 
-V 7. When entering app, if there are notification, alert the user with a message. 
-_______________________________________________________________________________________________________________
+When a user changes something in that object (category/item) we need to update that timestamp.
+After updating the timestamp, if the user is connected to a familyShare group, the app should upload the update to the server.
+The server than needs to check if this update is more recent that the one it has.
+In case the update is indeed more recent, update the database, and notify all other family members (except the origin sender). If not, send the more recent info back to the user.
 
-Priority 3: High Impact, High Complexity
-_______________________________________________________________________________________________________________
+In case the server sends an update to a user, the app will compare the timestamp with their local data.
+If the info is indeed more updated, the local data and view will change.
+If not, the user will upload an update to the server.
 
-V 6. Multi-Language Support (English & Russian)
-Why Fourth: Expands user base significantly
-Implementation:
-Create string resources for English and Russian
-Implement language selection
-Handle RTL/LTR layout switching
-Update all hardcoded Hebrew text
-Effort: 8-12 hours
-Impact: Opens app to international markets
-_______________________________________________________________________________________________________________
+learn the current code regarding synchronization with the cloud database.
+Please summarize all that and suggest implementation. do not execute the changes yet.
 
-Priority 4: Infrastructure Features
-_______________________________________________________________________________________________________________
+In case of a deleted item, keep a local list of deleted items with the timestamp.
+remove items from that list after 3 days.
 
-1. Cloud Server Database + WebSocket
-Why Fifth: Major infrastructure change requiring careful planning
-Implementation:
-Backend server setup
-Database design and migration
-WebSocket implementation for real-time sync
-Offline/online data handling
-User authentication
-Effort: 40-60 hours
-Impact: Enables multi-device sync and collaboration
+Use a pending list that sends the updates in a packet every 5 seconds.
 
-2. Push Notifications
-Why Last: Depends on cloud infrastructure
-Implementation:
-Firebase Cloud Messaging setup
-Notification triggers (expiring items, shopping reminders)
-Notification preferences
-Background processing
-Effort: 20-30 hours
-Impact: User engagement and retention
+___________________________________________________________________________
 
-Recommended Implementation Order:
-Phase 1 (Week 1): Quick Wins
-Cart Icon Toggle - Immediate UX improvement
-Direct Add to Shopping List - Workflow enhancement
-Phase 2 (Week 2): User Experience
-Shopping List Completion - Better feedback and data management
-Phase 3 (Weeks 3-4): Market Expansion
-Multi-Language Support - Expand user base
-Phase 4 (Months 2-3): Infrastructure
-Cloud Database + WebSocket - Foundation for advanced features
-Push Notifications - Engagement features
-
-Additional Considerations:
-For Multi-Language Support:
-Consider using Android's built-in localization system
-Plan for RTL/LTR layout switching
-Test with native speakers for each language
-For Cloud Infrastructure:
-Consider using Firebase for quick setup
-Plan data migration strategy
-Design offline-first architecture
-For Push Notifications:
-Define notification triggers (expiring items, shopping reminders, etc.)
-Plan notification frequency and user preferences
+I have a complicated task for you, I will break it down into sections:
+1. After user creates or edit an item (category or grocery, from the home or shopping list page), the app will store the change as a pending change (this is just a record of the change).
+2. every 30 seconds, the app will send to the server all the pending changes.
+3. the server will go over the changes and compare the IDs of the items in those changes.
+4. if the item does not exist, the server will create it in the database.
+5. if the item exist, it will compare the lastUpdate proparty.
+6. if the server has the outdated data, it will update/delete (according to the action type)
+7. if the user has the outdated data, the server will send message to the user with the updated data.
+8. after going over all the ppending changes, the server will send an acknowledge message to the sender.
+9. when the ack message received, show a toaster message "sync succeeded."
