@@ -1179,6 +1179,22 @@ fun HomeScreen(
                 title = { Text(if (isEditMode) localizedString("edit_item_title", selectedLanguage) else localizedString("add_item_title", selectedLanguage)) },
                 text = {
                     Column {
+                        // Show UUID for testing
+                        if (isEditMode && editIndex >= 0 && editIndex < groceries.size) {
+                            Text(
+                                text = "UUID: ${groceries[editIndex].uuid}",
+                                style = androidx.compose.material3.MaterialTheme.typography.bodySmall,
+                                color = Color.Gray,
+                                modifier = Modifier.padding(bottom = 8.dp)
+                            )
+                        } else if (!isEditMode) {
+                            Text(
+                                text = "New Item (UUID will be generated)",
+                                style = androidx.compose.material3.MaterialTheme.typography.bodySmall,
+                                color = Color.Gray,
+                                modifier = Modifier.padding(bottom = 8.dp)
+                            )
+                        }
                         OutlinedTextField(
                             value = name,
                             onValueChange = { name = it },
@@ -1584,13 +1600,24 @@ fun HomeScreen(
                 },
                 title = { Text(localizedString("edit_category_name", selectedLanguage)) },
                 text = {
-                    OutlinedTextField(
-                        value = editingCategoryName,
-                        onValueChange = { editingCategoryName = it },
-                        label = { Text(localizedString("category_name", selectedLanguage)) },
-                        modifier = Modifier.fillMaxWidth(),
-                        enabled = editingCategory?.name != "אחר"
-                    )
+                    Column {
+                        // Show UUID for testing
+                        if (editingCategory != null) {
+                            Text(
+                                text = "Category UUID: ${editingCategory!!.uuid}",
+                                style = androidx.compose.material3.MaterialTheme.typography.bodySmall,
+                                color = Color.Gray,
+                                modifier = Modifier.padding(bottom = 8.dp)
+                            )
+                        }
+                        OutlinedTextField(
+                            value = editingCategoryName,
+                            onValueChange = { editingCategoryName = it },
+                            label = { Text(localizedString("category_name", selectedLanguage)) },
+                            modifier = Modifier.fillMaxWidth(),
+                            enabled = editingCategory?.name != "אחר"
+                        )
+                    }
                 }
             )
         }
@@ -1946,13 +1973,10 @@ fun HomeScreen(
         if (showVersionDialog) {
             val versionText = remember {
                 try {
-                    // Read version.txt from the project root
-                    val versionFile = File(context.filesDir.parent + "/../../version.txt")
-                    if (versionFile.exists()) {
-                        versionFile.readText().trim()
-                    } else {
-                        "1.0.0" // Fallback version
-                    }
+                    // Read version.txt from assets folder
+                    val inputStream = context.assets.open("version.txt")
+                    val content = inputStream.bufferedReader().use { it.readText() }
+                    content.trim()
                 } catch (e: Exception) {
                     "1.0.0" // Fallback version if reading fails
                 }
@@ -2271,6 +2295,15 @@ fun ShoppingListScreen(
                             title = { Text(localizedString("edit_item_title", selectedLanguage)) },
             text = {
                 Column {
+                    // Show UUID for testing
+                    if (editGrocery != null) {
+                        Text(
+                            text = "UUID: ${editGrocery!!.uuid}",
+                            style = androidx.compose.material3.MaterialTheme.typography.bodySmall,
+                            color = Color.Gray,
+                            modifier = Modifier.padding(bottom = 8.dp)
+                        )
+                    }
                     OutlinedTextField(
                         value = name,
                         onValueChange = { name = it },
