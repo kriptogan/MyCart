@@ -173,9 +173,13 @@ object StringResources {
                  "buy_history_button" to "היסטוריית קניות (%d קניות)",
                  "days_ago" to "%d ימים",
                  "add_to_shopping_list" to "הוסף לרשימת קניות",
-                 "add_to_shopping_list_message" to "האם ברצונך להוסיף את '%s' לרשימת הקניות?",
-                 "yes" to "כן",
-                 "no" to "לא",
+                                 "add_to_shopping_list_message" to "האם ברצונך להוסיף את '%s' לרשימת הקניות?",
+                "duplicate_item_title" to "פריט כבר קיים",
+                "duplicate_item_message" to "הפריט '%s' כבר קיים ברשימה. מה ברצונך לעשות?",
+                "back" to "חזור",
+                "show" to "הצג",
+                "yes" to "כן",
+                "no" to "לא",
                  "return_to_shopping_list" to "החזר לרשימת קניות",
                  "categories_list" to "רשימת קטגוריות",
                  "move_up" to "העלה",
@@ -254,9 +258,13 @@ object StringResources {
                  "buy_history_button" to "Buy History (%d purchases)",
                  "days_ago" to "%d days",
                  "add_to_shopping_list" to "Add to Shopping List",
-                 "add_to_shopping_list_message" to "Do you want to add '%s' to the shopping list?",
-                 "yes" to "Yes",
-                 "no" to "No",
+                                 "add_to_shopping_list_message" to "Do you want to add '%s' to the shopping list?",
+                "duplicate_item_title" to "Item Already Exists",
+                "duplicate_item_message" to "The item '%s' already exists in the list. What would you like to do?",
+                "back" to "Back",
+                "show" to "Show",
+                "yes" to "Yes",
+                "no" to "No",
                  "return_to_shopping_list" to "Return to Shopping List",
                  "categories_list" to "Categories List",
                  "move_up" to "Move Up",
@@ -335,9 +343,13 @@ object StringResources {
                  "buy_history_button" to "История покупок (%d покупок)",
                  "days_ago" to "%d дней",
                  "add_to_shopping_list" to "Добавить в список покупок",
-                 "add_to_shopping_list_message" to "Хотите добавить '%s' в список покупок?",
-                 "yes" to "Да",
-                 "no" to "Нет",
+                                 "add_to_shopping_list_message" to "Хотите добавить '%s' в список покупок?",
+                "duplicate_item_title" to "Товар уже существует",
+                "duplicate_item_message" to "Товар '%s' уже существует в списке. Что вы хотите сделать?",
+                "back" to "Назад",
+                "show" to "Показать",
+                "yes" to "Да",
+                "no" to "Нет",
                  "return_to_shopping_list" to "Вернуть в список покупок",
                  "categories_list" to "Список категорий",
                  "move_up" to "Поднять",
@@ -383,7 +395,12 @@ object StringResources {
                  return if (args.isNotEmpty()) {
                      var result = baseString
                      args.forEachIndexed { index, arg ->
-                         result = result.replace(if (index == 0) "%d" else "%s", arg.toString())
+                         // Replace %s with string arguments and %d with numeric arguments
+                         if (arg is Number) {
+                             result = result.replaceFirst("%d", arg.toString())
+                         } else {
+                             result = result.replaceFirst("%s", arg.toString())
+                         }
                      }
                      result
                  } else {
@@ -775,6 +792,8 @@ fun HomeScreen(
     var showAlertNotification by remember { mutableStateOf(false) } // For alert notification popup
     var showLanguageSelection by remember { mutableStateOf(false) } // For language selection dialog
     var showVersionDialog by remember { mutableStateOf(false) } // For version dialog
+    var showDuplicateAlert by remember { mutableStateOf(false) } // For duplicate item name alert
+    var duplicateItemName by remember { mutableStateOf("") } // Name of duplicate item
     
     // Update configuration when locale changes
     val configuration = LocalConfiguration.current
@@ -1167,8 +1186,16 @@ fun HomeScreen(
                                         inShoppingList = false
                                         showDialog = false
                                     } else {
-                                        // For new items, show confirmation dialog
-                                        showAddToShoppingListConfirm = true
+                                        // For new items, check for duplicates first
+                                        val existingItem = groceries.find { it.name.equals(name.trim(), ignoreCase = true) }
+                                        if (existingItem != null) {
+                                            // Duplicate found, show alert with options (keep add window open)
+                                            duplicateItemName = name.trim()
+                                            showDuplicateAlert = true
+                                        } else {
+                                            // No duplicate, show confirmation dialog
+                                            showAddToShoppingListConfirm = true
+                                        }
                                     }
                                 }
                             }) {
@@ -1842,6 +1869,53 @@ fun HomeScreen(
                             }
                         }
                     }
+                }
+            )
+        }
+        
+        // Duplicate item alert dialog
+        if (showDuplicateAlert) {
+            AlertDialog(
+                onDismissRequest = { 
+                    showDuplicateAlert = false
+                    duplicateItemName = ""
+                },
+                confirmButton = {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = androidx.compose.foundation.layout.Arrangement.SpaceBetween
+                    ) {
+                        Button(
+                            onClick = { 
+                                // Back - just close the alert, keep add window open
+                                showDuplicateAlert = false
+                                duplicateItemName = ""
+                            }
+                        ) {
+                            Text(localizedString("back", selectedLanguage))
+                        }
+                        Button(
+                            onClick = { 
+                                // Show - close both alert and add window, then filter by name
+                                showDuplicateAlert = false
+                                showDialog = false
+                                // Set search query to filter by the duplicate name
+                                searchQuery = duplicateItemName
+                                // Reset add window state
+                                name = ""
+                                selectedCustomCategoryId = 1
+                                expirationDate = null
+                                inShoppingList = false
+                                duplicateItemName = ""
+                            }
+                        ) {
+                            Text(localizedString("show", selectedLanguage))
+                        }
+                    }
+                },
+                title = { Text(localizedString("duplicate_item_title", selectedLanguage)) },
+                text = { 
+                    Text(localizedString("duplicate_item_message", selectedLanguage, duplicateItemName))
                 }
             )
         }
