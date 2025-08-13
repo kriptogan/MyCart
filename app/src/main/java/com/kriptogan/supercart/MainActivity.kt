@@ -670,7 +670,7 @@ fun SuperCartApp() {
                         onAddToShoppingList = { grocery ->
                             groceries = groceries.map {
                                 if (it.name == grocery.name && it.customCategoryId == grocery.customCategoryId) {
-                                    it.copy(inShoppingList = !it.inShoppingList)
+                                    it.copy(inShoppingList = !it.inShoppingList, lastUpdate = LocalDateTime.now())
                                 } else {
                                     it
                                 }
@@ -699,7 +699,7 @@ fun SuperCartApp() {
                         onRemove = { grocery ->
                             groceries = groceries.map {
                                 if (it.name == grocery.name && it.customCategoryId == grocery.customCategoryId) {
-                                    it.copy(inShoppingList = false)
+                                    it.copy(inShoppingList = false, lastUpdate = LocalDateTime.now())
                                 } else {
                                     it
                                 }
@@ -1363,7 +1363,8 @@ fun HomeScreen(
                                     if (existingItemIndex != -1) {
                                         // Item exists, just set inShoppingList to true
                                         updatedGroceries[existingItemIndex] = updatedGroceries[existingItemIndex].copy(
-                                            inShoppingList = true
+                                            inShoppingList = true,
+                                            lastUpdate = LocalDateTime.now()
                                         )
                                     } else {
                                         // Item doesn't exist, create new item
