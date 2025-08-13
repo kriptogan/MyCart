@@ -178,6 +178,8 @@ object StringResources {
                 "duplicate_item_message" to "הפריט '%s' כבר קיים ברשימה. מה ברצונך לעשות?",
                 "back" to "חזור",
                 "show" to "הצג",
+                "import_confirm_title" to "אישור ייבוא רשימה",
+                "import_confirm_message" to "%d פריטים חדשים יתווספו למערכת. האם תרצה שיוצבו גם ברשימת הקניות?",
                 "yes" to "כן",
                 "no" to "לא",
                  "return_to_shopping_list" to "החזר לרשימת קניות",
@@ -263,6 +265,8 @@ object StringResources {
                 "duplicate_item_message" to "The item '%s' already exists in the list. What would you like to do?",
                 "back" to "Back",
                 "show" to "Show",
+                "import_confirm_title" to "Confirm Import List",
+                "import_confirm_message" to "The following %d new items will be added to the system. Do you want them to be placed in the shopping list as well?",
                 "yes" to "Yes",
                 "no" to "No",
                  "return_to_shopping_list" to "Return to Shopping List",
@@ -348,6 +352,8 @@ object StringResources {
                 "duplicate_item_message" to "Товар '%s' уже существует в списке. Что вы хотите сделать?",
                 "back" to "Назад",
                 "show" to "Показать",
+                "import_confirm_title" to "Подтвердить импорт списка",
+                "import_confirm_message" to "Следующие %d новых товаров будут добавлены в систему. Хотите ли вы также разместить их в списке покупок?",
                 "yes" to "Да",
                 "no" to "Нет",
                  "return_to_shopping_list" to "Вернуть в список покупок",
@@ -794,6 +800,8 @@ fun HomeScreen(
     var showVersionDialog by remember { mutableStateOf(false) } // For version dialog
     var showDuplicateAlert by remember { mutableStateOf(false) } // For duplicate item name alert
     var duplicateItemName by remember { mutableStateOf("") } // Name of duplicate item
+    var showImportConfirm by remember { mutableStateOf(false) } // For import confirmation dialog
+    var importItemsCount by remember { mutableStateOf(0) } // Number of items to import
     
     // Update configuration when locale changes
     val configuration = LocalConfiguration.current
@@ -1378,42 +1386,22 @@ fun HomeScreen(
                             )
                         }
                         Button(onClick = {
-                            // Parse each line and add as new items or update existing ones
+                            // Parse lines and count items to be imported
                             val lines = notesText.split("\n").filter { it.trim().isNotEmpty() }
                             if (lines.isNotEmpty()) {
-                                val updatedGroceries = groceries.toMutableList()
-                                
+                                // Count how many new items will be created
+                                var newItemsCount = 0
                                 lines.forEach { line ->
                                     val itemName = line.trim()
-                                    val existingItemIndex = updatedGroceries.indexOfFirst { it.name == itemName }
-                                    
-                                    if (existingItemIndex != -1) {
-                                        // Item exists, just set inShoppingList to true
-                                        updatedGroceries[existingItemIndex] = updatedGroceries[existingItemIndex].copy(
-                                            inShoppingList = true,
-                                            lastUpdate = LocalDateTime.now()
-                                        )
-                                    } else {
-                                        // Item doesn't exist, create new item
-                                        val newItem = GroceryWithDate(
-                                            name = itemName,
-                                            customCategoryId = 1, // Default to "אחר"
-                                            expirationDate = null,
-                                            lastTimeBoughtDays = null,
-                                            averageBuyingDays = null,
-                                            buyEvents = emptyList(),
-                                            inShoppingList = true,
-                                            isBought = false,
-                                            lastUpdate = LocalDateTime.now()
-                                        )
-                                        updatedGroceries.add(newItem)
+                                    val existingItem = groceries.find { it.name == itemName }
+                                    if (existingItem == null) {
+                                        newItemsCount++
                                     }
                                 }
                                 
-                                onUpdateGroceries(updatedGroceries)
+                                importItemsCount = newItemsCount
+                                showImportConfirm = true
                             }
-                            notesText = ""
-                            showNotesDialog = false
                         }) {
                             Icon(
                                 imageVector = Icons.Default.Done,
@@ -1916,6 +1904,105 @@ fun HomeScreen(
                 title = { Text(localizedString("duplicate_item_title", selectedLanguage)) },
                 text = { 
                     Text(localizedString("duplicate_item_message", selectedLanguage, duplicateItemName))
+                }
+            )
+        }
+        
+        // Import confirmation dialog
+        if (showImportConfirm) {
+            AlertDialog(
+                onDismissRequest = { 
+                    showImportConfirm = false
+                    importItemsCount = 0
+                },
+                confirmButton = {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = androidx.compose.foundation.layout.Arrangement.SpaceBetween
+                    ) {
+                        Button(
+                            onClick = { 
+                                // No - Add items but don't put them in shopping list
+                                val lines = notesText.split("\n").filter { it.trim().isNotEmpty() }
+                                val updatedGroceries = groceries.toMutableList()
+                                
+                                lines.forEach { line ->
+                                    val itemName = line.trim()
+                                    val existingItemIndex = updatedGroceries.indexOfFirst { it.name == itemName }
+                                    
+                                    if (existingItemIndex == -1) {
+                                        // Item doesn't exist, create new item (NOT in shopping list)
+                                        val newItem = GroceryWithDate(
+                                            name = itemName,
+                                            customCategoryId = 1, // Default to "אחר"
+                                            expirationDate = null,
+                                            lastTimeBoughtDays = null,
+                                            averageBuyingDays = null,
+                                            buyEvents = emptyList(),
+                                            inShoppingList = false,
+                                            isBought = false,
+                                            lastUpdate = LocalDateTime.now()
+                                        )
+                                        updatedGroceries.add(newItem)
+                                    }
+                                }
+                                
+                                onUpdateGroceries(updatedGroceries)
+                                notesText = ""
+                                showNotesDialog = false
+                                showImportConfirm = false
+                                importItemsCount = 0
+                            }
+                        ) {
+                            Text(localizedString("no", selectedLanguage))
+                        }
+                        Button(
+                            onClick = { 
+                                // Yes - Add items and put them in shopping list
+                                val lines = notesText.split("\n").filter { it.trim().isNotEmpty() }
+                                val updatedGroceries = groceries.toMutableList()
+                                
+                                lines.forEach { line ->
+                                    val itemName = line.trim()
+                                    val existingItemIndex = updatedGroceries.indexOfFirst { it.name == itemName }
+                                    
+                                    if (existingItemIndex != -1) {
+                                        // Item exists, just set inShoppingList to true
+                                        updatedGroceries[existingItemIndex] = updatedGroceries[existingItemIndex].copy(
+                                            inShoppingList = true,
+                                            lastUpdate = LocalDateTime.now()
+                                        )
+                                    } else {
+                                        // Item doesn't exist, create new item (IN shopping list)
+                                        val newItem = GroceryWithDate(
+                                            name = itemName,
+                                            customCategoryId = 1, // Default to "אחר"
+                                            expirationDate = null,
+                                            lastTimeBoughtDays = null,
+                                            averageBuyingDays = null,
+                                            buyEvents = emptyList(),
+                                            inShoppingList = true,
+                                            isBought = false,
+                                            lastUpdate = LocalDateTime.now()
+                                        )
+                                        updatedGroceries.add(newItem)
+                                    }
+                                }
+                                
+                                onUpdateGroceries(updatedGroceries)
+                                notesText = ""
+                                showNotesDialog = false
+                                showImportConfirm = false
+                                importItemsCount = 0
+                            }
+                        ) {
+                            Text(localizedString("yes", selectedLanguage))
+                        }
+                    }
+                },
+                title = { Text(localizedString("import_confirm_title", selectedLanguage)) },
+                text = { 
+                    Text(localizedString("import_confirm_message", selectedLanguage, importItemsCount))
                 }
             )
         }
