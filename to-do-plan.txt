@@ -1,3 +1,8 @@
+1. add isBought to groceries.
+2. update lastUpdate when cart/bought is clicked.
+ 
+ 
+ ____________________________________
  1. handle sync properly
  3. better UI for "select category" + an option to create a new one on the fly
  4. hide alert icon if there are no alerts

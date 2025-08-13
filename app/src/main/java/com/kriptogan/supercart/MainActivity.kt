@@ -591,9 +591,9 @@ fun SuperCartApp() {
         }
     }
 
-    // Helper function to get shopping list items by filtering inShoppingList = true
+    // Helper function to get shopping list items by filtering inShoppingList = true AND isBought = false
     val shoppingListItems = remember(groceries) {
-        groceries.filter { it.inShoppingList }
+        groceries.filter { it.inShoppingList && !it.isBought }
     }
 
     CompositionLocalProvider(
@@ -715,7 +715,9 @@ fun SuperCartApp() {
                                         lastTimeBoughtDays = 0,
                                         averageBuyingDays = avg,
                                         buyEvents = newBuyEvents,
-                                        inShoppingList = false
+                                        inShoppingList = false,
+                                        isBought = false,
+                                        lastUpdate = LocalDateTime.now()
                                     )
                                 } else {
                                     it
@@ -1373,6 +1375,7 @@ fun HomeScreen(
                                             averageBuyingDays = null,
                                             buyEvents = emptyList(),
                                             inShoppingList = true,
+                                            isBought = false,
                                             lastUpdate = LocalDateTime.now()
                                         )
                                         updatedGroceries.add(newItem)
@@ -1866,6 +1869,7 @@ fun HomeScreen(
                                     customCategoryId = selectedCustomCategoryId,
                                     expirationDate = expirationDate,
                                     inShoppingList = false,
+                                    isBought = false,
                                     lastUpdate = LocalDateTime.now()
                                 )
                                 onUpdateGroceries(updatedGroceries)
@@ -1887,6 +1891,7 @@ fun HomeScreen(
                                     customCategoryId = selectedCustomCategoryId,
                                     expirationDate = expirationDate,
                                     inShoppingList = true,
+                                    isBought = false,
                                     lastUpdate = LocalDateTime.now()
                                 )
                                 onUpdateGroceries(updatedGroceries)
@@ -2065,19 +2070,10 @@ fun ShoppingListScreen(
     var expanded by remember { mutableStateOf(false) } // For category dropdown
     
     // Shopping workflow state
-    var boughtItems by remember { mutableStateOf<List<GroceryWithDate>>(emptyList()) }
     var showDoneShoppingConfirm by remember { mutableStateOf(false) }
     
-    // Load bought items from DataStore on first composition
-    LaunchedEffect(Unit) {
-        val loaded = context.boughtItemsDataStore.data.first().map { it.withLocalDate() }
-        boughtItems = loaded
-    }
-    
-    // Save bought items to DataStore whenever they change
-    LaunchedEffect(boughtItems) {
-        context.boughtItemsDataStore.updateData { boughtItems.map { it.toSerializable() } }
-    }
+    // Filter bought items from the main groceries list (inShoppingList = true AND isBought = true)
+    val boughtItems = groceries.filter { it.inShoppingList && it.isBought }
 
     fun openEditDialog(grocery: GroceryWithDate) {
         name = grocery.name
@@ -2162,9 +2158,15 @@ fun ShoppingListScreen(
                                         }
                                         IconButton(
                                             onClick = { 
-                                                // Move item to bought list instead of buying immediately
-                                                boughtItems = boughtItems + grocery
-                                                onRemove(grocery) // Remove from shopping list
+                                                // Move item to bought list (keep in shopping list but mark as bought)
+                                                val updatedGroceries = groceries.map {
+                                                    if (it.name == grocery.name && it.customCategoryId == grocery.customCategoryId) {
+                                                        it.copy(inShoppingList = true, isBought = true, lastUpdate = LocalDateTime.now())
+                                                    } else {
+                                                        it
+                                                    }
+                                                }
+                                                onUpdateGroceries(updatedGroceries)
                                             },
                                             modifier = Modifier.padding(start = 4.dp)
                                         ) {
@@ -2238,12 +2240,10 @@ fun ShoppingListScreen(
                         )
                         IconButton(
                             onClick = { 
-                                // Return item to shopping list
-                                boughtItems = boughtItems.filter { it != boughtItem }
-                                // Add back to shopping list
+                                // Return item to shopping list (remove bought status but keep in shopping list)
                                 val updatedGroceries = groceries.map {
                                     if (it.name == boughtItem.name && it.customCategoryId == boughtItem.customCategoryId) {
-                                        it.copy(inShoppingList = true)
+                                        it.copy(isBought = false, lastUpdate = LocalDateTime.now())
                                     } else {
                                         it
                                     }
@@ -2433,11 +2433,16 @@ fun ShoppingListScreen(
                     Button(
                         onClick = { 
                             // Execute buy process for all bought items
+                            // The onBuy function will handle:
+                            // - Adding today's date to buyEvents
+                            // - Calculating new averageBuyingDays
+                            // - Setting lastTimeBoughtDays = 0
+                            // - Removing from shopping list (inShoppingList = false)
+                            // - Clearing bought status (isBought = false)
+                            // - Updating lastUpdate timestamp
                             boughtItems.forEach { boughtItem ->
                                 onBuy(boughtItem)
                             }
-                            // Clear bought items list (DataStore will be updated automatically via LaunchedEffect)
-                            boughtItems = emptyList()
                             showDoneShoppingConfirm = false
                         },
                         colors = androidx.compose.material3.ButtonDefaults.buttonColors(
@@ -2483,11 +2488,7 @@ object GroceryListSerializer : Serializer<List<Grocery>> {
 val Context.categoryOrderDataStore by preferencesDataStore(name = "category_order_prefs")
 val CATEGORY_ORDER_KEY = stringPreferencesKey("category_order")
 
-// Bought items DataStore
-val Context.boughtItemsDataStore: DataStore<List<Grocery>> by dataStore(
-    fileName = "bought_items.json",
-    serializer = GroceryListSerializer
-)
+
 
 // Language selection DataStore
 val Context.languageDataStore by preferencesDataStore(name = "language_prefs")

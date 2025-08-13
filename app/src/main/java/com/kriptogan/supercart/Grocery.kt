@@ -28,6 +28,7 @@ data class Grocery(
     val averageBuyingDays: Int? = null, // ממוצע ימים בין קניות (אופציונלי)
     val buyEvents: List<String> = emptyList(), // רשימת תאריכי קנייה (ISO)
     val inShoppingList: Boolean = false, // האם המצרך נמצא ברשימת הקניות
+    val isBought: Boolean = false, // האם המצרך נמצא ברשימת הקניות שנרכשו
     val lastUpdate: String = LocalDateTime.now().toString() // Last update timestamp (ISO string)
 )
 
@@ -41,6 +42,7 @@ fun Grocery.withLocalDate(): GroceryWithDate = GroceryWithDate(
     averageBuyingDays = averageBuyingDays,
     buyEvents = buyEvents.map { java.time.LocalDate.parse(it) },
     inShoppingList = inShoppingList,
+    isBought = isBought,
     lastUpdate = LocalDateTime.parse(lastUpdate)
 )
 
@@ -54,6 +56,7 @@ data class GroceryWithDate(
     val averageBuyingDays: Int? = null,
     val buyEvents: List<java.time.LocalDate> = emptyList(),
     val inShoppingList: Boolean = false, // האם המצרך נמצא ברשימת הקניות
+    val isBought: Boolean = false, // האם המצרך נמצא ברשימת הקניות שנרכשו
     val lastUpdate: LocalDateTime = LocalDateTime.now() // Last update timestamp
 )
 
@@ -67,6 +70,7 @@ fun GroceryWithDate.toSerializable(): Grocery = Grocery(
     averageBuyingDays = averageBuyingDays,
     buyEvents = buyEvents.map { it.toString() },
     inShoppingList = inShoppingList,
+    isBought = isBought,
     lastUpdate = lastUpdate.toString()
 )
 
