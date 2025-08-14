@@ -23,6 +23,7 @@
     <string name="item_name">Название товара</string>
     <string name="choose_category">Выберите категорию</string>
     <string name="select_category">Выберите категорию</string>
+    <string name="new_category">Новая категория</string>
     <string name="expiration_date">Выберите дату истечения срока (необязательно)</string>
     <string name="cancel">Отмена</string>
     <string name="save">Сохранить</string>

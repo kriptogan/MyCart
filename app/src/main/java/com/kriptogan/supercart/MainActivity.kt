@@ -98,6 +98,8 @@ import java.time.temporal.ChronoUnit
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.KeyboardArrowDown
@@ -108,7 +110,6 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.text.style.TextAlign
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
@@ -170,6 +171,7 @@ object StringResources {
                  "delete_all_items" to "מחק את כל הפריטים",
                  "move_to_other" to "העבר ל'אחר'",
                  "create_new_category" to "צור קטגוריה חדשה",
+                 "new_category" to "קטגוריה חדשה",
                  "category_name" to "שם הקטגוריה",
                  "buy_history" to "היסטוריית קניות - %s",
                  "buy_history_button" to "היסטוריית קניות (%d קניות)",
@@ -258,6 +260,7 @@ object StringResources {
                  "delete_all_items" to "Delete All Items",
                  "move_to_other" to "Move to 'Other'",
                  "create_new_category" to "Create New Category",
+                 "new_category" to "New Category",
                  "category_name" to "Category Name",
                  "buy_history" to "Buy History - %s",
                  "buy_history_button" to "Buy History (%d purchases)",
@@ -346,6 +349,7 @@ object StringResources {
                  "delete_all_items" to "Удалить все товары",
                  "move_to_other" to "Переместить в 'Другое'",
                  "create_new_category" to "Создать новую категорию",
+                 "new_category" to "Новая категория",
                  "category_name" to "Название категории",
                  "buy_history" to "История покупок - %s",
                  "buy_history_button" to "История покупок (%d покупок)",
@@ -1334,7 +1338,14 @@ fun HomeScreen(
                               onClick = { showCTestWindow = true },
                               modifier = Modifier.fillMaxWidth()
                           ) {
-                              Text("c-test")
+                              Text(
+                                  if (selectedCustomCategoryId != null) {
+                                      val selectedCategory = customCategories.find { it.id == selectedCustomCategoryId }
+                                      selectedCategory?.let { localizedCategoryName(it.name, selectedLanguage) } ?: localizedString("select_category", selectedLanguage)
+                                  } else {
+                                      localizedString("select_category", selectedLanguage)
+                                  }
+                              )
                           }
                     }
                 }
@@ -2223,55 +2234,75 @@ fun HomeScreen(
                 onDismissRequest = { showCTestWindow = false },
                 modifier = Modifier.fillMaxSize(),
                 title = { Text(localizedString("select_category", selectedLanguage)) },
-                text = {
-                    LazyColumn(
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        items(customCategories.sortedBy { it.viewOrder }) { category ->
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(vertical = 8.dp)
-                                    .clickable {
-                                        selectedCustomCategoryId = category.id
-                                        showCTestWindow = false
-                                    },
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    text = localizedCategoryName(category.name, selectedLanguage),
-                                    modifier = Modifier.weight(1f),
-                                    fontWeight = FontWeight.Bold
-                                )
-                            }
-                            if (category != customCategories.sortedBy { it.viewOrder }.last()) {
-                                Divider(modifier = Modifier.padding(vertical = 4.dp))
-                            }
-                        }
-                    }
-                },
-                confirmButton = {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Button(
-                            onClick = { 
-                                newCategoryName = ""
-                                showCreateCategoryDialog = true
+                                            text = {
+                                LazyColumn(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    items(customCategories.sortedBy { it.viewOrder }) { category ->
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .background(
+                                                    color = Color(0xFFF5F5F5),
+                                                    shape = RoundedCornerShape(8.dp)
+                                                )
+                                                .padding(16.dp)
+                                                .clickable {
+                                                    selectedCustomCategoryId = category.id
+                                                    showCTestWindow = false
+                                                },
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            if (selectedCustomCategoryId == category.id) {
+                                                Icon(
+                                                    imageVector = Icons.Default.Check,
+                                                    contentDescription = null,
+                                                    tint = Color.Green,
+                                                    modifier = Modifier.padding(end = 12.dp)
+                                                )
+                                            } else {
+                                                Spacer(modifier = Modifier.width(28.dp))
+                                            }
+                                            Text(
+                                                text = localizedCategoryName(category.name, selectedLanguage),
+                                                modifier = Modifier.weight(1f),
+                                                fontWeight = FontWeight.Medium
+                                            )
+                                        }
+                                    }
+                                }
                             },
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Text("new category")
-                        }
-                        Button(
-                            onClick = { showCTestWindow = false },
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Text(localizedString("close", selectedLanguage))
-                        }
-                    }
-                }
+                                            confirmButton = {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Button(
+                                        onClick = { showCTestWindow = false },
+                                        modifier = Modifier.weight(1f)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Close,
+                                            contentDescription = localizedString("close", selectedLanguage),
+                                            tint = Color.White
+                                        )
+                                    }
+                                    Button(
+                                        onClick = {
+                                            newCategoryName = ""
+                                            showCreateCategoryDialog = true
+                                        },
+                                        modifier = Modifier.weight(1f)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Add,
+                                            contentDescription = localizedString("new_category", selectedLanguage),
+                                            tint = Color.White
+                                        )
+                                    }
+                                }
+                            }
             )
         }
     }
