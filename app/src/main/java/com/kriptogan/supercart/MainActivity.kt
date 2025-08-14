@@ -1263,26 +1263,19 @@ fun HomeScreen(
                             label = { Text(localizedString("item_name", selectedLanguage)) }
                         )
                         Spacer(modifier = Modifier.height(8.dp))
-                        // Category dropdown
-                        Box {
-                            val selectedCategory = customCategories.find { it.id == selectedCustomCategoryId }
-                            Button(
-                                onClick = { expanded = true },
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Text(selectedCategory?.let { localizedCategoryName(it.name, selectedLanguage) } ?: localizedString("choose_category", selectedLanguage))
-                            }
-                            DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-                                customCategories.sortedBy { it.viewOrder }.forEach { cat ->
-                                    DropdownMenuItem(
-                                        text = { Text(localizedCategoryName(cat.name, selectedLanguage)) },
-                                        onClick = {
-                                            selectedCustomCategoryId = cat.id
-                                            expanded = false
-                                        }
-                                    )
+                        // Category selection button
+                        Button(
+                            onClick = { showCTestWindow = true },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(
+                                if (selectedCustomCategoryId != null) {
+                                    val selectedCategory = customCategories.find { it.id == selectedCustomCategoryId }
+                                    selectedCategory?.let { localizedCategoryName(it.name, selectedLanguage) } ?: localizedString("select_category", selectedLanguage)
+                                } else {
+                                    localizedString("select_category", selectedLanguage)
                                 }
-                            }
+                            )
                         }
                         Spacer(modifier = Modifier.height(8.dp))
                         // Expiration date picker
@@ -1332,21 +1325,7 @@ fun HomeScreen(
                                 }
                             }
                         }
-                        Spacer(modifier = Modifier.height(8.dp))
-                                                  // c-test button
-                          Button(
-                              onClick = { showCTestWindow = true },
-                              modifier = Modifier.fillMaxWidth()
-                          ) {
-                              Text(
-                                  if (selectedCustomCategoryId != null) {
-                                      val selectedCategory = customCategories.find { it.id == selectedCustomCategoryId }
-                                      selectedCategory?.let { localizedCategoryName(it.name, selectedLanguage) } ?: localizedString("select_category", selectedLanguage)
-                                  } else {
-                                      localizedString("select_category", selectedLanguage)
-                                  }
-                              )
-                          }
+
                     }
                 }
             )
