@@ -45,3 +45,22 @@ I have a complicated task for you, I will break it down into sections:
 7. if the user has the outdated data, the server will send message to the user with the updated data.
 8. after going over all the ppending changes, the server will send an acknowledge message to the sender.
 9. when the ack message received, show a toaster message "sync succeeded."
+
+______________________________________________________________________________
+
+I would like to implement a sharing mechanism using Firebase.
+Here are the rules:
+
+1. In the settings burger, add an option called "Sharing group".
+2. Clicking the sharing group will open an alertDialog with 2 options:
+2.1. Create group.
+2.2. Join group.
+3. Creating a group will do the following:
+3.1. The server will generate a unique 8-digit code.
+3.2. show the user their share group number.
+3.3. upload his datastore to the Firebase.
+4. Join a group will do the following steps:
+4.1. The user will need to insert an 8-digit code.
+4.2. The server will look for an existing group with a matched code.
+4.3. The user will download the data of that group.
+4.4. The data will overwrite the local data and will be stored in the datastore.
