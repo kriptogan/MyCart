@@ -128,7 +128,8 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.room.util.copy
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.runtime.key
-import com.kriptogan.supercart.FirebaseManager
+import com.kriptogan.supercart.FirebaseService
+import android.util.Log
 
 // Custom string resource system
 object StringResources {
@@ -576,6 +577,9 @@ fun SuperCartApp() {
     var groceries by remember { mutableStateOf(listOf<GroceryWithDate>()) }
     val scope = rememberCoroutineScope()
     
+    // Firebase service
+    val firebaseService = remember { FirebaseService() }
+    
     // Custom categories state
     var customCategories by remember { mutableStateOf<List<CustomCategory>>(emptyList()) }
     var categoryOrder by remember { mutableStateOf<List<Int>?>(null) }
@@ -820,9 +824,6 @@ fun HomeScreen(
     var importItemsCount by remember { mutableStateOf(0) } // Number of items to import
     var showCTestWindow by remember { mutableStateOf(false) } // For c-test window
     
-    // Firebase readiness state
-    var isFirebaseReady by remember { mutableStateOf(false) }
-    
     // Update configuration when locale changes
     val configuration = LocalConfiguration.current
     val layoutDirection = if (selectedLanguage == "iw") LayoutDirection.Rtl else LayoutDirection.Ltr
@@ -883,12 +884,7 @@ fun HomeScreen(
         }
     }
     
-    // Check Firebase readiness
-    LaunchedEffect(Unit) {
-        // Wait for Firebase to be ready with retry mechanism
-        isFirebaseReady = FirebaseManager.waitForFirebaseReady()
-        android.util.Log.d("FirebaseInit", "Firebase ready: $isFirebaseReady")
-    }
+
 
     fun openEditDialog(index: Int, grocery: GroceryWithDate) {
         name = grocery.name
@@ -983,21 +979,16 @@ fun HomeScreen(
                     ) {
                         IconButton(
                             onClick = {
-                                if (isFirebaseReady) {
-                                    scope.launch {
-                                        val isConnected = FirebaseManager.testConnection()
-                                        // Show result in console and also log it
-                                        println("Firebase connection test: $isConnected")
-                                        android.util.Log.d("FirebaseTest", "Connection test result: $isConnected")
-                                    }
-                                } else {
-                                    android.util.Log.w("FirebaseTest", "Firebase not ready yet")
-                                    println("Firebase not ready yet")
+                                scope.launch {
+                                    val isConnected = firebaseService.testConnection()
+                                    // Show result in console and also log it
+                                    println("Firebase connection test: $isConnected")
+                                    android.util.Log.d("FirebaseTest", "Connection test result: $isConnected")
                                 }
                             },
                             modifier = Modifier
                                 .background(
-                                    color = if (isFirebaseReady) Color(0xFFFF5722) else Color.Gray,
+                                    color = Color(0xFFFF5722),
                                     shape = androidx.compose.foundation.shape.CircleShape
                                 )
                                 .size(48.dp)
@@ -1009,9 +1000,9 @@ fun HomeScreen(
                             )
                         }
                         Text(
-                            text = if (isFirebaseReady) "Ready" else "Loading...",
+                            text = "Test",
                             fontSize = 10.sp,
-                            color = if (isFirebaseReady) Color.Green else Color.Gray
+                            color = Color.White
                         )
                     }
                 }
