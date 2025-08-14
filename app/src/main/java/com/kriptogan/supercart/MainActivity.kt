@@ -76,6 +76,10 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.material3.Surface
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material.icons.filled.Add
 import androidx.datastore.core.DataStore
 import androidx.datastore.core.Serializer
@@ -180,6 +184,8 @@ object StringResources {
                 "show" to "הצג",
                 "import_confirm_title" to "אישור ייבוא רשימה",
                 "import_confirm_message" to "%d פריטים חדשים יתווספו למערכת. האם תרצה שיוצבו גם ברשימת הקניות?",
+                "choose_category" to "בחר קטגוריה",
+                "new_category" to "קטגוריה חדשה",
                 "yes" to "כן",
                 "no" to "לא",
                  "return_to_shopping_list" to "החזר לרשימת קניות",
@@ -267,6 +273,8 @@ object StringResources {
                 "show" to "Show",
                 "import_confirm_title" to "Confirm Import List",
                 "import_confirm_message" to "The following %d new items will be added to the system. Do you want them to be placed in the shopping list as well?",
+                "choose_category" to "Choose Category",
+                "new_category" to "New Category",
                 "yes" to "Yes",
                 "no" to "No",
                  "return_to_shopping_list" to "Return to Shopping List",
@@ -354,6 +362,8 @@ object StringResources {
                 "show" to "Показать",
                 "import_confirm_title" to "Подтвердить импорт списка",
                 "import_confirm_message" to "Следующие %d новых товаров будут добавлены в систему. Хотите ли вы также разместить их в списке покупок?",
+                "choose_category" to "Выберите категорию",
+                "new_category" to "Новая категория",
                 "yes" to "Да",
                 "no" to "Нет",
                  "return_to_shopping_list" to "Вернуть в список покупок",
@@ -519,6 +529,7 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SuperCartApp() {
     val configuration = LocalConfiguration.current
@@ -618,6 +629,10 @@ fun SuperCartApp() {
     val shoppingListItems = remember(groceries) {
         groceries.filter { it.inShoppingList && !it.isBought }
     }
+    
+    // Category selection state
+    var showCategorySelection by remember { mutableStateOf(false) } // For full-screen category selection
+    var tempSelectedCategoryId by remember { mutableStateOf(1) } // Temporary category selection
 
     CompositionLocalProvider(
         LocalLayoutDirection provides layoutDirection
@@ -713,7 +728,11 @@ fun SuperCartApp() {
                             languageChangeKey++
                         },
                         isAppFirstStart = isAppFirstStart,
-                        onAppFirstStartComplete = { isAppFirstStart = false }
+                        onAppFirstStartComplete = { isAppFirstStart = false },
+                        showCategorySelection = showCategorySelection,
+                        onShowCategorySelection = { showCategorySelection = it },
+                        tempSelectedCategoryId = tempSelectedCategoryId,
+                        onTempSelectedCategoryIdChange = { tempSelectedCategoryId = it }
                     )
                     1 -> ShoppingListScreen(
                         shoppingList = shoppingListItems,
@@ -749,8 +768,111 @@ fun SuperCartApp() {
                         },
                         orderedCategories = orderedCategories,
                         customCategories = customCategories,
-                        selectedLanguage = selectedLanguage
+                        selectedLanguage = selectedLanguage,
+                        showCategorySelection = showCategorySelection,
+                        onShowCategorySelection = { showCategorySelection = it },
+                        tempSelectedCategoryId = tempSelectedCategoryId,
+                        onTempSelectedCategoryIdChange = { tempSelectedCategoryId = it }
                     )
+                }
+            }
+        }
+    }
+    
+    // Full-screen category selection - rendered at root level to appear above all content
+    if (showCategorySelection) {
+        Surface(
+            modifier = Modifier.fillMaxSize(),
+            color = androidx.compose.material3.MaterialTheme.colorScheme.background
+        ) {
+            Column(
+                modifier = Modifier.fillMaxSize()
+            ) {
+                // Header
+                androidx.compose.material3.TopAppBar(
+                    title = { Text(localizedString("choose_category", selectedLanguage)) },
+                    colors = androidx.compose.material3.TopAppBarDefaults.topAppBarColors(
+                        containerColor = Color(0xFF4CAF50),
+                        titleContentColor = Color.White
+                    )
+                )
+                
+                // Categories grid
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f)
+                        .padding(16.dp),
+                    verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp)
+                ) {
+                    items(customCategories.sortedBy { it.viewOrder }) { category ->
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    // Update the temporary selection
+                                    tempSelectedCategoryId = category.id
+                                    // Close the selection dialog
+                                    showCategorySelection = false
+                                },
+                            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+                            colors = CardDefaults.cardColors(
+                                containerColor = if (tempSelectedCategoryId == category.id) Color(0xFFE8F5E8) else Color.White
+                            ),
+                            border = if (tempSelectedCategoryId == category.id) BorderStroke(2.dp, Color(0xFF4CAF50)) else null
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(16.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = localizedCategoryName(category.name, selectedLanguage),
+                                    style = androidx.compose.material3.MaterialTheme.typography.bodyLarge,
+                                    fontWeight = if (tempSelectedCategoryId == category.id) FontWeight.Bold else FontWeight.Normal,
+                                    modifier = Modifier.weight(1f)
+                                )
+                                if (tempSelectedCategoryId == category.id) {
+                                    Icon(
+                                        imageVector = Icons.Default.Check,
+                                        contentDescription = "Selected",
+                                        tint = Color(0xFF4CAF50)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                // Footer buttons
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    horizontalArrangement = androidx.compose.foundation.layout.Arrangement.SpaceBetween
+                ) {
+                    Button(
+                        onClick = { showCategorySelection = false },
+                        colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                            containerColor = Color.Gray
+                        )
+                    ) {
+                        Text(localizedString("back", selectedLanguage), color = Color.White)
+                    }
+                    Button(
+                        onClick = { 
+                            // Note: We can't create new categories from this level
+                            // The create category dialog is in HomeScreen
+                            // For now, just close the selection
+                            showCategorySelection = false
+                        },
+                        colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                            containerColor = Color(0xFF4CAF50)
+                        )
+                    ) {
+                        Text(localizedString("new_category", selectedLanguage), color = Color.White)
+                    }
                 }
             }
         }
@@ -771,7 +893,11 @@ fun HomeScreen(
     selectedLanguage: String,
     onLanguageChange: (String) -> Unit,
     isAppFirstStart: Boolean,
-    onAppFirstStartComplete: () -> Unit
+    onAppFirstStartComplete: () -> Unit,
+    showCategorySelection: Boolean,
+    onShowCategorySelection: (Boolean) -> Unit,
+    tempSelectedCategoryId: Int,
+    onTempSelectedCategoryIdChange: (Int) -> Unit
 ) {
     val context = LocalContext.current
     var showDialog by remember { mutableStateOf(false) }
@@ -1254,26 +1380,16 @@ fun HomeScreen(
                             label = { Text(localizedString("item_name", selectedLanguage)) }
                         )
                         Spacer(modifier = Modifier.height(8.dp))
-                        // Category dropdown
-                        Box {
-                            val selectedCategory = customCategories.find { it.id == selectedCustomCategoryId }
-                            Button(
-                                onClick = { expanded = true },
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Text(selectedCategory?.let { localizedCategoryName(it.name, selectedLanguage) } ?: localizedString("choose_category", selectedLanguage))
-                            }
-                            DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-                                customCategories.sortedBy { it.viewOrder }.forEach { cat ->
-                                    DropdownMenuItem(
-                                        text = { Text(localizedCategoryName(cat.name, selectedLanguage)) },
-                                        onClick = {
-                                            selectedCustomCategoryId = cat.id
-                                            expanded = false
-                                        }
-                                    )
-                                }
-                            }
+                        // Category selection button
+                        val selectedCategory = customCategories.find { it.id == selectedCustomCategoryId }
+                        Button(
+                            onClick = { 
+                                onTempSelectedCategoryIdChange(selectedCustomCategoryId)
+                                onShowCategorySelection(true)
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(selectedCategory?.let { localizedCategoryName(it.name, selectedLanguage) } ?: localizedString("choose_category", selectedLanguage))
                         }
                         Spacer(modifier = Modifier.height(8.dp))
                         // Expiration date picker
@@ -1785,6 +1901,12 @@ fun HomeScreen(
                                     val updatedCategories = customCategories + newCategory
                                     onUpdateCategories(updatedCategories)
                                     
+                                    // If category selection is open, use the new category and close selection
+                                    if (showCategorySelection) {
+                                        onTempSelectedCategoryIdChange(newId)
+                                        onShowCategorySelection(false)
+                                    }
+                                    
                                     showCreateCategoryDialog = false
                                     newCategoryName = ""
                                 }
@@ -2169,6 +2291,8 @@ fun HomeScreen(
             )
         }
         
+
+        
         // Version dialog
         if (showVersionDialog) {
             val versionText = remember {
@@ -2210,7 +2334,11 @@ fun ShoppingListScreen(
     onBuy: (GroceryWithDate) -> Unit,
     orderedCategories: List<CustomCategory>,
     customCategories: List<CustomCategory>,
-    selectedLanguage: String
+    selectedLanguage: String,
+    showCategorySelection: Boolean,
+    onShowCategorySelection: (Boolean) -> Unit,
+    tempSelectedCategoryId: Int,
+    onTempSelectedCategoryIdChange: (Int) -> Unit
 ) {
     val context = LocalContext.current
     val layoutDirection = if (selectedLanguage == "iw") LayoutDirection.Rtl else LayoutDirection.Ltr
@@ -2229,7 +2357,6 @@ fun ShoppingListScreen(
     var selectedCustomCategoryId by remember { mutableStateOf(1) }
     var expirationDate by remember { mutableStateOf<LocalDate?>(null) }
     var showDatePicker by remember { mutableStateOf(false) }
-    var expanded by remember { mutableStateOf(false) } // For category dropdown
     
     // Shopping workflow state
     var showDoneShoppingConfirm by remember { mutableStateOf(false) }
@@ -2519,26 +2646,16 @@ fun ShoppingListScreen(
                         label = { Text(stringResource(R.string.item_name)) }
                     )
                     Spacer(modifier = Modifier.height(8.dp))
-                    // Category dropdown
-                    Box {
-                        val selectedCategory = customCategories.find { it.id == selectedCustomCategoryId }
-                        Button(
-                            onClick = { expanded = true },
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Text(selectedCategory?.let { localizedCategoryName(it.name, selectedLanguage) } ?: localizedString("choose_category", selectedLanguage))
-                        }
-                        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-                            customCategories.sortedBy { it.viewOrder }.forEach { cat ->
-                                DropdownMenuItem(
-                                    text = { Text(localizedCategoryName(cat.name, selectedLanguage)) },
-                                    onClick = {
-                                        selectedCustomCategoryId = cat.id
-                                        expanded = false
-                                    }
-                                )
-                            }
-                        }
+                    // Category selection button
+                    val selectedCategory = customCategories.find { it.id == selectedCustomCategoryId }
+                    Button(
+                        onClick = { 
+                            onTempSelectedCategoryIdChange(selectedCustomCategoryId)
+                            onShowCategorySelection(true)
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(selectedCategory?.let { localizedCategoryName(it.name, selectedLanguage) } ?: localizedString("choose_category", selectedLanguage))
                     }
                     Spacer(modifier = Modifier.height(8.dp))
                     // Expiration date picker
@@ -2621,6 +2738,8 @@ fun ShoppingListScreen(
             }
         )
     }
+    
+
 }
 
 @Preview(showBackground = true)
