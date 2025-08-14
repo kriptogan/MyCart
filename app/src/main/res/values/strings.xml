@@ -22,6 +22,7 @@
     <string name="edit_item_title">ערוך מצרך</string>
     <string name="item_name">שם המצרך</string>
     <string name="choose_category">בחר קטגוריה</string>
+    <string name="select_category">בחר קטגוריה</string>
     <string name="expiration_date">בחר תאריך תפוגה (אופציונלי)</string>
     <string name="cancel">ביטול</string>
     <string name="save">שמור</string>

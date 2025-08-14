@@ -76,6 +76,7 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.material.icons.filled.Add
 import androidx.datastore.core.DataStore
 import androidx.datastore.core.Serializer
@@ -160,6 +161,7 @@ object StringResources {
                  "edit_item_title" to "ערוך מצרך",
                  "item_name" to "שם המצרך",
                  "choose_category" to "בחר קטגוריה",
+                 "select_category" to "בחר קטגוריה",
                  "expiration_date" to "בחר תאריך תפוגה (אופציונלי)",
                  "confirm_delete" to "אישור מחיקה",
                  "confirm_delete_message" to "האם אתה בטוח שברצונך למחוק?",
@@ -247,6 +249,7 @@ object StringResources {
                  "edit_item_title" to "Edit Item",
                  "item_name" to "Item Name",
                  "choose_category" to "Choose Category",
+                 "select_category" to "Select Category",
                  "expiration_date" to "Choose expiration date (optional)",
                  "confirm_delete" to "Confirm Delete",
                  "confirm_delete_message" to "Are you sure you want to delete?",
@@ -334,6 +337,7 @@ object StringResources {
                  "edit_item_title" to "Редактировать товар",
                  "item_name" to "Название товара",
                  "choose_category" to "Выберите категорию",
+                 "select_category" to "Выберите категорию",
                  "expiration_date" to "Выберите дату истечения срока (необязательно)",
                  "confirm_delete" to "Подтвердить удаление",
                  "confirm_delete_message" to "Вы уверены, что хотите удалить?",
@@ -802,6 +806,7 @@ fun HomeScreen(
     var duplicateItemName by remember { mutableStateOf("") } // Name of duplicate item
     var showImportConfirm by remember { mutableStateOf(false) } // For import confirmation dialog
     var importItemsCount by remember { mutableStateOf(0) } // Number of items to import
+    var showCTestWindow by remember { mutableStateOf(false) } // For c-test window
     
     // Update configuration when locale changes
     val configuration = LocalConfiguration.current
@@ -1323,6 +1328,14 @@ fun HomeScreen(
                                 }
                             }
                         }
+                        Spacer(modifier = Modifier.height(8.dp))
+                                                  // c-test button
+                          Button(
+                              onClick = { showCTestWindow = true },
+                              modifier = Modifier.fillMaxWidth()
+                          ) {
+                              Text("c-test")
+                          }
                     }
                 }
             )
@@ -1785,6 +1798,12 @@ fun HomeScreen(
                                     val updatedCategories = customCategories + newCategory
                                     onUpdateCategories(updatedCategories)
                                     
+                                    // Automatically select the newly created category
+                                    selectedCustomCategoryId = newId
+                                    
+                                    // Close the c-test window after selection
+                                    showCTestWindow = false
+                                    
                                     showCreateCategoryDialog = false
                                     newCategoryName = ""
                                 }
@@ -2194,6 +2213,64 @@ fun HomeScreen(
                 title = { Text(localizedString("show_version", selectedLanguage)) },
                 text = {
                     Text(versionText)
+                }
+            )
+        }
+        
+        // c-test window
+        if (showCTestWindow) {
+            AlertDialog(
+                onDismissRequest = { showCTestWindow = false },
+                modifier = Modifier.fillMaxSize(),
+                title = { Text(localizedString("select_category", selectedLanguage)) },
+                text = {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        items(customCategories.sortedBy { it.viewOrder }) { category ->
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 8.dp)
+                                    .clickable {
+                                        selectedCustomCategoryId = category.id
+                                        showCTestWindow = false
+                                    },
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = localizedCategoryName(category.name, selectedLanguage),
+                                    modifier = Modifier.weight(1f),
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                            if (category != customCategories.sortedBy { it.viewOrder }.last()) {
+                                Divider(modifier = Modifier.padding(vertical = 4.dp))
+                            }
+                        }
+                    }
+                },
+                confirmButton = {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Button(
+                            onClick = { 
+                                newCategoryName = ""
+                                showCreateCategoryDialog = true
+                            },
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text("new category")
+                        }
+                        Button(
+                            onClick = { showCTestWindow = false },
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text(localizedString("close", selectedLanguage))
+                        }
+                    }
                 }
             )
         }
