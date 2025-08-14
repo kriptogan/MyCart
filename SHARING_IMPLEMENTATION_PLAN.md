@@ -16,24 +16,24 @@ Implement a sharing mechanism using Firebase that allows users to create or join
 ## Implementation Steps
 
 ### Phase 1: Foundation & Data Models
-- [x] **Step 1.1**: Create sharing group data models (Group, GroupMember, etc.)
-- [x] **Step 1.2**: Set up Firestore collections structure
-- [x] **Step 1.3**: Implement 8-digit code generation logic
-- [x] **Step 1.4**: Add group state management to MainActivity
+- [ ] **Step 1.1**: Create sharing group data models (Group, GroupMember, etc.)
+- [ ] **Step 1.2**: Set up Firestore collections structure
+- [ ] **Step 1.3**: Implement 8-digit code generation logic
+- [ ] **Step 1.4**: Add group state management to MainActivity
 
 ### Phase 2: UI Components
-- [x] **Step 2.1**: Add "Sharing group" option to burger menu
-- [x] **Step 2.2**: Create main sharing dialog with Create/Join options
-- [x] **Step 2.3**: Implement "Create Group" dialog
-- [x] **Step 2.4**: Implement "Join Group" dialog with code input
-- [x] **Step 2.5**: Add group status display (current group info)
+- [ ] **Step 2.1**: Add "Sharing group" option to burger menu
+- [ ] **Step 2.2**: Create main sharing dialog with Create/Join options
+- [ ] **Step 2.3**: Implement "Create Group" dialog
+- [ ] **Step 2.4**: Implement "Join Group" dialog with code input
+- [ ] **Step 2.5**: Add group status display (current group info)
 
 ### Phase 3: Firebase Operations
-- [x] **Step 3.1**: Implement group creation in Firestore
-- [x] **Step 3.2**: Implement group joining logic
-- [x] **Step 3.3**: Add data upload functionality (groceries + categories)
-- [x] **Step 3.4**: Add data download functionality
-- [x] **Step 3.5**: Implement leave group functionality
+- [ ] **Step 3.1**: Implement group creation in Firestore
+- [ ] **Step 3.2**: Implement group joining logic
+- [ ] **Step 3.3**: Add data upload functionality (groceries + categories)
+- [ ] **Step 3.4**: Add data download functionality
+- [ ] **Step 3.5**: Implement leave group functionality
 
 ### Phase 4: Data Synchronization
 - [ ] **Step 4.1**: Implement data overwrite logic when joining group
