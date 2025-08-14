@@ -732,7 +732,8 @@ fun SuperCartApp() {
                             languageChangeKey++
                         },
                         isAppFirstStart = isAppFirstStart,
-                        onAppFirstStartComplete = { isAppFirstStart = false }
+                        onAppFirstStartComplete = { isAppFirstStart = false },
+                        firebaseService = firebaseService
                     )
                     1 -> ShoppingListScreen(
                         shoppingList = shoppingListItems,
@@ -790,7 +791,8 @@ fun HomeScreen(
     selectedLanguage: String,
     onLanguageChange: (String) -> Unit,
     isAppFirstStart: Boolean,
-    onAppFirstStartComplete: () -> Unit
+    onAppFirstStartComplete: () -> Unit,
+    firebaseService: FirebaseService
 ) {
     val context = LocalContext.current
     var showDialog by remember { mutableStateOf(false) }

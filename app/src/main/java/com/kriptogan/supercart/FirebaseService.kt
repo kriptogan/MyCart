@@ -7,10 +7,10 @@ class FirebaseService {
     private val db = FirebaseFirestore.getInstance()
     
     companion object {
-        private const val TEST_COLLECTION = "test"
+        private const val TEST_COLLECTION = "device_registrations"
     }
     
-    // Simple connection test - just try to read from a test collection
+    // Simple connection test - just try to read from the device_registrations collection
     suspend fun testConnection(): Boolean {
         return try {
             val result = db.collection(TEST_COLLECTION).limit(1).get().await()
