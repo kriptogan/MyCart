@@ -83,6 +83,7 @@ import androidx.datastore.core.Serializer
 import androidx.datastore.dataStore
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.delay
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.Json
 import com.kriptogan.supercart.GroceryWithDate
@@ -127,6 +128,7 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.room.util.copy
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.runtime.key
+import com.kriptogan.supercart.FirebaseManager
 
 // Custom string resource system
 object StringResources {
@@ -573,7 +575,7 @@ fun SuperCartApp() {
     )
     var groceries by remember { mutableStateOf(listOf<GroceryWithDate>()) }
     val scope = rememberCoroutineScope()
-
+    
     // Custom categories state
     var customCategories by remember { mutableStateOf<List<CustomCategory>>(emptyList()) }
     var categoryOrder by remember { mutableStateOf<List<Int>?>(null) }
@@ -584,6 +586,8 @@ fun SuperCartApp() {
         val saved = context.categoryOrderDataStore.data.first()[CATEGORY_ORDER_KEY]
         categoryOrder = saved?.split(",")?.mapNotNull { it.toIntOrNull() }
     }
+    
+
 
     // Compute ordered categories - ensure all categories are included
     val currentCategoryOrder = categoryOrder
@@ -816,6 +820,9 @@ fun HomeScreen(
     var importItemsCount by remember { mutableStateOf(0) } // Number of items to import
     var showCTestWindow by remember { mutableStateOf(false) } // For c-test window
     
+    // Firebase readiness state
+    var isFirebaseReady by remember { mutableStateOf(false) }
+    
     // Update configuration when locale changes
     val configuration = LocalConfiguration.current
     val layoutDirection = if (selectedLanguage == "iw") LayoutDirection.Rtl else LayoutDirection.Ltr
@@ -876,7 +883,12 @@ fun HomeScreen(
         }
     }
     
-
+    // Check Firebase readiness
+    LaunchedEffect(Unit) {
+        // Wait for Firebase to be ready with retry mechanism
+        isFirebaseReady = FirebaseManager.waitForFirebaseReady()
+        android.util.Log.d("FirebaseInit", "Firebase ready: $isFirebaseReady")
+    }
 
     fun openEditDialog(index: Int, grocery: GroceryWithDate) {
         name = grocery.name
@@ -962,6 +974,44 @@ fun HomeScreen(
                             imageVector = Icons.Default.Menu,
                             contentDescription = localizedString("menu", selectedLanguage),
                             tint = Color.White
+                        )
+                    }
+                    Spacer(modifier = Modifier.weight(1f))
+                    // Firebase test button
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        IconButton(
+                            onClick = {
+                                if (isFirebaseReady) {
+                                    scope.launch {
+                                        val isConnected = FirebaseManager.testConnection()
+                                        // Show result in console and also log it
+                                        println("Firebase connection test: $isConnected")
+                                        android.util.Log.d("FirebaseTest", "Connection test result: $isConnected")
+                                    }
+                                } else {
+                                    android.util.Log.w("FirebaseTest", "Firebase not ready yet")
+                                    println("Firebase not ready yet")
+                                }
+                            },
+                            modifier = Modifier
+                                .background(
+                                    color = if (isFirebaseReady) Color(0xFFFF5722) else Color.Gray,
+                                    shape = androidx.compose.foundation.shape.CircleShape
+                                )
+                                .size(48.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Check,
+                                contentDescription = "Test Firebase Connection",
+                                tint = Color.White
+                            )
+                        }
+                        Text(
+                            text = if (isFirebaseReady) "Ready" else "Loading...",
+                            fontSize = 10.sp,
+                            color = if (isFirebaseReady) Color.Green else Color.Gray
                         )
                     }
                 }
