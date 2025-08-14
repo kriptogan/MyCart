@@ -168,6 +168,7 @@ object StringResources {
                  "confirm_delete_message" to "האם אתה בטוח שברצונך למחוק?",
                  "delete_category" to "מחק קטגוריה",
                  "delete_category_message" to "הקטגוריה '%s' מכילה פריטים. מה ברצונך לעשות?",
+                 "delete_category_confirm" to "האם אתה בטוח שברצונך למחוק את הקטגוריה '%s'?",
                  "delete_all_items" to "מחק את כל הפריטים",
                  "move_to_other" to "העבר ל'אחר'",
                  "create_new_category" to "צור קטגוריה חדשה",
@@ -257,6 +258,7 @@ object StringResources {
                  "confirm_delete_message" to "Are you sure you want to delete?",
                  "delete_category" to "Delete Category",
                  "delete_category_message" to "The category '%s' contains items. What would you like to do?",
+                 "delete_category_confirm" to "Are you sure you want to delete the category '%s'?",
                  "delete_all_items" to "Delete All Items",
                  "move_to_other" to "Move to 'Other'",
                  "create_new_category" to "Create New Category",
@@ -346,6 +348,7 @@ object StringResources {
                  "confirm_delete_message" to "Вы уверены, что хотите удалить?",
                  "delete_category" to "Удалить категорию",
                  "delete_category_message" to "Категория '%s' содержит товары. Что вы хотите сделать?",
+                 "delete_category_confirm" to "Вы уверены, что хотите удалить категорию '%s'?",
                  "delete_all_items" to "Удалить все товары",
                  "move_to_other" to "Переместить в 'Другое'",
                  "create_new_category" to "Создать новую категорию",
@@ -796,6 +799,7 @@ fun HomeScreen(
     var editingCategory by remember { mutableStateOf<CustomCategory?>(null) } // Category being edited
     var editingCategoryName by remember { mutableStateOf("") } // New name for the category
     var showDeleteCategoryDialog by remember { mutableStateOf(false) } // For delete category confirmation
+    var showDeleteCategoryConfirm by remember { mutableStateOf(false) } // For simple delete confirmation
     var categoryToDelete by remember { mutableStateOf<CustomCategory?>(null) } // Category to be deleted
     var showCreateCategoryDialog by remember { mutableStateOf(false) } // For creating new category
     var newCategoryName by remember { mutableStateOf("") } // Name for new category
@@ -1585,7 +1589,12 @@ fun HomeScreen(
                                     onClick = { 
                                         categoryToDelete = editingCategory
                                         showEditCategoryDialog = false
-                                        showDeleteCategoryDialog = true
+                                        // Check if category has items
+                                        if (groceries.any { it.customCategoryId == editingCategory!!.id }) {
+                                            showDeleteCategoryDialog = true
+                                        } else {
+                                            showDeleteCategoryConfirm = true
+                                        }
                                     },
                                     colors = androidx.compose.material3.ButtonDefaults.buttonColors(
                                         containerColor = Color.Red
@@ -1708,7 +1717,10 @@ fun HomeScreen(
                                 // Move all items to "אחר" category (ID 1)
                                 val updatedGroceries = groceries.map { grocery ->
                                     if (grocery.customCategoryId == categoryToDelete!!.id) {
-                                        grocery.copy(customCategoryId = 1) // Move to "אחר"
+                                        grocery.copy(
+                                            customCategoryId = 1, // Move to "אחר"
+                                            lastUpdate = LocalDateTime.now() // Update lastUpdate
+                                        )
                                     } else {
                                         grocery
                                     }
@@ -1742,6 +1754,47 @@ fun HomeScreen(
                 title = { Text(localizedString("delete_category", selectedLanguage)) },
                 text = { 
                     Text(localizedString("delete_category_message", selectedLanguage, categoryToDelete?.name ?: ""))
+                }
+            )
+        }
+        
+        // Simple delete category confirmation dialog (for empty categories)
+        if (showDeleteCategoryConfirm && categoryToDelete != null) {
+            AlertDialog(
+                onDismissRequest = { 
+                    showDeleteCategoryConfirm = false
+                    categoryToDelete = null
+                },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            // Remove the category (no items to worry about)
+                            val updatedCategories = customCategories.filter { it.id != categoryToDelete!!.id }
+                            onUpdateCategories(updatedCategories)
+                            
+                            showDeleteCategoryConfirm = false
+                            categoryToDelete = null
+                        },
+                        colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                            containerColor = Color.Red
+                        )
+                    ) {
+                        Text(localizedString("delete", selectedLanguage), color = Color.White)
+                    }
+                },
+                dismissButton = {
+                    Button(
+                        onClick = { 
+                            showDeleteCategoryConfirm = false
+                            categoryToDelete = null
+                        }
+                    ) {
+                        Text(localizedString("cancel", selectedLanguage))
+                    }
+                },
+                title = { Text(localizedString("delete_category", selectedLanguage)) },
+                text = { 
+                    Text(localizedString("delete_category_confirm", selectedLanguage, categoryToDelete?.name ?: ""))
                 }
             )
         }
