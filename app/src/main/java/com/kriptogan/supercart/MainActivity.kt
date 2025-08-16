@@ -130,6 +130,11 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.runtime.key
 import com.kriptogan.supercart.FirebaseService
 import android.util.Log
+import com.kriptogan.supercart.SharingFirebaseService
+import com.kriptogan.supercart.GroupState
+import com.kriptogan.supercart.Group
+import com.kriptogan.supercart.GroupData
+import com.kriptogan.supercart.DeviceUtils
 
 // Custom string resource system
 object StringResources {
@@ -577,8 +582,14 @@ fun SuperCartApp() {
     var groceries by remember { mutableStateOf(listOf<GroceryWithDate>()) }
     val scope = rememberCoroutineScope()
     
-    // Firebase service
+    // Firebase services
     val firebaseService = remember { FirebaseService() }
+    val sharingFirebaseService = remember { SharingFirebaseService() }
+    
+    // Group state management
+    var groupState by remember { mutableStateOf(GroupState()) }
+    var currentGroup by remember { mutableStateOf<Group?>(null) }
+    var currentGroupData by remember { mutableStateOf<GroupData?>(null) }
     
     // Custom categories state
     var customCategories by remember { mutableStateOf<List<CustomCategory>>(emptyList()) }
@@ -591,7 +602,40 @@ fun SuperCartApp() {
         categoryOrder = saved?.split(",")?.mapNotNull { it.toIntOrNull() }
     }
     
-
+    // Load group state from DataStore on first composition
+    LaunchedEffect(Unit) {
+        groupState = context.groupStateDataStore.data.first()
+        
+        // If user is in a group, load group details
+        if (groupState.isInGroup && groupState.currentGroupId != null) {
+            try {
+                val group = sharingFirebaseService.findGroupByCode(groupState.currentGroupCode ?: "")
+                if (group != null) {
+                    currentGroup = group
+                    val groupData = sharingFirebaseService.getGroupData(group.groupId)
+                    currentGroupData = groupData
+                } else {
+                    // Group not found, reset state
+                    context.groupStateDataStore.updateData { GroupState() }
+                    groupState = GroupState()
+                    currentGroup = null
+                    currentGroupData = null
+                }
+            } catch (e: Exception) {
+                Log.e("SuperCartApp", "Failed to load group state: ${e.message}", e)
+                // Reset group state on error
+                context.groupStateDataStore.updateData { GroupState() }
+                groupState = GroupState()
+                currentGroup = null
+                currentGroupData = null
+            }
+        }
+    }
+    
+    // Save group state to DataStore whenever it changes
+    LaunchedEffect(groupState) {
+        context.groupStateDataStore.updateData { groupState }
+    }
 
     // Compute ordered categories - ensure all categories are included
     val currentCategoryOrder = categoryOrder
@@ -733,7 +777,20 @@ fun SuperCartApp() {
                         },
                         isAppFirstStart = isAppFirstStart,
                         onAppFirstStartComplete = { isAppFirstStart = false },
-                        firebaseService = firebaseService
+                        firebaseService = firebaseService,
+                        sharingFirebaseService = sharingFirebaseService,
+                        groupState = groupState,
+                        currentGroup = currentGroup,
+                        currentGroupData = currentGroupData,
+                        onGroupStateChange = { newGroupState ->
+                            groupState = newGroupState
+                        },
+                        onCurrentGroupChange = { newGroup ->
+                            currentGroup = newGroup
+                        },
+                        onCurrentGroupDataChange = { newGroupData ->
+                            currentGroupData = newGroupData
+                        }
                     )
                     1 -> ShoppingListScreen(
                         shoppingList = shoppingListItems,
@@ -792,7 +849,14 @@ fun HomeScreen(
     onLanguageChange: (String) -> Unit,
     isAppFirstStart: Boolean,
     onAppFirstStartComplete: () -> Unit,
-    firebaseService: FirebaseService
+    firebaseService: FirebaseService,
+    sharingFirebaseService: SharingFirebaseService,
+    groupState: GroupState,
+    currentGroup: Group?,
+    currentGroupData: GroupData?,
+    onGroupStateChange: (GroupState) -> Unit,
+    onCurrentGroupChange: (Group?) -> Unit,
+    onCurrentGroupDataChange: (GroupData?) -> Unit
 ) {
     val context = LocalContext.current
     var showDialog by remember { mutableStateOf(false) }
@@ -1098,6 +1162,65 @@ fun HomeScreen(
                     ),
                     shape = androidx.compose.foundation.shape.RoundedCornerShape(8.dp)
                 )
+            }
+            
+            // Group status display
+            if (groupState.isInGroup && currentGroup != null) {
+                item {
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 16.dp),
+                        border = CardDefaults.outlinedCardBorder(),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = Color(0xFFE8F5E8) // Light green background
+                        ),
+                        shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp)
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(16.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Check,
+                                    contentDescription = "Group Active",
+                                    tint = Color(0xFF4CAF50),
+                                    modifier = Modifier.padding(end = 8.dp)
+                                )
+                                Text(
+                                    text = "Sharing Group Active",
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 16.sp,
+                                    color = Color(0xFF2E7D32)
+                                )
+                                Spacer(modifier = Modifier.weight(1f))
+                                Text(
+                                    text = "Code: ${currentGroup.groupCode}",
+                                    fontWeight = FontWeight.Medium,
+                                    fontSize = 14.sp,
+                                    color = Color(0xFF2E7D32)
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = "Group: ${currentGroup.groupId.take(8)}...",
+                                fontSize = 12.sp,
+                                color = Color(0xFF2E7D32)
+                            )
+                            if (groupState.lastSyncAt != null) {
+                                Text(
+                                    text = "Last sync: ${groupState.lastSyncAt}",
+                                    fontSize = 12.sp,
+                                    color = Color(0xFF2E7D32)
+                                )
+                            }
+                        }
+                    }
+                }
             }
             orderedCategories.forEach { category ->
                 val itemsInCategory = groceries.withIndex()
@@ -2853,6 +2976,23 @@ object CustomCategoryListSerializer : Serializer<List<CustomCategory>> {
         }.getOrDefault(emptyList())
     override suspend fun writeTo(t: List<CustomCategory>, output: OutputStream) {
         output.write(Json.encodeToString(ListSerializer(CustomCategory.serializer()), t).encodeToByteArray())
+    }
+}
+
+// Group state DataStore
+val Context.groupStateDataStore: DataStore<GroupState> by dataStore(
+    fileName = "group_state.json",
+    serializer = GroupStateSerializer
+)
+
+object GroupStateSerializer : Serializer<GroupState> {
+    override val defaultValue: GroupState = GroupState()
+    override suspend fun readFrom(input: InputStream): GroupState =
+        runCatching {
+            Json.decodeFromString(GroupState.serializer(), input.readBytes().decodeToString())
+        }.getOrDefault(GroupState())
+    override suspend fun writeTo(t: GroupState, output: OutputStream) {
+        output.write(Json.encodeToString(GroupState.serializer(), t).encodeToByteArray())
     }
 }
 
