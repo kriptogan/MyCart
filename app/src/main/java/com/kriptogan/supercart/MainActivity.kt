@@ -74,7 +74,6 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.material.icons.filled.Add
@@ -98,7 +97,12 @@ import androidx.compose.material.icons.filled.Warning
 import java.time.temporal.ChronoUnit
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.material.icons.filled.List
@@ -107,10 +111,8 @@ import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Done
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Delete
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.dp
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
@@ -123,7 +125,6 @@ import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.room.util.copy
 import androidx.compose.ui.viewinterop.AndroidView
@@ -206,6 +207,7 @@ object StringResources {
                  "items_need_attention" to "פריטים שדורשים תשומת לב",
                  "items_need_attention_message" to "יש פריטים שפג תוקפם, עומדים לפוג, או עבר ממוצע הקנייה שלהם. האם ברצונך לראות אותם?",
                  "show_expiring_items" to "הצג רק מוצרים שפג תוקפם, עומדים לפוג, או עבר ממוצע קנייה",
+                 "sharing_group" to "קבוצת שיתוף",
                  "create" to "צור",
                  // Category translations
                  "אחר" to "אחר",
@@ -296,6 +298,7 @@ object StringResources {
                  "items_need_attention" to "Items Need Attention",
                  "items_need_attention_message" to "There are items that have expired, are about to expire, or have exceeded their average buying period. Would you like to see them?",
                  "show_expiring_items" to "Show only items that have expired, are about to expire, or have exceeded their average buying period",
+                 "sharing_group" to "Sharing Group",
                  "create" to "Create",
                  // Category translations
                  "אחר" to "Other",
@@ -386,6 +389,7 @@ object StringResources {
                  "items_need_attention" to "Товары требуют внимания",
                  "items_need_attention_message" to "Есть товары, срок годности которых истек, истекает или превышен средний период покупки. Хотите их увидеть?",
                  "show_expiring_items" to "Показать только товары, срок годности которых истек, истекает или превышен средний период покупки",
+                 "sharing_group" to "Группа обмена",
                  "create" to "Создать",
                  // Category translations
                  "אחר" to "Другое",
@@ -889,6 +893,9 @@ fun HomeScreen(
     var showImportConfirm by remember { mutableStateOf(false) } // For import confirmation dialog
     var importItemsCount by remember { mutableStateOf(0) } // Number of items to import
     var showCTestWindow by remember { mutableStateOf(false) } // For c-test window
+    var showSharingDialog by remember { mutableStateOf(false) } // For sharing group dialog
+    var showCreateGroupDialog by remember { mutableStateOf(false) } // For create group dialog
+    var showJoinGroupDialog by remember { mutableStateOf(false) } // For join group dialog
     
     // Update configuration when locale changes
     val configuration = LocalConfiguration.current
@@ -1112,6 +1119,19 @@ fun HomeScreen(
                                 },
                                 onClick = {
                                     showNotesDialog = true
+                                    showMenu = false
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { 
+                                    Text(
+                                        localizedString("sharing_group", selectedLanguage),
+                                        modifier = Modifier.fillMaxWidth(),
+                                        textAlign = TextAlign.Center
+                                    ) 
+                                },
+                                onClick = {
+                                    showSharingDialog = true
                                     showMenu = false
                                 }
                             )
@@ -2501,6 +2521,424 @@ fun HomeScreen(
                                     }
                                 }
                             }
+            )
+        }
+        
+        // Main sharing dialog with Create/Join options
+        if (showSharingDialog) {
+            AlertDialog(
+                onDismissRequest = { showSharingDialog = false },
+                title = { 
+                    Text(
+                        text = localizedString("sharing_group", selectedLanguage),
+                        modifier = Modifier.fillMaxWidth(),
+                        textAlign = TextAlign.Center,
+                        fontWeight = FontWeight.Bold
+                    ) 
+                },
+                text = { 
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            text = "Choose how you want to share your grocery lists and categories:",
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.padding(bottom = 24.dp)
+                        )
+                        
+                        // Create Group Button
+                        Button(
+                            onClick = {
+                                showSharingDialog = false
+                                showCreateGroupDialog = true
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(bottom = 12.dp),
+                            colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                                containerColor = Color(0xFF4CAF50)
+                            )
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Add,
+                                    contentDescription = "Create Group",
+                                    tint = Color.White,
+                                    modifier = Modifier.padding(end = 8.dp)
+                                )
+                                Text(
+                                    text = "Create New Group",
+                                    color = Color.White,
+                                    fontWeight = FontWeight.Medium
+                                )
+                            }
+                        }
+                        
+                        // Join Group Button
+                        Button(
+                            onClick = {
+                                showSharingDialog = false
+                                showJoinGroupDialog = true
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(bottom = 12.dp),
+                            colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                                containerColor = Color(0xFF2196F3)
+                            )
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Check,
+                                    contentDescription = "Join Group",
+                                    tint = Color.White,
+                                    modifier = Modifier.padding(end = 8.dp)
+                                )
+                                Text(
+                                    text = "Join Existing Group",
+                                    color = Color.White,
+                                    fontWeight = FontWeight.Medium
+                                )
+                            }
+                        }
+                        
+                        // Current Group Status (if already in a group)
+                        if (groupState.isInGroup && currentGroup != null) {
+                            Divider(
+                                modifier = Modifier.padding(vertical = 16.dp),
+                                color = Color(0xFFE0E0E0)
+                            )
+                            Text(
+                                text = "You are currently in a sharing group:",
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier.padding(bottom = 8.dp),
+                                fontSize = 14.sp,
+                                color = Color.Gray
+                            )
+                            Text(
+                                text = "Code: ${currentGroup.groupCode}",
+                                textAlign = TextAlign.Center,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFF4CAF50)
+                            )
+                        }
+                    }
+                },
+                confirmButton = {
+                    Button(
+                        onClick = { showSharingDialog = false },
+                        colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                            containerColor = Color(0xFF757575)
+                        )
+                    ) {
+                        Text(
+                            text = localizedString("close", selectedLanguage),
+                            color = Color.White
+                        )
+                    }
+                }
+            )
+        }
+        
+        // Create Group Dialog
+        if (showCreateGroupDialog) {
+            AlertDialog(
+                onDismissRequest = { showCreateGroupDialog = false },
+                title = { 
+                    Text(
+                        text = "Create New Sharing Group",
+                        modifier = Modifier.fillMaxWidth(),
+                        textAlign = TextAlign.Center,
+                        fontWeight = FontWeight.Bold
+                    ) 
+                },
+                text = { 
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            text = "You're about to create a new sharing group. This will:",
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.padding(bottom = 16.dp)
+                        )
+                        
+                        // Information about what will happen
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(
+                                    color = Color(0xFFF5F5F5),
+                                    shape = RoundedCornerShape(8.dp)
+                                )
+                                .padding(16.dp)
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.padding(bottom = 8.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Check,
+                                    contentDescription = null,
+                                    tint = Color(0xFF4CAF50),
+                                    modifier = Modifier
+                                        .padding(end = 8.dp)
+                                        .size(16.dp)
+                                )
+                                Text(
+                                    text = "Generate a unique 8-digit group code",
+                                    fontSize = 14.sp
+                                )
+                            }
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.padding(bottom = 8.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Check,
+                                    contentDescription = null,
+                                    tint = Color(0xFF4CAF50),
+                                    modifier = Modifier
+                                        .padding(end = 8.dp)
+                                        .size(16.dp)
+                                )
+                                Text(
+                                    text = "Upload your current groceries and categories",
+                                    fontSize = 14.sp
+                                )
+                            }
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.padding(bottom = 8.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Check,
+                                    contentDescription = null,
+                                    tint = Color(0xFF4CAF50),
+                                    modifier = Modifier
+                                        .padding(end = 8.dp)
+                                        .size(16.dp)
+                                )
+                                Text(
+                                    text = "Allow others to join using the group code",
+                                    fontSize = 14.sp
+                                )
+                            }
+                        }
+                        
+                        Spacer(modifier = Modifier.height(16.dp))
+                        
+                        Text(
+                            text = "Are you sure you want to create a new sharing group?",
+                            textAlign = TextAlign.Center,
+                            fontWeight = FontWeight.Medium,
+                            modifier = Modifier.padding(bottom = 16.dp)
+                        )
+                    }
+                },
+                confirmButton = {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Button(
+                            onClick = { showCreateGroupDialog = false },
+                            colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                                containerColor = Color(0xFF757575)
+                            )
+                        ) {
+                            Text(
+                                text = localizedString("cancel", selectedLanguage),
+                                color = Color.White
+                            )
+                        }
+                        Button(
+                            onClick = {
+                                // TODO: Implement actual group creation in Step 3.1
+                                showCreateGroupDialog = false
+                                // For now, just show a success message
+                                // In the next phase, this will create the group in Firebase
+                            },
+                            colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                                containerColor = Color(0xFF4CAF50)
+                            )
+                        ) {
+                            Text(
+                                text = "Create Group",
+                                color = Color.White,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
+                    }
+                }
+            )
+        }
+        
+        // Join Group Dialog
+        if (showJoinGroupDialog) {
+            AlertDialog(
+                onDismissRequest = { showJoinGroupDialog = false },
+                title = { 
+                    Text(
+                        text = "Join Existing Sharing Group",
+                        modifier = Modifier.fillMaxWidth(),
+                        textAlign = TextAlign.Center,
+                        fontWeight = FontWeight.Bold
+                    ) 
+                },
+                text = { 
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            text = "Enter the 8-digit group code to join an existing sharing group:",
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.padding(bottom = 16.dp)
+                        )
+                        
+                        // Group Code Input Field
+                        OutlinedTextField(
+                            value = "", // TODO: Add state variable for group code input
+                            onValueChange = { /* TODO: Handle input changes */ },
+                            label = { Text("Group Code") },
+                            placeholder = { Text("Enter 8-digit code") },
+                            singleLine = true,
+                            keyboardOptions = KeyboardOptions(
+                                keyboardType = KeyboardType.Number,
+                                imeAction = ImeAction.Done
+                            ),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(bottom = 16.dp),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = Color(0xFF2196F3),
+                                unfocusedBorderColor = Color(0xFFE0E0E0)
+                            )
+                        )
+                        
+                        // Information about what will happen
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(
+                                    color = Color(0xFFF5F5F5),
+                                    shape = RoundedCornerShape(8.dp)
+                                )
+                                .padding(16.dp)
+                        ) {
+                            Text(
+                                text = "When you join a group:",
+                                fontWeight = FontWeight.Medium,
+                                modifier = Modifier.padding(bottom = 8.dp)
+                            )
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.padding(bottom = 6.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Info,
+                                    contentDescription = null,
+                                    tint = Color(0xFF2196F3),
+                                    modifier = Modifier
+                                        .padding(end = 8.dp)
+                                        .size(16.dp)
+                                )
+                                Text(
+                                    text = "Your local data will be replaced with group data",
+                                    fontSize = 14.sp
+                                )
+                            }
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.padding(bottom = 6.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Info,
+                                    contentDescription = null,
+                                    tint = Color(0xFF2196F3),
+                                    modifier = Modifier
+                                        .padding(end = 8.dp)
+                                        .size(16.dp)
+                                )
+                                Text(
+                                    text = "You'll be able to sync changes with group members",
+                                    fontSize = 14.sp
+                                )
+                            }
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.padding(bottom = 6.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Info,
+                                    contentDescription = null,
+                                    tint = Color(0xFF2196F3),
+                                    modifier = Modifier
+                                        .padding(end = 8.dp)
+                                        .size(16.dp)
+                                )
+                                Text(
+                                    text = "You can leave the group at any time",
+                                    fontSize = 14.sp
+                                )
+                            }
+                        }
+                        
+                        Spacer(modifier = Modifier.height(16.dp))
+                        
+                        Text(
+                            text = "Make sure you have the correct group code from the group owner.",
+                            textAlign = TextAlign.Center,
+                            fontSize = 12.sp,
+                            color = Color.Gray,
+                            modifier = Modifier.padding(bottom = 16.dp)
+                        )
+                    }
+                },
+                confirmButton = {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Button(
+                            onClick = { showJoinGroupDialog = false },
+                            colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                                containerColor = Color(0xFF757575)
+                            )
+                        ) {
+                            Text(
+                                text = localizedString("cancel", selectedLanguage),
+                                color = Color.White
+                            )
+                        }
+                        Button(
+                            onClick = {
+                                // TODO: Implement actual group joining in Step 3.2
+                                showJoinGroupDialog = false
+                                // For now, just show a placeholder message
+                                // In the next phase, this will validate and join the group
+                            },
+                            colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                                containerColor = Color(0xFF2196F3)
+                            ),
+                            enabled = false // TODO: Enable when group code is valid
+                        ) {
+                            Text(
+                                text = "Join Group",
+                                color = Color.White,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
+                    }
+                }
             )
         }
     }
