@@ -158,13 +158,31 @@ class SharingFirebaseService {
             
             db.runTransaction { transaction ->
                 val groupDoc = transaction.get(groupRef)
+                Log.d(TAG, "Group document exists: ${groupDoc.exists()}")
+                
                 if (groupDoc.exists()) {
-                    val group = groupDoc.toObject(Group::class.java)
-                    if (group != null) {
-                        val updatedMembers = group.members + member
-                        val updatedGroup = group.copy(members = updatedMembers)
-                        transaction.set(groupRef, updatedGroup)
+                    try {
+                        val group = groupDoc.toObject(Group::class.java)
+                        Log.d(TAG, "Group deserialized successfully: $group")
+                        
+                        if (group != null) {
+                            val updatedMembers = group.members + member
+                            Log.d(TAG, "Updated members list: $updatedMembers")
+                            
+                            val updatedGroup = group.copy(members = updatedMembers)
+                            Log.d(TAG, "Updated group: $updatedGroup")
+                            
+                            transaction.set(groupRef, updatedGroup)
+                            Log.d(TAG, "Transaction set operation completed")
+                        } else {
+                            Log.e(TAG, "Failed to deserialize group document")
+                        }
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Error during group deserialization: ${e.message}", e)
+                        throw e
                     }
+                } else {
+                    Log.e(TAG, "Group document does not exist for ID: $groupId")
                 }
             }.await()
             
@@ -191,13 +209,31 @@ class SharingFirebaseService {
             
             db.runTransaction { transaction ->
                 val groupDoc = transaction.get(groupRef)
+                Log.d(TAG, "Group document exists: ${groupDoc.exists()}")
+                
                 if (groupDoc.exists()) {
-                    val group = groupDoc.toObject(Group::class.java)
-                    if (group != null) {
-                        val updatedMembers = group.members.filter { it.deviceId != deviceId }
-                        val updatedGroup = group.copy(members = updatedMembers)
-                        transaction.set(groupRef, updatedGroup)
+                    try {
+                        val group = groupDoc.toObject(Group::class.java)
+                        Log.d(TAG, "Group deserialized successfully: $group")
+                        
+                        if (group != null) {
+                            val updatedMembers = group.members.filter { it.deviceId != deviceId }
+                            Log.d(TAG, "Updated members list: $updatedMembers")
+                            
+                            val updatedGroup = group.copy(members = updatedMembers)
+                            Log.d(TAG, "Updated group: $updatedGroup")
+                            
+                            transaction.set(groupRef, updatedGroup)
+                            Log.d(TAG, "Transaction set operation completed")
+                        } else {
+                            Log.e(TAG, "Failed to deserialize group document")
+                        }
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Error during group deserialization: ${e.message}", e)
+                        throw e
                     }
+                } else {
+                    Log.e(TAG, "Group document does not exist for ID: $groupId")
                 }
             }.await()
             

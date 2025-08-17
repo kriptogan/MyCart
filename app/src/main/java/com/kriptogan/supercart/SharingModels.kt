@@ -8,11 +8,11 @@ import kotlinx.serialization.Serializable
  * Represents a sharing group that allows users to share grocery lists and categories
  */
 @Serializable
-data class Group(
+data class Group @JvmOverloads constructor(
     val groupId: String = UUID.randomUUID().toString(),
-    val groupCode: String, // 8-digit code for joining
-    val ownerId: String, // Device ID of the group creator
-    val members: List<GroupMember>,
+    val groupCode: String = "",
+    val ownerId: String = "",
+    val members: List<GroupMember> = emptyList(),
     val createdAt: String = LocalDateTime.now().toString(), // ISO string format
     val lastSyncAt: String = LocalDateTime.now().toString() // ISO string format
 )
@@ -21,9 +21,9 @@ data class Group(
  * Represents a member of a sharing group
  */
 @Serializable
-data class GroupMember(
-    val userId: String, // Device ID of the member
-    val deviceId: String, // Device identifier
+data class GroupMember @JvmOverloads constructor(
+    val userId: String = "", // Device ID of the member
+    val deviceId: String = "", // Device identifier
     val joinedAt: String = LocalDateTime.now().toString(), // ISO string format
     val lastActiveAt: String = LocalDateTime.now().toString() // ISO string format
 )
@@ -32,12 +32,12 @@ data class GroupMember(
  * Represents the shared data within a group (groceries + categories)
  */
 @Serializable
-data class GroupData(
-    val groupId: String,
-    val groceries: List<Grocery>,
-    val categories: List<CustomCategory>,
+data class GroupData @JvmOverloads constructor(
+    val groupId: String = "",
+    val groceries: List<Grocery> = emptyList(),
+    val categories: List<CustomCategory> = emptyList(),
     val lastUpdatedAt: String = LocalDateTime.now().toString(), // ISO string format
-    val lastModifiedBy: String // Device ID of who made the last change
+    val lastModifiedBy: String = "" // Device ID of who made the last change
 )
 
 /**
