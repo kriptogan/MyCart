@@ -98,6 +98,7 @@ import java.time.temporal.ChronoUnit
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.ExitToApp
 
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.foundation.text.KeyboardOptions
@@ -924,6 +925,13 @@ fun HomeScreen(
     var dataDownloadErrorMessage by remember { mutableStateOf("") }
     var isDownloadingData by remember { mutableStateOf(false) } // Loading state for download
     
+            // Step 3.5: Leave group state variables
+        var showLeaveGroupSuccess by remember { mutableStateOf(false) }
+        var showLeaveGroupError by remember { mutableStateOf(false) }
+        var leaveGroupErrorMessage by remember { mutableStateOf("") }
+        var isLeavingGroup by remember { mutableStateOf(false) }
+        var showLeaveGroupConfirmation by remember { mutableStateOf(false) }
+    
     // Update configuration when locale changes
     val configuration = LocalConfiguration.current
     val layoutDirection = if (selectedLanguage == "iw") LayoutDirection.Rtl else LayoutDirection.Ltr
@@ -1462,6 +1470,58 @@ fun HomeScreen(
                                         Spacer(modifier = Modifier.width(8.dp))
                                         Text(
                                             text = "Download Data from Group",
+                                            color = Color.White,
+                                            fontWeight = FontWeight.Medium
+                                        )
+                                    }
+                                }
+                            }
+                            
+                            Spacer(modifier = Modifier.height(8.dp))
+                            
+                            // Leave Group Button
+                            Button(
+                                onClick = {
+                                    // Show confirmation dialog
+                                    showLeaveGroupConfirmation = true
+                                },
+                                enabled = !isLeavingGroup,
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                                    containerColor = Color(0xFFD32F2F) // Red color for leave
+                                )
+                            ) {
+                                if (isLeavingGroup) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.Center
+                                    ) {
+                                        androidx.compose.material3.CircularProgressIndicator(
+                                            modifier = Modifier.size(16.dp),
+                                            color = Color.White,
+                                            strokeWidth = 2.dp
+                                        )
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text(
+                                            text = "Leaving...",
+                                            color = Color.White,
+                                            fontWeight = FontWeight.Medium
+                                        )
+                                    }
+                                } else {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.Center
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.ExitToApp,
+                                            contentDescription = "Leave Group",
+                                            tint = Color.White,
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text(
+                                            text = "Leave Group",
                                             color = Color.White,
                                             fontWeight = FontWeight.Medium
                                         )
@@ -3632,6 +3692,178 @@ fun HomeScreen(
                     ) {
                         Text(
                             text = "OK",
+                            color = Color.White,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+                }
+            )
+        }
+        
+        // Leave Group Success Dialog
+        if (showLeaveGroupSuccess) {
+            AlertDialog(
+                onDismissRequest = { showLeaveGroupSuccess = false },
+                title = { 
+                    Text(
+                        text = "Successfully Left Group",
+                        modifier = Modifier.fillMaxWidth(),
+                        textAlign = TextAlign.Center,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFF4CAF50)
+                    ) 
+                },
+                text = { 
+                    Text(
+                        text = "You have successfully left the sharing group. Your local data remains unchanged.",
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.padding(bottom = 16.dp)
+                    )
+                },
+                confirmButton = {
+                    Button(
+                        onClick = { showLeaveGroupSuccess = false },
+                        colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                            containerColor = Color(0xFF4CAF50)
+                        )
+                    ) {
+                        Text(
+                            text = "OK",
+                            color = Color.White,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+                }
+            )
+        }
+        
+        // Leave Group Error Dialog
+        if (showLeaveGroupError) {
+            AlertDialog(
+                onDismissRequest = { showLeaveGroupError = false },
+                title = { 
+                    Text(
+                        text = "Failed to Leave Group",
+                        modifier = Modifier.fillMaxWidth(),
+                        textAlign = TextAlign.Center,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFFD32F2F)
+                    ) 
+                },
+                text = { 
+                    Text(
+                        text = leaveGroupErrorMessage,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.padding(bottom = 16.dp)
+                    )
+                },
+                confirmButton = {
+                    Button(
+                        onClick = { showLeaveGroupError = false },
+                        colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                            containerColor = Color(0xFFD32F2F)
+                        )
+                    ) {
+                        Text(
+                            text = "OK",
+                            color = Color.White,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+                }
+            )
+        }
+        
+        // Leave Group Confirmation Dialog
+        if (showLeaveGroupConfirmation) {
+            AlertDialog(
+                onDismissRequest = { showLeaveGroupConfirmation = false },
+                title = { 
+                    Text(
+                        text = "Leave Group",
+                        modifier = Modifier.fillMaxWidth(),
+                        textAlign = TextAlign.Center,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFFD32F2F)
+                    ) 
+                },
+                text = { 
+                    Text(
+                        text = "Are you sure you want to leave the group? This action cannot be undone.",
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.padding(bottom = 16.dp)
+                    )
+                },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            // Step 3.5: Implement leave group functionality
+                            scope.launch {
+                                try {
+                                    isLeavingGroup = true
+                                    
+                                    // Get device ID for leave group
+                                    val deviceId = DeviceUtils.getDeviceId(context)
+                                    
+                                    // Leave group in Firebase
+                                    val leaveSuccess = sharingFirebaseService.removeMemberFromGroup(currentGroup!!.groupId, deviceId)
+                                    
+                                    if (leaveSuccess) {
+                                        // Leave group successfully
+                                        val updatedGroupState = groupState.copy(
+                                            isInGroup = false,
+                                            currentGroupId = null,
+                                            currentGroupCode = null,
+                                            isOwner = false,
+                                            lastSyncAt = LocalDateTime.now().toString()
+                                        )
+                                        
+                                        // Update local group state
+                                        onGroupStateChange(updatedGroupState)
+                                        
+                                        // Update current group
+                                        onCurrentGroupChange(null)
+                                        
+                                        // Show success feedback
+                                        showLeaveGroupSuccess = true
+                                        
+                                        Log.d("LeaveGroup", "Successfully left group: ${currentGroup!!.groupCode}")
+                                    } else {
+                                        // Failed to leave group
+                                        leaveGroupErrorMessage = "Failed to leave group. Please try again."
+                                        showLeaveGroupError = true
+                                        Log.e("LeaveGroup", "Failed to leave group")
+                                    }
+                                } catch (e: Exception) {
+                                    Log.e("LeaveGroup", "Error leaving group: ${e.message}", e)
+                                    leaveGroupErrorMessage = "Error leaving group: ${e.message}"
+                                    showLeaveGroupError = true
+                                } finally {
+                                    isLeavingGroup = false
+                                }
+                            }
+                            showLeaveGroupConfirmation = false
+                        },
+                        colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                            containerColor = Color(0xFFD32F2F)
+                        )
+                    ) {
+                        Text(
+                            text = "Leave Group",
+                            color = Color.White,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+                },
+                dismissButton = {
+                    Button(
+                        onClick = { showLeaveGroupConfirmation = false },
+                        colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                            containerColor = Color(0xFF757575)
+                        )
+                    ) {
+                        Text(
+                            text = "Cancel",
                             color = Color.White,
                             fontWeight = FontWeight.Medium
                         )
