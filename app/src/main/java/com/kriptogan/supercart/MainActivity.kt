@@ -918,6 +918,12 @@ fun HomeScreen(
     var dataUploadErrorMessage by remember { mutableStateOf("") }
     var isUploadingData by remember { mutableStateOf(false) } // Loading state for upload
     
+    // Group data download feedback states
+    var showDataDownloadSuccess by remember { mutableStateOf(false) }
+    var showDataDownloadError by remember { mutableStateOf(false) }
+    var dataDownloadErrorMessage by remember { mutableStateOf("") }
+    var isDownloadingData by remember { mutableStateOf(false) } // Loading state for download
+    
     // Update configuration when locale changes
     val configuration = LocalConfiguration.current
     val layoutDirection = if (selectedLanguage == "iw") LayoutDirection.Rtl else LayoutDirection.Ltr
@@ -1348,6 +1354,114 @@ fun HomeScreen(
                                         Spacer(modifier = Modifier.width(8.dp))
                                         Text(
                                             text = "Upload Data to Group",
+                                            color = Color.White,
+                                            fontWeight = FontWeight.Medium
+                                        )
+                                    }
+                                }
+                            }
+                            
+                            Spacer(modifier = Modifier.height(8.dp))
+                            
+                            // Download Data Button
+                            Button(
+                                onClick = {
+                                    // Step 3.4: Implement data download functionality
+                                    scope.launch {
+                                        try {
+                                            isDownloadingData = true
+                                            
+                                            // Get group data from Firebase
+                                            val groupData = sharingFirebaseService.getGroupData(currentGroup.groupId)
+                                            
+                                            if (groupData != null) {
+                                                // Update local groceries with downloaded data
+                                                val downloadedGroceries = groupData.groceries.map { serializableGrocery ->
+                                                    // Convert serializable Grocery back to GroceryWithDate
+                                                    GroceryWithDate(
+                                                        uuid = serializableGrocery.uuid,
+                                                        name = serializableGrocery.name,
+                                                        customCategoryId = serializableGrocery.customCategoryId,
+                                                        customCategoryUuid = serializableGrocery.customCategoryUuid,
+                                                        expirationDate = serializableGrocery.expirationDate?.let { LocalDate.parse(it) },
+                                                        lastTimeBoughtDays = serializableGrocery.lastTimeBoughtDays,
+                                                        averageBuyingDays = serializableGrocery.averageBuyingDays,
+                                                        buyEvents = serializableGrocery.buyEvents.map { LocalDate.parse(it) },
+                                                        inShoppingList = serializableGrocery.inShoppingList,
+                                                        isBought = serializableGrocery.isBought,
+                                                        lastUpdate = LocalDateTime.parse(serializableGrocery.lastUpdate)
+                                                    )
+                                                }
+                                                
+                                                // Update local categories with downloaded data
+                                                val downloadedCategories = groupData.categories
+                                                
+                                                // Update local state
+                                                onUpdateGroceries(downloadedGroceries)
+                                                onUpdateCategories(downloadedCategories)
+                                                
+                                                // Update local group state with new sync time
+                                                val updatedGroupState = groupState.copy(
+                                                    lastSyncAt = LocalDateTime.now().toString()
+                                                )
+                                                onGroupStateChange(updatedGroupState)
+                                                
+                                                // Show success feedback
+                                                showDataDownloadSuccess = true
+                                                
+                                                Log.d("DataDownload", "Successfully downloaded data from group: ${currentGroup.groupCode}")
+                                            } else {
+                                                // Download failed
+                                                dataDownloadErrorMessage = "Failed to download data. Please try again."
+                                                showDataDownloadError = true
+                                                Log.e("DataDownload", "Failed to download data from group")
+                                            }
+                                        } catch (e: Exception) {
+                                            Log.e("DataDownload", "Error downloading data: ${e.message}", e)
+                                            dataDownloadErrorMessage = "Error downloading data: ${e.message}"
+                                            showDataDownloadError = true
+                                        } finally {
+                                            isDownloadingData = false
+                                        }
+                                    }
+                                },
+                                enabled = !isDownloadingData,
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                                    containerColor = Color(0xFF2196F3) // Blue color for download
+                                )
+                            ) {
+                                if (isDownloadingData) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.Center
+                                    ) {
+                                        androidx.compose.material3.CircularProgressIndicator(
+                                            modifier = Modifier.size(16.dp),
+                                            color = Color.White,
+                                            strokeWidth = 2.dp
+                                        )
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text(
+                                            text = "Downloading...",
+                                            color = Color.White,
+                                            fontWeight = FontWeight.Medium
+                                        )
+                                    }
+                                } else {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.Center
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.KeyboardArrowDown,
+                                            contentDescription = "Download",
+                                            tint = Color.White,
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text(
+                                            text = "Download Data from Group",
                                             color = Color.White,
                                             fontWeight = FontWeight.Medium
                                         )
@@ -3439,6 +3553,79 @@ fun HomeScreen(
                 confirmButton = {
                     Button(
                         onClick = { showDataUploadError = false },
+                        colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                            containerColor = Color(0xFFD32F2F)
+                        )
+                    ) {
+                        Text(
+                            text = "OK",
+                            color = Color.White,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+                }
+            )
+        }
+        
+        // Data Download Success Dialog
+        if (showDataDownloadSuccess) {
+            AlertDialog(
+                onDismissRequest = { showDataDownloadSuccess = false },
+                title = { 
+                    Text(
+                        text = "Data Downloaded Successfully!",
+                        modifier = Modifier.fillMaxWidth(),
+                        textAlign = TextAlign.Center,
+                        fontWeight = FontWeight.Bold
+                    ) 
+                },
+                text = { 
+                    Text(
+                        text = "Your local grocery list and categories have been successfully updated with the group data.\n\nYour local data is now synchronized with the group.",
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.padding(bottom = 16.dp)
+                    )
+                },
+                confirmButton = {
+                    Button(
+                        onClick = { showDataDownloadSuccess = false },
+                        colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                            containerColor = Color(0xFF2196F3)
+                        )
+                    ) {
+                        Text(
+                            text = "OK",
+                            color = Color.White,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+                }
+            )
+        }
+        
+        // Data Download Error Dialog
+        if (showDataDownloadError) {
+            AlertDialog(
+                onDismissRequest = { showDataDownloadError = false },
+                title = { 
+                    Text(
+                        text = "Failed to Download Data",
+                        modifier = Modifier.fillMaxWidth(),
+                        textAlign = TextAlign.Center,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFFD32F2F)
+                    ) 
+                },
+                text = { 
+                    Text(
+                        text = dataDownloadErrorMessage,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.padding(bottom = 16.dp)
+                    )
+                },
+                confirmButton = {
+                    Button(
+                        onClick = { showDataDownloadError = false },
                         colors = androidx.compose.material3.ButtonDefaults.buttonColors(
                             containerColor = Color(0xFFD32F2F)
                         )

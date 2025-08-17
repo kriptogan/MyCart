@@ -32,7 +32,7 @@ Implement a sharing mechanism using Firebase that allows users to create or join
 - [x] **Step 3.1**: Implement group creation in Firestore
 - [x] **Step 3.2**: Implement group joining logic
 - [x] **Step 3.3**: Add data upload functionality (groceries + categories)
-- [ ] **Step 3.4**: Add data download functionality
+- [x] **Step 3.4**: Add data download functionality
 - [ ] **Step 3.5**: Implement leave group functionality
 
 ### Phase 4: Data Synchronization
@@ -112,9 +112,10 @@ data class GroupData(
 - [x] Step 3.1 completed - Group creation in Firestore implemented
 - [x] Step 3.2 completed - Group joining logic implemented
 - [x] Step 3.3 completed - Data upload functionality implemented
+- [x] Step 3.4 completed - Data download functionality implemented
 
 ## Next Action
-Ready to continue with **Phase 3: Firebase Operations** - Continue with Step 3.4: Add data download functionality
+Ready to continue with **Phase 3: Firebase Operations** - Continue with Step 3.5: Implement leave group functionality
 
 ## Notes
 - Keep implementation incremental
