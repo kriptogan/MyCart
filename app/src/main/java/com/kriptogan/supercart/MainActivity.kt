@@ -136,6 +136,7 @@ import com.kriptogan.supercart.GroupState
 import com.kriptogan.supercart.Group
 import com.kriptogan.supercart.GroupData
 import com.kriptogan.supercart.DeviceUtils
+import com.kriptogan.supercart.SharingUtils
 
 // Custom string resource system
 object StringResources {
@@ -896,6 +897,19 @@ fun HomeScreen(
     var showSharingDialog by remember { mutableStateOf(false) } // For sharing group dialog
     var showCreateGroupDialog by remember { mutableStateOf(false) } // For create group dialog
     var showJoinGroupDialog by remember { mutableStateOf(false) } // For join group dialog
+    
+    // Group creation feedback states
+    var showGroupCreationSuccess by remember { mutableStateOf(false) }
+    var createdGroupCode by remember { mutableStateOf("") }
+    var showGroupCreationError by remember { mutableStateOf(false) }
+    var groupCreationErrorMessage by remember { mutableStateOf("") }
+    
+    // Group joining feedback states
+    var showGroupJoiningSuccess by remember { mutableStateOf(false) }
+    var joinedGroupCode by remember { mutableStateOf("") }
+    var showGroupJoiningError by remember { mutableStateOf(false) }
+    var groupJoiningErrorMessage by remember { mutableStateOf("") }
+    var groupCodeInput by remember { mutableStateOf("") } // For group code input field
     
     // Update configuration when locale changes
     val configuration = LocalConfiguration.current
@@ -2761,10 +2775,57 @@ fun HomeScreen(
                         }
                         Button(
                             onClick = {
-                                // TODO: Implement actual group creation in Step 3.1
-                                showCreateGroupDialog = false
-                                // For now, just show a success message
-                                // In the next phase, this will create the group in Firebase
+                                // Step 3.1: Implement actual group creation in Firestore
+                                scope.launch {
+                                    try {
+                                        // Get device ID for group creation
+                                        val deviceId = DeviceUtils.getDeviceId(context)
+                                        
+                                        // Create new group using SharingUtils
+                                        val newGroup = SharingUtils.createGroup(deviceId)
+                                        
+                                        // Create group in Firebase
+                                        val groupId = sharingFirebaseService.createGroup(newGroup)
+                                        
+                                        if (groupId != null) {
+                                            // Group created successfully
+                                            val createdGroup = newGroup.copy(groupId = groupId)
+                                            
+                                            // Update local group state
+                                            val newGroupState = GroupState(
+                                                isInGroup = true,
+                                                currentGroupId = groupId,
+                                                currentGroupCode = newGroup.groupCode,
+                                                isOwner = true,
+                                                lastSyncAt = LocalDateTime.now().toString()
+                                            )
+                                            
+                                            // Update group state in parent component
+                                            onGroupStateChange(newGroupState)
+                                            
+                                            // Update current group
+                                            onCurrentGroupChange(createdGroup)
+                                            
+                                            // Close dialog
+                                            showCreateGroupDialog = false
+                                            
+                                            // Show success feedback
+                                            createdGroupCode = newGroup.groupCode
+                                            showGroupCreationSuccess = true
+                                            
+                                            Log.d("GroupCreation", "Group created successfully with code: ${newGroup.groupCode}")
+                                        } else {
+                                            // Group creation failed
+                                            groupCreationErrorMessage = "Failed to create group in Firebase"
+                                            showGroupCreationError = true
+                                            Log.e("GroupCreation", "Failed to create group in Firebase")
+                                        }
+                                    } catch (e: Exception) {
+                                        Log.e("GroupCreation", "Error creating group: ${e.message}", e)
+                                        groupCreationErrorMessage = "Error creating group: ${e.message}"
+                                        showGroupCreationError = true
+                                    }
+                                }
                             },
                             colors = androidx.compose.material3.ButtonDefaults.buttonColors(
                                 containerColor = Color(0xFF4CAF50)
@@ -2776,6 +2837,125 @@ fun HomeScreen(
                                 fontWeight = FontWeight.Medium
                             )
                         }
+                    }
+                }
+            )
+        }
+        
+        // Group Creation Success Dialog
+        if (showGroupCreationSuccess) {
+            AlertDialog(
+                onDismissRequest = { showGroupCreationSuccess = false },
+                title = { 
+                    Text(
+                        text = "Group Created Successfully!",
+                        modifier = Modifier.fillMaxWidth(),
+                        textAlign = TextAlign.Center,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFF4CAF50)
+                    ) 
+                },
+                text = { 
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            text = "Your sharing group has been created successfully!",
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.padding(bottom = 16.dp)
+                        )
+                        
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 8.dp),
+                            colors = CardDefaults.cardColors(
+                                containerColor = Color(0xFFE8F5E8)
+                            ),
+                            border = CardDefaults.outlinedCardBorder()
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(16.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Text(
+                                    text = "Group Code:",
+                                    fontWeight = FontWeight.Medium,
+                                    modifier = Modifier.padding(bottom = 8.dp)
+                                )
+                                Text(
+                                    text = createdGroupCode,
+                                    fontSize = 24.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color(0xFF2E7D32),
+                                    modifier = Modifier
+                                        .background(
+                                            color = Color(0xFFC8E6C9),
+                                            shape = RoundedCornerShape(8.dp)
+                                        )
+                                        .padding(horizontal = 16.dp, vertical = 8.dp)
+                                )
+                                Text(
+                                    text = "Share this code with others to let them join your group",
+                                    fontSize = 12.sp,
+                                    color = Color.Gray,
+                                    textAlign = TextAlign.Center,
+                                    modifier = Modifier.padding(top = 8.dp)
+                                )
+                            }
+                        }
+                    }
+                },
+                confirmButton = {
+                    Button(
+                        onClick = { showGroupCreationSuccess = false },
+                        colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                            containerColor = Color(0xFF4CAF50)
+                        )
+                    ) {
+                        Text(
+                            text = "OK",
+                            color = Color.White,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+                }
+            )
+        }
+        
+        // Group Creation Error Dialog
+        if (showGroupCreationError) {
+            AlertDialog(
+                onDismissRequest = { showGroupCreationError = false },
+                title = { 
+                    Text(
+                        text = "Group Creation Failed",
+                        modifier = Modifier.fillMaxWidth(),
+                        textAlign = TextAlign.Center,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFFFF5722)
+                    ) 
+                },
+                text = { 
+                    Text(
+                        text = groupCreationErrorMessage,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.padding(vertical = 16.dp)
+                    )
+                },
+                confirmButton = {
+                    Button(
+                        onClick = { showGroupCreationError = false },
+                        colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                            containerColor = Color(0xFFFF5722)
+                        )
+                    ) {
+                        Text(
+                            text = "OK",
+                            color = Color.White,
+                            fontWeight = FontWeight.Medium
+                        )
                     }
                 }
             )
@@ -2806,8 +2986,8 @@ fun HomeScreen(
                         
                         // Group Code Input Field
                         OutlinedTextField(
-                            value = "", // TODO: Add state variable for group code input
-                            onValueChange = { /* TODO: Handle input changes */ },
+                            value = groupCodeInput,
+                            onValueChange = { groupCodeInput = it },
                             label = { Text("Group Code") },
                             placeholder = { Text("Enter 8-digit code") },
                             singleLine = true,
@@ -2921,15 +3101,98 @@ fun HomeScreen(
                         }
                         Button(
                             onClick = {
-                                // TODO: Implement actual group joining in Step 3.2
-                                showJoinGroupDialog = false
-                                // For now, just show a placeholder message
-                                // In the next phase, this will validate and join the group
+                                // Step 3.2: Implement actual group joining in Firestore
+                                scope.launch {
+                                    try {
+                                        // Validate group code input
+                                        if (groupCodeInput.length != 8) {
+                                            groupJoiningErrorMessage = "Group code must be exactly 8 digits"
+                                            showGroupJoiningError = true
+                                            return@launch
+                                        }
+                                        
+                                        // Get device ID for group joining
+                                        val deviceId = DeviceUtils.getDeviceId(context)
+                                        
+                                        // Find group by code
+                                        val foundGroup = sharingFirebaseService.findGroupByCode(groupCodeInput)
+                                        
+                                        if (foundGroup != null) {
+                                            // Check if device is already a member
+                                            val isAlreadyMember = foundGroup.members.any { it.deviceId == deviceId }
+                                            
+                                            if (isAlreadyMember) {
+                                                groupJoiningErrorMessage = "You are already a member of this group"
+                                                showGroupJoiningError = true
+                                                return@launch
+                                            }
+                                            
+                                            // Create new member
+                                            val newMember = GroupMember(
+                                                userId = deviceId,
+                                                deviceId = deviceId,
+                                                joinedAt = LocalDateTime.now().toString(),
+                                                lastActiveAt = LocalDateTime.now().toString()
+                                            )
+                                            
+                                            // Add member to group
+                                            val memberAdded = sharingFirebaseService.addMemberToGroup(foundGroup.groupId, newMember)
+                                            
+                                            if (memberAdded) {
+                                                // Member added successfully
+                                                val updatedGroup = foundGroup.copy(
+                                                    members = foundGroup.members + newMember
+                                                )
+                                                
+                                                // Update local group state
+                                                val newGroupState = GroupState(
+                                                    isInGroup = true,
+                                                    currentGroupId = foundGroup.groupId,
+                                                    currentGroupCode = foundGroup.groupCode,
+                                                    isOwner = false,
+                                                    lastSyncAt = LocalDateTime.now().toString()
+                                                )
+                                                
+                                                // Update group state in parent component
+                                                onGroupStateChange(newGroupState)
+                                                
+                                                // Update current group
+                                                onCurrentGroupChange(updatedGroup)
+                                                
+                                                // Close dialog
+                                                showJoinGroupDialog = false
+                                                
+                                                // Clear input
+                                                groupCodeInput = ""
+                                                
+                                                // Show success feedback
+                                                joinedGroupCode = foundGroup.groupCode
+                                                showGroupJoiningSuccess = true
+                                                
+                                                Log.d("GroupJoining", "Successfully joined group: ${foundGroup.groupCode}")
+                                            } else {
+                                                // Failed to add member
+                                                groupJoiningErrorMessage = "Failed to join group. Please try again."
+                                                showGroupJoiningError = true
+                                                Log.e("GroupJoining", "Failed to add member to group")
+                                            }
+                                        } else {
+                                            // Group not found
+                                            groupJoiningErrorMessage = "Group not found. Please check the code and try again."
+                                            showGroupJoiningError = true
+                                            Log.e("GroupJoining", "Group not found with code: $groupCodeInput")
+                                        }
+                                    } catch (e: Exception) {
+                                        Log.e("GroupJoining", "Error joining group: ${e.message}", e)
+                                        groupJoiningErrorMessage = "Error joining group: ${e.message}"
+                                        showGroupJoiningError = true
+                                    }
+                                }
                             },
                             colors = androidx.compose.material3.ButtonDefaults.buttonColors(
                                 containerColor = Color(0xFF2196F3)
                             ),
-                            enabled = false // TODO: Enable when group code is valid
+                            enabled = groupCodeInput.length == 8 // Enable when group code is exactly 8 digits
                         ) {
                             Text(
                                 text = "Join Group",
@@ -2937,6 +3200,79 @@ fun HomeScreen(
                                 fontWeight = FontWeight.Medium
                             )
                         }
+                    }
+                }
+            )
+        }
+        
+        // Group Joining Success Dialog
+        if (showGroupJoiningSuccess) {
+            AlertDialog(
+                onDismissRequest = { showGroupJoiningSuccess = false },
+                title = { 
+                    Text(
+                        text = "Successfully Joined Group!",
+                        modifier = Modifier.fillMaxWidth(),
+                        textAlign = TextAlign.Center,
+                        fontWeight = FontWeight.Bold
+                    ) 
+                },
+                text = { 
+                    Text(
+                        text = "You have successfully joined the group with code: $joinedGroupCode\n\nYou can now sync your grocery lists and categories with other group members.",
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.padding(bottom = 16.dp)
+                    )
+                },
+                confirmButton = {
+                    Button(
+                        onClick = { showGroupJoiningSuccess = false },
+                        colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                            containerColor = Color(0xFF4CAF50)
+                        )
+                    ) {
+                        Text(
+                            text = "OK",
+                            color = Color.White,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+                }
+            )
+        }
+        
+        // Group Joining Error Dialog
+        if (showGroupJoiningError) {
+            AlertDialog(
+                onDismissRequest = { showGroupJoiningError = false },
+                title = { 
+                    Text(
+                        text = "Failed to Join Group",
+                        modifier = Modifier.fillMaxWidth(),
+                        textAlign = TextAlign.Center,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFFD32F2F)
+                    ) 
+                },
+                text = { 
+                    Text(
+                        text = groupJoiningErrorMessage,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.padding(bottom = 16.dp)
+                    )
+                },
+                confirmButton = {
+                    Button(
+                        onClick = { showGroupJoiningError = false },
+                        colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                            containerColor = Color(0xFFD32F2F)
+                        )
+                    ) {
+                        Text(
+                            text = "OK",
+                            color = Color.White,
+                            fontWeight = FontWeight.Medium
+                        )
                     }
                 }
             )
