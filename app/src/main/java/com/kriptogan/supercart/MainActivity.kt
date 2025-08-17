@@ -98,6 +98,7 @@ import java.time.temporal.ChronoUnit
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Info
+
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.input.KeyboardType
@@ -911,6 +912,12 @@ fun HomeScreen(
     var groupJoiningErrorMessage by remember { mutableStateOf("") }
     var groupCodeInput by remember { mutableStateOf("") } // For group code input field
     
+    // Group data upload feedback states
+    var showDataUploadSuccess by remember { mutableStateOf(false) }
+    var showDataUploadError by remember { mutableStateOf(false) }
+    var dataUploadErrorMessage by remember { mutableStateOf("") }
+    var isUploadingData by remember { mutableStateOf(false) } // Loading state for upload
+    
     // Update configuration when locale changes
     val configuration = LocalConfiguration.current
     val layoutDirection = if (selectedLanguage == "iw") LayoutDirection.Rtl else LayoutDirection.Ltr
@@ -1251,6 +1258,101 @@ fun HomeScreen(
                                     fontSize = 12.sp,
                                     color = Color(0xFF2E7D32)
                                 )
+                            }
+                            
+                            Spacer(modifier = Modifier.height(12.dp))
+                            
+                            // Upload Data Button
+                            Button(
+                                onClick = {
+                                    // Step 3.3: Implement data upload functionality
+                                    scope.launch {
+                                        try {
+                                            isUploadingData = true
+                                            
+                                            // Get device ID for tracking who made the change
+                                            val deviceId = DeviceUtils.getDeviceId(context)
+                                            
+                                            // Create GroupData with current local data
+                                            val groupData = GroupData(
+                                                groupId = currentGroup.groupId,
+                                                groceries = groceries.map { it.toSerializable() }, // Convert to serializable format
+                                                categories = customCategories,
+                                                lastUpdatedAt = LocalDateTime.now().toString(),
+                                                lastModifiedBy = deviceId
+                                            )
+                                            
+                                            // Upload data to Firebase
+                                            val uploadSuccess = sharingFirebaseService.updateGroupData(groupData)
+                                            
+                                            if (uploadSuccess) {
+                                                // Update local group state with new sync time
+                                                val updatedGroupState = groupState.copy(
+                                                    lastSyncAt = LocalDateTime.now().toString()
+                                                )
+                                                onGroupStateChange(updatedGroupState)
+                                                
+                                                // Show success feedback
+                                                showDataUploadSuccess = true
+                                                
+                                                Log.d("DataUpload", "Successfully uploaded data to group: ${currentGroup.groupCode}")
+                                            } else {
+                                                // Upload failed
+                                                dataUploadErrorMessage = "Failed to upload data. Please try again."
+                                                showDataUploadError = true
+                                                Log.e("DataUpload", "Failed to upload data to group")
+                                            }
+                                        } catch (e: Exception) {
+                                            Log.e("DataUpload", "Error uploading data: ${e.message}", e)
+                                            dataUploadErrorMessage = "Error uploading data: ${e.message}"
+                                            showDataUploadError = true
+                                        } finally {
+                                            isUploadingData = false
+                                        }
+                                    }
+                                },
+                                enabled = !isUploadingData,
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                                    containerColor = Color(0xFF4CAF50)
+                                )
+                            ) {
+                                if (isUploadingData) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.Center
+                                    ) {
+                                        androidx.compose.material3.CircularProgressIndicator(
+                                            modifier = Modifier.size(16.dp),
+                                            color = Color.White,
+                                            strokeWidth = 2.dp
+                                        )
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text(
+                                            text = "Uploading...",
+                                            color = Color.White,
+                                            fontWeight = FontWeight.Medium
+                                        )
+                                    }
+                                } else {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.Center
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.KeyboardArrowUp,
+                                            contentDescription = "Upload",
+                                            tint = Color.White,
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text(
+                                            text = "Upload Data to Group",
+                                            color = Color.White,
+                                            fontWeight = FontWeight.Medium
+                                        )
+                                    }
+                                }
                             }
                         }
                     }
@@ -3264,6 +3366,79 @@ fun HomeScreen(
                 confirmButton = {
                     Button(
                         onClick = { showGroupJoiningError = false },
+                        colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                            containerColor = Color(0xFFD32F2F)
+                        )
+                    ) {
+                        Text(
+                            text = "OK",
+                            color = Color.White,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+                }
+            )
+        }
+        
+        // Data Upload Success Dialog
+        if (showDataUploadSuccess) {
+            AlertDialog(
+                onDismissRequest = { showDataUploadSuccess = false },
+                title = { 
+                    Text(
+                        text = "Data Uploaded Successfully!",
+                        modifier = Modifier.fillMaxWidth(),
+                        textAlign = TextAlign.Center,
+                        fontWeight = FontWeight.Bold
+                    ) 
+                },
+                text = { 
+                    Text(
+                        text = "Your grocery list and categories have been successfully uploaded to the group.\n\nOther group members can now download this data to sync with their local lists.",
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.padding(bottom = 16.dp)
+                    )
+                },
+                confirmButton = {
+                    Button(
+                        onClick = { showDataUploadSuccess = false },
+                        colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                            containerColor = Color(0xFF4CAF50)
+                        )
+                    ) {
+                        Text(
+                            text = "OK",
+                            color = Color.White,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+                }
+            )
+        }
+        
+        // Data Upload Error Dialog
+        if (showDataUploadError) {
+            AlertDialog(
+                onDismissRequest = { showDataUploadError = false },
+                title = { 
+                    Text(
+                        text = "Failed to Upload Data",
+                        modifier = Modifier.fillMaxWidth(),
+                        textAlign = TextAlign.Center,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFFD32F2F)
+                    ) 
+                },
+                text = { 
+                    Text(
+                        text = dataUploadErrorMessage,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.padding(bottom = 16.dp)
+                    )
+                },
+                confirmButton = {
+                    Button(
+                        onClick = { showDataUploadError = false },
                         colors = androidx.compose.material3.ButtonDefaults.buttonColors(
                             containerColor = Color(0xFFD32F2F)
                         )
