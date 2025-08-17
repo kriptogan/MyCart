@@ -3067,6 +3067,31 @@ fun HomeScreen(
                                             // Group created successfully
                                             val createdGroup = newGroup.copy(groupId = groupId)
                                             
+                                            // Automatically upload user's data to the new group
+                                            try {
+                                                Log.d("GroupCreation", "Auto-uploading user data to new group")
+                                                
+                                                // Create GroupData with current groceries and categories
+                                                val groupData = GroupData(
+                                                    groupId = groupId,
+                                                    groceries = groceries.map { it.toSerializable() },
+                                                    categories = customCategories,
+                                                    lastModifiedBy = deviceId
+                                                )
+                                                
+                                                // Upload to Firebase
+                                                val uploadSuccess = sharingFirebaseService.updateGroupData(groupData)
+                                                
+                                                if (uploadSuccess) {
+                                                    Log.d("GroupCreation", "User data uploaded successfully to new group")
+                                                } else {
+                                                    Log.w("GroupCreation", "Failed to upload user data to new group")
+                                                }
+                                            } catch (e: Exception) {
+                                                Log.e("GroupCreation", "Error auto-uploading user data: ${e.message}", e)
+                                                // Don't fail group creation if data upload fails
+                                            }
+                                            
                                             // Update local group state
                                             val newGroupState = GroupState(
                                                 isInGroup = true,
@@ -3139,6 +3164,14 @@ fun HomeScreen(
                         Text(
                             text = "Your sharing group has been created successfully!",
                             textAlign = TextAlign.Center,
+                            modifier = Modifier.padding(bottom = 16.dp)
+                        )
+                        
+                        Text(
+                            text = "Your current groceries and categories have been automatically uploaded to the group.",
+                            textAlign = TextAlign.Center,
+                            fontSize = 14.sp,
+                            color = Color(0xFF4CAF50),
                             modifier = Modifier.padding(bottom = 16.dp)
                         )
                         

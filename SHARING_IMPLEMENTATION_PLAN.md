@@ -29,7 +29,7 @@ Implement a sharing mechanism using Firebase that allows users to create or join
 - [x] **Step 2.5**: Add group status display (current group info)
 
 ### Phase 3: Firebase Operations
-- [x] **Step 3.1**: Implement group creation in Firestore
+- [x] **Step 3.1**: Implement group creation in Firestore (with auto-upload)
 - [x] **Step 3.2**: Implement group joining logic
 - [x] **Step 3.3**: Add data upload functionality (groceries + categories)
 - [x] **Step 3.4**: Add data download functionality
@@ -109,7 +109,7 @@ data class GroupData(
 - [x] Step 2.4 completed - "Join Group" dialog with code input implemented
 - [x] Step 2.5 completed - Group status display implemented
 - [x] **Phase 2 COMPLETED** - UI Components ready
-- [x] Step 3.1 completed - Group creation in Firestore implemented
+- [x] Step 3.1 completed - Group creation in Firestore implemented (with auto-upload)
 - [x] Step 3.2 completed - Group joining logic implemented
 - [x] Step 3.3 completed - Data upload functionality implemented
 - [x] Step 3.4 completed - Data download functionality implemented
@@ -124,3 +124,6 @@ Ready to continue with **Phase 4: Data Synchronization** - Continue with Step 4.
 - Test each step before moving to next
 - Maintain existing app functionality
 - Follow existing code patterns and style
+
+## Recent Enhancements
+- **Auto-upload on Group Creation**: When creating a group, user's current groceries and categories are automatically uploaded, ensuring new members have immediate access to the group owner's data.
