@@ -42,6 +42,17 @@ class SharingFirebaseService {
             
             Log.d(TAG, "Group created successfully with ID: $groupId")
             
+            // Update the group object with the actual Firestore document ID
+            val updatedGroup = group.copy(groupId = groupId)
+            
+            // Update the document with the correct groupId
+            db.collection(GROUPS_COLLECTION)
+                .document(groupId)
+                .set(updatedGroup)
+                .await()
+            
+            Log.d(TAG, "Group document updated with correct groupId: $groupId")
+            
             // Create initial group data document
             val initialGroupData = GroupData(
                 groupId = groupId,
@@ -83,9 +94,23 @@ class SharingFirebaseService {
                 Log.d(TAG, "No group found with code: $groupCode")
                 null
             } else {
-                val group = result.documents[0].toObject(Group::class.java)
-                Log.d(TAG, "Group found: ${group?.groupId}")
-                group
+                val document = result.documents[0]
+                val actualDocumentId = document.id
+                Log.d(TAG, "Group document found with ID: $actualDocumentId")
+                
+                val group = document.toObject(Group::class.java)
+                if (group != null) {
+                    Log.d(TAG, "Original group object has groupId: ${group.groupId}")
+                    Log.d(TAG, "Firestore document ID: $actualDocumentId")
+                    
+                    // Create a new group object with the correct Firestore document ID
+                    val correctedGroup = group.copy(groupId = actualDocumentId)
+                    Log.d(TAG, "Corrected group object has groupId: ${correctedGroup.groupId}")
+                    correctedGroup
+                } else {
+                    Log.e(TAG, "Failed to deserialize group document")
+                    null
+                }
             }
         } catch (e: Exception) {
             Log.e(TAG, "Failed to find group by code: ${e.message}", e)
@@ -152,13 +177,35 @@ class SharingFirebaseService {
     suspend fun addMemberToGroup(groupId: String, member: GroupMember): Boolean {
         return try {
             Log.d(TAG, "Adding member ${member.deviceId} to group: $groupId")
+            Log.d(TAG, "Group ID being used: $groupId")
             
-            // Update the group document with the new member
-            val groupRef = db.collection(GROUPS_COLLECTION).document(groupId)
+            // First, try to find the group by the provided groupId to get the correct document ID
+            var actualGroupId = groupId
+            var groupRef = db.collection(GROUPS_COLLECTION).document(groupId)
             
-            db.runTransaction { transaction ->
+            // Verify document exists before transaction
+            var preCheckDoc = groupRef.get().await()
+            Log.d(TAG, "Pre-transaction check - Group document exists: ${preCheckDoc.exists()}")
+            Log.d(TAG, "Pre-transaction check - Group document ID: ${preCheckDoc.id}")
+            Log.d(TAG, "Pre-transaction check - Expected groupId: $groupId")
+            Log.d(TAG, "Pre-transaction check - Actual document ID: ${preCheckDoc.id}")
+            Log.d(TAG, "Pre-transaction check - IDs match: ${groupId == preCheckDoc.id}")
+            
+            // If the document doesn't exist with the provided groupId, try to find it by searching
+            if (!preCheckDoc.exists()) {
+                Log.d(TAG, "Group document not found with provided groupId, searching for group...")
+                
+                // Try to find the group by searching for the group code or other identifiers
+                // For now, we'll return false since we need more context to find the right group
+                Log.e(TAG, "Cannot add member: group document not found and no way to locate it")
+                return false
+            }
+            
+            val transactionResult = db.runTransaction { transaction ->
                 val groupDoc = transaction.get(groupRef)
                 Log.d(TAG, "Group document exists: ${groupDoc.exists()}")
+                Log.d(TAG, "Group document ID: ${groupDoc.id}")
+                Log.d(TAG, "Group document path: ${groupDoc.reference.path}")
                 
                 if (groupDoc.exists()) {
                     try {
@@ -176,6 +223,7 @@ class SharingFirebaseService {
                             Log.d(TAG, "Transaction set operation completed")
                         } else {
                             Log.e(TAG, "Failed to deserialize group document")
+                            throw IllegalStateException("Failed to deserialize group document")
                         }
                     } catch (e: Exception) {
                         Log.e(TAG, "Error during group deserialization: ${e.message}", e)
@@ -183,10 +231,22 @@ class SharingFirebaseService {
                     }
                 } else {
                     Log.e(TAG, "Group document does not exist for ID: $groupId")
+                    throw IllegalStateException("Group document does not exist for ID: $groupId")
                 }
-            }.await()
+            }
             
-            Log.d(TAG, "Member added successfully to group: $groupId")
+            Log.d(TAG, "Transaction completed successfully")
+            transactionResult.await()
+            
+            // Verify the change was actually committed
+            val postCheckDoc = groupRef.get().await()
+            Log.d(TAG, "Post-transaction check - Group document exists: ${postCheckDoc.exists()}")
+            if (postCheckDoc.exists()) {
+                val postGroup = postCheckDoc.toObject(Group::class.java)
+                Log.d(TAG, "Post-transaction check - Members count: ${postGroup?.members?.size}")
+            }
+            
+            Log.d(TAG, "Member added successfully to group: $actualGroupId")
             true
         } catch (e: Exception) {
             Log.e(TAG, "Failed to add member to group: ${e.message}", e)
@@ -204,12 +264,46 @@ class SharingFirebaseService {
         return try {
             Log.d(TAG, "Removing member $deviceId from group: $groupId")
             
-            // Update the group document by removing the member
-            val groupRef = db.collection(GROUPS_COLLECTION).document(groupId)
+            // First, try to find the group by the provided groupId to get the correct document ID
+            var actualGroupId = groupId
+            var groupRef = db.collection(GROUPS_COLLECTION).document(groupId)
             
-            db.runTransaction { transaction ->
+            // Verify document exists before transaction
+            var preCheckDoc = groupRef.get().await()
+            Log.d(TAG, "Pre-transaction check - Group document exists: ${preCheckDoc.exists()}")
+            Log.d(TAG, "Pre-transaction check - Group document ID: ${preCheckDoc.id}")
+            
+            // If the document doesn't exist with the provided groupId, try to find it by searching
+            if (!preCheckDoc.exists()) {
+                Log.d(TAG, "Group document not found with provided groupId, searching for group...")
+                
+                // Try to find the group by searching for the device in any group
+                val query = db.collection(GROUPS_COLLECTION)
+                    .whereArrayContains("members", mapOf("deviceId" to deviceId))
+                    .limit(1)
+                
+                val result = query.get().await()
+                if (!result.isEmpty) {
+                    val foundGroup = result.documents[0]
+                    actualGroupId = foundGroup.id
+                    groupRef = db.collection(GROUPS_COLLECTION).document(actualGroupId)
+                    Log.d(TAG, "Found group with actual document ID: $actualGroupId")
+                    
+                    // Re-check with the correct document ID
+                    preCheckDoc = groupRef.get().await()
+                    Log.d(TAG, "Re-check - Group document exists: ${preCheckDoc.exists()}")
+                    Log.d(TAG, "Re-check - Group document ID: ${preCheckDoc.id}")
+                } else {
+                    Log.e(TAG, "No group found containing member: $deviceId")
+                    return false
+                }
+            }
+            
+            val transactionResult = db.runTransaction { transaction ->
                 val groupDoc = transaction.get(groupRef)
                 Log.d(TAG, "Group document exists: ${groupDoc.exists()}")
+                Log.d(TAG, "Group document ID: ${groupDoc.id}")
+                Log.d(TAG, "Group document path: ${groupDoc.reference.path}")
                 
                 if (groupDoc.exists()) {
                     try {
@@ -227,6 +321,7 @@ class SharingFirebaseService {
                             Log.d(TAG, "Transaction set operation completed")
                         } else {
                             Log.e(TAG, "Failed to deserialize group document")
+                            throw IllegalStateException("Failed to deserialize group document")
                         }
                     } catch (e: Exception) {
                         Log.e(TAG, "Error during group deserialization: ${e.message}", e)
@@ -234,10 +329,22 @@ class SharingFirebaseService {
                     }
                 } else {
                     Log.e(TAG, "Group document does not exist for ID: $groupId")
+                    throw IllegalStateException("Group document does not exist for ID: $groupId")
                 }
-            }.await()
+            }
             
-            Log.d(TAG, "Member removed successfully from group: $groupId")
+            Log.d(TAG, "Transaction completed successfully")
+            transactionResult.await()
+            
+            // Verify the change was actually committed
+            val postCheckDoc = groupRef.get().await()
+            Log.d(TAG, "Post-transaction check - Group document exists: ${postCheckDoc.exists()}")
+            if (postCheckDoc.exists()) {
+                val postGroup = postCheckDoc.toObject(Group::class.java)
+                Log.d(TAG, "Post-transaction check - Members count: ${postGroup?.members?.size}")
+            }
+            
+            Log.d(TAG, "Member removed successfully from group: $actualGroupId")
             true
         } catch (e: Exception) {
             Log.e(TAG, "Failed to remove member from group: ${e.message}", e)
@@ -300,6 +407,49 @@ class SharingFirebaseService {
     }
     
     /**
+     * Refresh group data by fetching the latest version from Firebase
+     * @param groupId The group ID to refresh
+     * @return The refreshed group data, or null if failed
+     */
+    suspend fun refreshGroupData(groupId: String): Group? {
+        return try {
+            Log.d(TAG, "Refreshing group data for group: $groupId")
+            getGroupById(groupId)
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to refresh group data: ${e.message}", e)
+            null
+        }
+    }
+
+    /**
+     * Get a group by its ID
+     * @param groupId The group ID
+     * @return The group if found, null otherwise
+     */
+    suspend fun getGroupById(groupId: String): Group? {
+        return try {
+            Log.d(TAG, "Fetching group by ID: $groupId")
+            
+            val groupDoc = db.collection(GROUPS_COLLECTION)
+                .document(groupId)
+                .get()
+                .await()
+            
+            if (groupDoc.exists()) {
+                val group = groupDoc.toObject(Group::class.java)
+                Log.d(TAG, "Group found by ID: $groupId, members count: ${group?.members?.size}")
+                group
+            } else {
+                Log.d(TAG, "Group not found by ID: $groupId")
+                null
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to get group by ID: ${e.message}", e)
+            null
+        }
+    }
+
+    /**
      * Get all groups where a device is a member
      * @param deviceId The device ID to search for
      * @return List of groups where the device is a member
@@ -312,13 +462,51 @@ class SharingFirebaseService {
                 .whereArrayContains("members", mapOf("deviceId" to deviceId))
             
             val result = query.get().await()
-            val groups = result.documents.mapNotNull { it.toObject(Group::class.java) }
+            val groups = result.documents.mapNotNull { doc ->
+                val group = doc.toObject(Group::class.java)
+                if (group != null) {
+                    // Ensure the groupId matches the actual Firestore document ID
+                    group.copy(groupId = doc.id)
+                } else {
+                    null
+                }
+            }
             
             Log.d(TAG, "Found ${groups.size} groups for device: $deviceId")
             groups
         } catch (e: Exception) {
             Log.e(TAG, "Failed to get groups for device: ${e.message}", e)
             emptyList()
+        }
+    }
+    
+    /**
+     * Fix existing groups that have incorrect groupId values
+     * This method updates all existing groups to have the correct Firestore document ID
+     */
+    suspend fun fixExistingGroups(): Boolean {
+        return try {
+            Log.d(TAG, "Starting to fix existing groups...")
+            
+            val result = db.collection(GROUPS_COLLECTION).get().await()
+            var fixedCount = 0
+            
+            for (doc in result.documents) {
+                val group = doc.toObject(Group::class.java)
+                if (group != null && group.groupId != doc.id) {
+                    Log.d(TAG, "Fixing group: ${group.groupId} -> ${doc.id}")
+                    
+                    val correctedGroup = group.copy(groupId = doc.id)
+                    doc.reference.set(correctedGroup).await()
+                    fixedCount++
+                }
+            }
+            
+            Log.d(TAG, "Fixed $fixedCount groups")
+            true
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to fix existing groups: ${e.message}", e)
+            false
         }
     }
 }

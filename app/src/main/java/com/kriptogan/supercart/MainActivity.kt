@@ -3444,41 +3444,49 @@ fun HomeScreen(
                                                 lastActiveAt = LocalDateTime.now().toString()
                                             )
                                             
-                                            // Add member to group
+                                            // Add member to group using the corrected groupId from findGroupByCode
+                                            Log.d("GroupJoining", "Using corrected groupId: ${foundGroup.groupId}")
                                             val memberAdded = sharingFirebaseService.addMemberToGroup(foundGroup.groupId, newMember)
                                             
                                             if (memberAdded) {
-                                                // Member added successfully
-                                                val updatedGroup = foundGroup.copy(
-                                                    members = foundGroup.members + newMember
-                                                )
+                                                // Member added successfully - fetch updated group data
+                                                Log.d("GroupJoining", "Member added successfully, fetching updated group data")
+                                                val updatedGroup = sharingFirebaseService.getGroupById(foundGroup.groupId)
                                                 
-                                                // Update local group state
-                                                val newGroupState = GroupState(
-                                                    isInGroup = true,
-                                                    currentGroupId = foundGroup.groupId,
-                                                    currentGroupCode = foundGroup.groupCode,
-                                                    isOwner = false,
-                                                    lastSyncAt = LocalDateTime.now().toString()
-                                                )
-                                                
-                                                // Update group state in parent component
-                                                onGroupStateChange(newGroupState)
-                                                
-                                                // Update current group
-                                                onCurrentGroupChange(updatedGroup)
-                                                
-                                                // Close dialog
-                                                showJoinGroupDialog = false
-                                                
-                                                // Clear input
-                                                groupCodeInput = ""
-                                                
-                                                // Show success feedback
-                                                joinedGroupCode = foundGroup.groupCode
-                                                showGroupJoiningSuccess = true
-                                                
-                                                Log.d("GroupJoining", "Successfully joined group: ${foundGroup.groupCode}")
+                                                if (updatedGroup != null) {
+                                                    Log.d("GroupJoining", "Updated group data fetched, members count: ${updatedGroup.members.size}")
+                                                    
+                                                    // Update local group state
+                                                    val newGroupState = GroupState(
+                                                        isInGroup = true,
+                                                        currentGroupId = updatedGroup.groupId,
+                                                        currentGroupCode = updatedGroup.groupCode,
+                                                        isOwner = false,
+                                                        lastSyncAt = LocalDateTime.now().toString()
+                                                    )
+                                                    
+                                                    // Update group state in parent component
+                                                    onGroupStateChange(newGroupState)
+                                                    
+                                                    // Update current group with fresh data
+                                                    onCurrentGroupChange(updatedGroup)
+                                                    
+                                                    // Close dialog
+                                                    showJoinGroupDialog = false
+                                                    
+                                                    // Clear input
+                                                    groupCodeInput = ""
+                                                    
+                                                    // Show success feedback
+                                                    joinedGroupCode = updatedGroup.groupCode
+                                                    showGroupJoiningSuccess = true
+                                                    
+                                                    Log.d("GroupJoining", "Successfully joined group: ${updatedGroup.groupCode} with ${updatedGroup.members.size} members")
+                                                } else {
+                                                    Log.e("GroupJoining", "Failed to fetch updated group data after joining")
+                                                    groupJoiningErrorMessage = "Joined group but failed to load group data. Please refresh."
+                                                    showGroupJoiningError = true
+                                                }
                                             } else {
                                                 // Failed to add member
                                                 groupJoiningErrorMessage = "Failed to join group. Please try again."

@@ -127,3 +127,4 @@ Ready to continue with **Phase 4: Data Synchronization** - Continue with Step 4.
 
 ## Recent Enhancements
 - **Auto-upload on Group Creation**: When creating a group, user's current groceries and categories are automatically uploaded, ensuring new members have immediate access to the group owner's data.
+- **Critical Bug Fix - Group Member Updates**: Fixed issue where group member updates were not reflecting after joining a group. The problem was that local state was being updated with old group data instead of fetching fresh data from Firebase after successful member addition. Added `getGroupById()` method and updated group joining logic to fetch updated group data.
