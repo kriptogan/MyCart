@@ -616,12 +616,42 @@ fun SuperCartApp() {
         // If user is in a group, load group details
         if (groupState.isInGroup && groupState.currentGroupId != null) {
             try {
+                Log.d("SuperCartApp", "Loading group state - Group ID: ${groupState.currentGroupId}, Group Code: ${groupState.currentGroupCode}")
+                
+                // First, validate the group ID to ensure it's correct
+                val validatedGroupId = sharingFirebaseService.validateAndFixGroupId(groupState.currentGroupId!!)
+                
+                if (validatedGroupId != null && validatedGroupId != groupState.currentGroupId) {
+                    Log.w("SuperCartApp", "Group ID was corrected: ${groupState.currentGroupId} -> $validatedGroupId")
+                    
+                    // Update the group state with the corrected ID
+                    val correctedGroupState = groupState.copy(currentGroupId = validatedGroupId)
+                    context.groupStateDataStore.updateData { correctedGroupState }
+                    groupState = correctedGroupState
+                }
+                
                 val group = sharingFirebaseService.findGroupByCode(groupState.currentGroupCode ?: "")
                 if (group != null) {
-                    currentGroup = group
-                    val groupData = sharingFirebaseService.getGroupData(group.groupId)
-                    currentGroupData = groupData
+                    Log.d("SuperCartApp", "Group found by code: ${group.groupCode}, Group ID: ${group.groupId}")
+                    
+                    // Verify that the group ID matches what we have stored
+                    if (group.groupId == groupState.currentGroupId) {
+                        Log.d("SuperCartApp", "Group ID matches stored ID - proceeding with group load")
+                        currentGroup = group
+                        val groupData = sharingFirebaseService.getGroupData(group.groupId)
+                        currentGroupData = groupData
+                    } else {
+                        Log.w("SuperCartApp", "Group ID mismatch! Stored: ${groupState.currentGroupId}, Found: ${group.groupId}")
+                        Log.w("SuperCartApp", "This indicates a data inconsistency - resetting group state")
+                        
+                        // Group ID mismatch - reset state
+                        context.groupStateDataStore.updateData { GroupState() }
+                        groupState = GroupState()
+                        currentGroup = null
+                        currentGroupData = null
+                    }
                 } else {
+                    Log.w("SuperCartApp", "Group not found by code: ${groupState.currentGroupCode}")
                     // Group not found, reset state
                     context.groupStateDataStore.updateData { GroupState() }
                     groupState = GroupState()
@@ -3092,10 +3122,10 @@ fun HomeScreen(
                                                 // Don't fail group creation if data upload fails
                                             }
                                             
-                                            // Update local group state
+                                            // Update local group state with the correct group ID from Firebase
                                             val newGroupState = GroupState(
                                                 isInGroup = true,
-                                                currentGroupId = groupId,
+                                                currentGroupId = groupId, // Use the actual Firestore document ID
                                                 currentGroupCode = newGroup.groupCode,
                                                 isOwner = true,
                                                 lastSyncAt = LocalDateTime.now().toString()
@@ -3104,7 +3134,7 @@ fun HomeScreen(
                                             // Update group state in parent component
                                             onGroupStateChange(newGroupState)
                                             
-                                            // Update current group
+                                            // Update current group with the created group (which has the correct groupId)
                                             onCurrentGroupChange(createdGroup)
                                             
                                             // Close dialog
@@ -3114,7 +3144,7 @@ fun HomeScreen(
                                             createdGroupCode = newGroup.groupCode
                                             showGroupCreationSuccess = true
                                             
-                                            Log.d("GroupCreation", "Group created successfully with code: ${newGroup.groupCode}")
+                                            Log.d("GroupCreation", "Group created successfully with code: ${newGroup.groupCode} and ID: $groupId")
                                         } else {
                                             // Group creation failed
                                             groupCreationErrorMessage = "Failed to create group in Firebase"
@@ -3456,11 +3486,16 @@ fun HomeScreen(
                                                 if (updatedGroup != null) {
                                                     Log.d("GroupJoining", "Updated group data fetched, members count: ${updatedGroup.members.size}")
                                                     
+                                                    // IMPORTANT: Use the corrected group object from findGroupByCode
+                                                    // This ensures we have the correct Firestore document ID
+                                                    val correctedGroup = foundGroup
+                                                    Log.d("GroupJoining", "Using corrected group with ID: ${correctedGroup.groupId}")
+                                                    
                                                     // Update local group state
                                                     val newGroupState = GroupState(
                                                         isInGroup = true,
-                                                        currentGroupId = updatedGroup.groupId,
-                                                        currentGroupCode = updatedGroup.groupCode,
+                                                        currentGroupId = correctedGroup.groupId,
+                                                        currentGroupCode = correctedGroup.groupCode,
                                                         isOwner = false,
                                                         lastSyncAt = LocalDateTime.now().toString()
                                                     )
@@ -3468,8 +3503,8 @@ fun HomeScreen(
                                                     // Update group state in parent component
                                                     onGroupStateChange(newGroupState)
                                                     
-                                                    // Update current group with fresh data
-                                                    onCurrentGroupChange(updatedGroup)
+                                                    // Update current group with the corrected group object
+                                                    onCurrentGroupChange(correctedGroup)
                                                     
                                                     // Close dialog
                                                     showJoinGroupDialog = false
@@ -3478,10 +3513,10 @@ fun HomeScreen(
                                                     groupCodeInput = ""
                                                     
                                                     // Show success feedback
-                                                    joinedGroupCode = updatedGroup.groupCode
+                                                    joinedGroupCode = correctedGroup.groupCode
                                                     showGroupJoiningSuccess = true
                                                     
-                                                    Log.d("GroupJoining", "Successfully joined group: ${updatedGroup.groupCode} with ${updatedGroup.members.size} members")
+                                                    Log.d("GroupJoining", "Successfully joined group: ${correctedGroup.groupCode} with ${updatedGroup.members.size} members")
                                                 } else {
                                                     Log.e("GroupJoining", "Failed to fetch updated group data after joining")
                                                     groupJoiningErrorMessage = "Joined group but failed to load group data. Please refresh."
@@ -3846,12 +3881,26 @@ fun HomeScreen(
                                     // Get device ID for leave group
                                     val deviceId = DeviceUtils.getDeviceId(context)
                                     
+                                    Log.d("LeaveGroup", "Attempting to leave group - Current Group: ${currentGroup?.groupCode}")
+                                    Log.d("LeaveGroup", "Group ID being used: ${currentGroup?.groupId}")
+                                    Log.d("LeaveGroup", "Device ID: $deviceId")
+                                    
+                                    // Verify current group exists and has valid ID
+                                    if (currentGroup == null || currentGroup!!.groupId.isBlank()) {
+                                        Log.e("LeaveGroup", "Cannot leave group: currentGroup is null or has invalid groupId")
+                                        leaveGroupErrorMessage = "Cannot leave group: invalid group state. Please refresh the app."
+                                        showLeaveGroupError = true
+                                        return@launch
+                                    }
+                                    
                                     // Leave group in Firebase
                                     val leaveSuccess = sharingFirebaseService.removeMemberFromGroup(currentGroup!!.groupId, deviceId)
                                     
                                     if (leaveSuccess) {
                                         // Leave group successfully
-                                        val updatedGroupState = groupState.copy(
+                                        Log.d("LeaveGroup", "Successfully left group in Firebase")
+                                        
+                                        val updatedGroupState = GroupState(
                                             isInGroup = false,
                                             currentGroupId = null,
                                             currentGroupCode = null,

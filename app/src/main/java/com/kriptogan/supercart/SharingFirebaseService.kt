@@ -264,6 +264,17 @@ class SharingFirebaseService {
         return try {
             Log.d(TAG, "Removing member $deviceId from group: $groupId")
             
+            // Validate input parameters
+            if (groupId.isBlank()) {
+                Log.e(TAG, "Cannot remove member: groupId is blank")
+                return false
+            }
+            
+            if (deviceId.isBlank()) {
+                Log.e(TAG, "Cannot remove member: deviceId is blank")
+                return false
+            }
+            
             // First, try to find the group by the provided groupId to get the correct document ID
             var actualGroupId = groupId
             var groupRef = db.collection(GROUPS_COLLECTION).document(groupId)
@@ -477,6 +488,51 @@ class SharingFirebaseService {
         } catch (e: Exception) {
             Log.e(TAG, "Failed to get groups for device: ${e.message}", e)
             emptyList()
+        }
+    }
+    
+    /**
+     * Validate and fix group ID inconsistencies
+     * This method checks if a group ID matches the actual Firestore document ID
+     * @param groupId The group ID to validate
+     * @return The corrected group ID if validation fails, or the original ID if valid
+     */
+    suspend fun validateAndFixGroupId(groupId: String): String? {
+        return try {
+            Log.d(TAG, "Validating group ID: $groupId")
+            
+            if (groupId.isBlank()) {
+                Log.e(TAG, "Group ID is blank")
+                return null
+            }
+            
+            // Check if the document exists with the provided groupId
+            val groupDoc = db.collection(GROUPS_COLLECTION).document(groupId).get().await()
+            
+            if (groupDoc.exists()) {
+                Log.d(TAG, "Group ID is valid: $groupId")
+                return groupId
+            } else {
+                Log.w(TAG, "Group ID not found in Firestore: $groupId")
+                
+                // Try to find the group by searching for any group that might contain this ID
+                // This is a fallback for cases where the group ID might be incorrect
+                val allGroups = db.collection(GROUPS_COLLECTION).get().await()
+                
+                for (doc in allGroups.documents) {
+                    val group = doc.toObject(Group::class.java)
+                    if (group != null && (group.groupId == groupId || group.groupCode == groupId)) {
+                        Log.d(TAG, "Found group with matching ID or code: ${doc.id}")
+                        return doc.id
+                    }
+                }
+                
+                Log.e(TAG, "No matching group found for ID: $groupId")
+                return null
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error validating group ID: ${e.message}", e)
+            return null
         }
     }
     
