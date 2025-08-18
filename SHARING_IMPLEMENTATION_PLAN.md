@@ -36,7 +36,7 @@ Implement a sharing mechanism using Firebase that allows users to create or join
 - [x] **Step 3.5**: Implement leave group functionality
 
 ### Phase 4: Data Synchronization
-- [ ] **Step 4.1**: Implement data overwrite logic when joining group
+- [x] **Step 4.1**: Implement data overwrite logic when joining group
 - [ ] **Step 4.2**: Add user confirmation for data overwrite
 - [ ] **Step 4.3**: Handle group state persistence
 - [ ] **Step 4.4**: Add error handling and validation
@@ -115,9 +115,10 @@ data class GroupData(
 - [x] Step 3.4 completed - Data download functionality implemented
 - [x] Step 3.5 completed - Leave group functionality implemented
 - [x] **Phase 3 COMPLETED** - Firebase Operations ready
+- [x] **Step 4.1 COMPLETED** - Data overwrite logic when joining group implemented
 
 ## Next Action
-Ready to continue with **Phase 4: Data Synchronization** - Continue with Step 4.1: Implement data overwrite logic when joining group
+Ready to continue with **Phase 4: Data Synchronization** - Continue with Step 4.2: Add user confirmation for data overwrite
 
 ## Notes
 - Keep implementation incremental

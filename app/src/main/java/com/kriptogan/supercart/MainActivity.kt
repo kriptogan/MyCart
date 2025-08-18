@@ -3365,14 +3365,15 @@ fun HomeScreen(
                                 Icon(
                                     imageVector = Icons.Default.Info,
                                     contentDescription = null,
-                                    tint = Color(0xFF2196F3),
+                                    tint = Color(0xFFFF5722), // Warning color
                                     modifier = Modifier
                                         .padding(end = 8.dp)
                                         .size(16.dp)
                                 )
                                 Text(
-                                    text = "Your local data will be replaced with group data",
-                                    fontSize = 14.sp
+                                    text = "Your local data will be completely replaced with group data",
+                                    fontSize = 14.sp,
+                                    color = Color(0xFFD32F2F) // Warning text color
                                 )
                             }
                             Row(
@@ -3406,6 +3407,41 @@ fun HomeScreen(
                                 )
                                 Text(
                                     text = "You can leave the group at any time",
+                                    fontSize = 14.sp
+                                )
+                            }
+                        }
+                        
+                        Spacer(modifier = Modifier.height(16.dp))
+                        
+                        // Enhanced warning about data replacement
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 8.dp),
+                            colors = CardDefaults.cardColors(
+                                containerColor = Color(0xFFFFEBEE) // Light red background
+                            ),
+                            border = CardDefaults.outlinedCardBorder(
+                                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFFFCDD2))
+                            )
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(16.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Warning,
+                                    contentDescription = "Warning",
+                                    tint = Color(0xFFD32F2F),
+                                    modifier = Modifier
+                                        .padding(end = 12.dp)
+                                        .size(20.dp)
+                                )
+                                Text(
+                                    text = "⚠️ WARNING: Joining this group will completely replace your current groceries and categories with the group's data. This action cannot be undone.",
+                                    color = Color(0xFFD32F2F),
+                                    fontWeight = FontWeight.Medium,
                                     fontSize = 14.sp
                                 )
                             }
@@ -3491,32 +3527,82 @@ fun HomeScreen(
                                                     val correctedGroup = foundGroup
                                                     Log.d("GroupJoining", "Using corrected group with ID: ${correctedGroup.groupId}")
                                                     
-                                                    // Update local group state
-                                                    val newGroupState = GroupState(
-                                                        isInGroup = true,
-                                                        currentGroupId = correctedGroup.groupId,
-                                                        currentGroupCode = correctedGroup.groupCode,
-                                                        isOwner = false,
-                                                        lastSyncAt = LocalDateTime.now().toString()
-                                                    )
-                                                    
-                                                    // Update group state in parent component
-                                                    onGroupStateChange(newGroupState)
-                                                    
-                                                    // Update current group with the corrected group object
-                                                    onCurrentGroupChange(correctedGroup)
-                                                    
-                                                    // Close dialog
-                                                    showJoinGroupDialog = false
-                                                    
-                                                    // Clear input
-                                                    groupCodeInput = ""
-                                                    
-                                                    // Show success feedback
-                                                    joinedGroupCode = correctedGroup.groupCode
-                                                    showGroupJoiningSuccess = true
-                                                    
-                                                    Log.d("GroupJoining", "Successfully joined group: ${correctedGroup.groupCode} with ${updatedGroup.members.size} members")
+                                                    // Step 4.1: Implement complete data overwrite logic
+                                                    try {
+                                                        Log.d("GroupJoining", "Starting data overwrite process...")
+                                                        
+                                                        // Get group data from Firebase
+                                                        val groupData = sharingFirebaseService.getGroupData(correctedGroup.groupId)
+                                                        
+                                                        if (groupData != null) {
+                                                            Log.d("GroupJoining", "Group data retrieved, starting complete overwrite")
+                                                            
+                                                            // Complete overwrite of local groceries with group data
+                                                            val downloadedGroceries = groupData.groceries.map { serializableGrocery ->
+                                                                // Convert serializable Grocery back to GroceryWithDate
+                                                                GroceryWithDate(
+                                                                    uuid = serializableGrocery.uuid,
+                                                                    name = serializableGrocery.name,
+                                                                    customCategoryId = serializableGrocery.customCategoryId,
+                                                                    customCategoryUuid = serializableGrocery.customCategoryUuid,
+                                                                    expirationDate = serializableGrocery.expirationDate?.let { LocalDate.parse(it) },
+                                                                    lastTimeBoughtDays = serializableGrocery.lastTimeBoughtDays,
+                                                                    averageBuyingDays = serializableGrocery.averageBuyingDays,
+                                                                    buyEvents = serializableGrocery.buyEvents.map { LocalDate.parse(it) },
+                                                                    inShoppingList = serializableGrocery.inShoppingList,
+                                                                    isBought = serializableGrocery.isBought,
+                                                                    lastUpdate = LocalDateTime.parse(serializableGrocery.lastUpdate)
+                                                                )
+                                                            }
+                                                            
+                                                            // Complete overwrite of local categories with group data
+                                                            val downloadedCategories = groupData.categories
+                                                            
+                                                            Log.d("GroupJoining", "Data conversion completed - Groceries: ${downloadedGroceries.size}, Categories: ${downloadedCategories.size}")
+                                                            
+                                                            // Complete overwrite of local state (no merging, full replacement)
+                                                            onUpdateGroceries(downloadedGroceries)
+                                                            onUpdateCategories(downloadedCategories)
+                                                            
+                                                            Log.d("GroupJoining", "Local data completely overwritten with group data")
+                                                            
+                                                            // Update local group state
+                                                            val newGroupState = GroupState(
+                                                                isInGroup = true,
+                                                                currentGroupId = correctedGroup.groupId,
+                                                                currentGroupCode = correctedGroup.groupCode,
+                                                                isOwner = false,
+                                                                lastSyncAt = LocalDateTime.now().toString()
+                                                            )
+                                                            
+                                                            // Update group state in parent component
+                                                            onGroupStateChange(newGroupState)
+                                                            
+                                                            // Update current group with the corrected group object
+                                                            onCurrentGroupChange(correctedGroup)
+                                                            
+                                                            // Close dialog
+                                                            showJoinGroupDialog = false
+                                                            
+                                                            // Clear input
+                                                            groupCodeInput = ""
+                                                            
+                                                            // Show success feedback
+                                                            joinedGroupCode = correctedGroup.groupCode
+                                                            showGroupJoiningSuccess = true
+                                                            
+                                                            Log.d("GroupJoining", "Successfully joined group: ${correctedGroup.groupCode} with ${updatedGroup.members.size} members")
+                                                            Log.d("GroupJoining", "Local data completely replaced: ${downloadedGroceries.size} groceries, ${downloadedCategories.size} categories")
+                                                        } else {
+                                                            Log.w("GroupJoining", "No group data found, but group exists - this is unusual")
+                                                            groupJoiningErrorMessage = "Joined group but no data found. Your local data remains unchanged."
+                                                            showGroupJoiningError = true
+                                                        }
+                                                    } catch (e: Exception) {
+                                                        Log.e("GroupJoining", "Error during data overwrite: ${e.message}", e)
+                                                        groupJoiningErrorMessage = "Error replacing local data: ${e.message}"
+                                                        showGroupJoiningError = true
+                                                    }
                                                 } else {
                                                     Log.e("GroupJoining", "Failed to fetch updated group data after joining")
                                                     groupJoiningErrorMessage = "Joined group but failed to load group data. Please refresh."
@@ -3570,11 +3656,61 @@ fun HomeScreen(
                     ) 
                 },
                 text = { 
-                    Text(
-                        text = "You have successfully joined the group with code: $joinedGroupCode\n\nYou can now sync your grocery lists and categories with other group members.",
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.padding(bottom = 16.dp)
-                    )
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            text = "You have successfully joined the group with code: $joinedGroupCode",
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.padding(bottom = 16.dp)
+                        )
+                        
+                        // Step 4.1: Clear indication of data replacement
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 8.dp),
+                            colors = CardDefaults.cardColors(
+                                containerColor = Color(0xFFE8F5E8) // Light green background
+                            ),
+                            border = CardDefaults.outlinedCardBorder()
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(16.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Check,
+                                    contentDescription = "Data Replaced",
+                                    tint = Color(0xFF4CAF50),
+                                    modifier = Modifier
+                                        .padding(bottom = 8.dp)
+                                        .size(24.dp)
+                                )
+                                Text(
+                                    text = "Local Data Completely Replaced",
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color(0xFF2E7D32),
+                                    modifier = Modifier.padding(bottom = 8.dp)
+                                )
+                                Text(
+                                    text = "Your local groceries and categories have been completely replaced with the group's data. You can now sync changes with other group members.",
+                                    fontSize = 14.sp,
+                                    color = Color(0xFF2E7D32),
+                                    textAlign = TextAlign.Center
+                                )
+                            }
+                        }
+                        
+                        Spacer(modifier = Modifier.height(16.dp))
+                        
+                        Text(
+                            text = "You can now sync your grocery lists and categories with other group members.",
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.padding(bottom = 16.dp)
+                        )
+                    }
                 },
                 confirmButton = {
                     Button(
